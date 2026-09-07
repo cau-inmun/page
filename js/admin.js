@@ -65,9 +65,10 @@
       linkGroups = l || [];
     } catch (err) {
       console.error(err);
-      toast('데이터를 불러오지 못했습니다');
+      showLoadError(err);
       return;
     }
+    $('#load-error').hidden = true;
     sortNotices();
     renderNoticeList();
     renderFormTabs();
@@ -75,6 +76,52 @@
     renderSite();
     renderLinks();
     await loadSubs();
+  }
+
+  /* 데이터를 못 읽었을 때, 왜 그런지와 무엇을 해야 하는지를 화면에 남긴다.
+     가장 흔한 원인은 로그인은 됐지만 admins 에 등록되지 않은 경우인데,
+     이때 '불러오지 못했습니다' 만 띄우면 원인을 알 길이 없다. */
+  function showLoadError(err) {
+    const code = (err && err.code) || '';
+    const user = STORE.auth.user;
+    const box = $('#load-error');
+    box.hidden = false;
+    box.innerHTML = '';
+
+    if (code === 'permission-denied') {
+      box.append(
+        el('strong', { text: '관리자로 등록되지 않은 계정입니다. ' }),
+        '로그인은 됐지만 Firestore 가 데이터 접근을 막았습니다. ',
+        el('br'),
+        'Firebase 콘솔 → Firestore Database → 데이터 → ',
+        el('code', { text: 'admins' }),
+        ' 컬렉션에 아래 UID 를 문서 ID 로 하는 문서를 만들어 주세요.'
+      );
+      if (user) {
+        box.append(el('div', { style: 'margin-top:10px' }, [
+          el('code', { text: user.uid }),
+          el('button', {
+            type: 'button', class: 'rowbtn', style: 'margin-left:8px',
+            text: 'UID 복사',
+            onclick: async () => {
+              try { await navigator.clipboard.writeText(user.uid); toast('복사했습니다'); }
+              catch (e) { toast('복사 실패 — 직접 선택해 주세요'); }
+            }
+          })
+        ]));
+      }
+      box.append(el('div', { style: 'margin-top:10px' }, [
+        el('a', { class: 'btn', href: 'setup.html' }, ['연결 진단 열기'])
+      ]));
+    } else {
+      box.append(
+        el('strong', { text: '데이터를 불러오지 못했습니다. ' }),
+        code ? `(${code}) ` : '',
+        '보안 규칙이 배포되지 않았거나 네트워크 문제일 수 있습니다. ',
+        el('a', { href: 'setup.html' }, ['연결 진단']),
+        ' 에서 원인을 확인하세요.'
+      );
+    }
   }
 
   async function fetchSeedNotices() {

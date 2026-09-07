@@ -870,3 +870,8 @@ table.subs td.when { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .check-row--warn .check-row__mark { background: var(--sand); border-color: var(--sand-deep); color: var(--brand-deep); }
 .check-row--skip { opacity: .6; }
 .check-row--skip .check-row__mark { background: var(--sand-soft); border-color: var(--line); color: var(--ink-3); }
+
+/* 푸터의 관리자 링크 — 학생회만 쓰는 입구.
+   로그인이 막고 있으므로 보여도 안전하지만, 학우의 시선을 끌 이유는 없다. */
+.footer__admin { color: var(--ink-3); text-decoration: underline; text-underline-offset: 2px; }
+.footer__admin:hover { color: var(--brand-deep); }
