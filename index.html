@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>중앙대학교 인문대학 제15대 학생회 ‘역’</title>
+<meta name="description" content="중앙대학교 인문대학 제15대 학생회 ‘역’ 공식 링크 페이지. 공지사항, 신청 링크, 문의 채널을 한곳에 모았습니다.">
+<meta name="theme-color" content="#F8E9D4">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="중앙대학교 인문대학 학생회">
+<meta property="og:title" content="중앙대학교 인문대학 제15대 학생회 ‘역’">
+<meta property="og:description" content="공지사항, 신청 링크, 문의 채널을 한곳에 모았습니다.">
+<meta property="og:image" content="assets/logo.png">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary">
+
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/logo.png">
+<link rel="canonical" href="./">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"></noscript>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></noscript>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body data-page="home">
+<div class="page">
+
+  <a class="skip-link" href="#main">본문으로 건너뛰기</a>
+
+  <header class="topbar">
+    <div class="wrap topbar__inner">
+      <a class="topbar__brand" href="./">
+        <span class="topbar__mark" data-logo><img src="assets/logo.png" alt=""></span>
+        <span>인문대학 학생회</span>
+      </a>
+      <nav class="nav" aria-label="주요 메뉴">
+        <a href="./" aria-current="page">홈</a>
+        <a href="notices.html">공지</a>
+        <a href="#links">링크</a>
+        <a href="#about">소개</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+
+    <!-- ================= HERO ================= -->
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero__logo" data-logo>
+        <img src="assets/logo.png" alt="중앙대학교 인문대학 제15대 학생회 ‘역’ 로고">
+      </div>
+      <p class="hero__eyebrow" data-site="college">중앙대학교 인문대학</p>
+      <h1 class="hero__title" id="hero-title">
+        <span data-site="council">제15대 학생회</span>
+        <span class="quote">‘<span data-site="name">역</span>’</span>
+      </h1>
+      <p class="hero__tagline" data-site="tagline">인문대학의 모든 소식을 한곳에서</p>
+
+      <div class="quick" data-quick></div>
+    </section>
+
+    <!-- ================= 공지 ================= -->
+    <section class="wrap" id="notices" aria-labelledby="notice-head">
+      <div class="sec-head">
+        <h2 id="notice-head">공지사항</h2>
+        <a class="sec-head__more" href="notices.html">전체 보기</a>
+      </div>
+      <ul class="notices" data-recent>
+        <li class="skeleton" aria-hidden="true"></li>
+        <li class="skeleton" aria-hidden="true"></li>
+        <li class="skeleton" aria-hidden="true"></li>
+      </ul>
+    </section>
+
+    <!-- ================= 링크 모음 ================= -->
+    <section class="wrap" id="links" aria-labelledby="links-head">
+      <div class="sec-head">
+        <h2 id="links-head">링크 모음</h2>
+      </div>
+      <div data-links></div>
+    </section>
+
+    <!-- ================= 소개 ================= -->
+    <section class="wrap" id="about" aria-labelledby="about-head">
+      <div class="sec-head">
+        <h2 id="about-head">학생회 소개</h2>
+      </div>
+      <div class="about-card reveal">
+        <p class="about-card__intro" data-about-intro></p>
+        <ul class="depts" data-depts></ul>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p class="footer__name">
+        <span data-site="college">중앙대학교 인문대학</span>
+        <span data-site="council">제15대 학생회</span> ‘<span data-site="name">역</span>’
+      </p>
+      <p data-contact-place></p>
+      <div class="footer__links" data-footer-links>
+        <a href="notices.html">공지사항</a>
+      </div>
+      <p class="footer__copy">© <span id="year"></span> 중앙대학교 인문대학 학생회</p>
+    </div>
+  </footer>
+
+</div>
+
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/pages.js"></script>
+</body>
+</html>

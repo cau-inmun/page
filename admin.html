@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>공지 작성 도구 · 인문대학 학생회</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#F8E9D4">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap"></noscript>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"></noscript>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body data-page="admin">
+<div class="page">
+
+  <header class="topbar">
+    <div class="wrap admin topbar__inner">
+      <a class="topbar__brand" href="./">
+        <span class="topbar__mark" data-logo><img src="assets/logo.png" alt=""></span>
+        <span>공지 작성 도구</span>
+      </a>
+      <nav class="nav" aria-label="주요 메뉴">
+        <a href="./">홈</a>
+        <a href="notices.html">공지</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap admin" style="padding-top:28px">
+
+      <div class="banner admin__note">
+        이 도구는 <strong>서버에 저장하지 않습니다.</strong> 여기서 공지를 정리한 뒤
+        <strong>JSON 내려받기</strong> → 저장소의 <code>data/notices.json</code> 교체 → 커밋 순서로 반영됩니다.
+        작성 중인 내용은 이 브라우저에만 임시 저장됩니다.
+      </div>
+
+      <div class="banner admin__note" id="restore-note" hidden>
+        이전에 작성하던 내용을 불러왔습니다. 처음부터 다시 하려면 아래 <strong>사이트 공지 다시 불러오기</strong>를 누르세요.
+      </div>
+
+      <!-- ========== 작성 폼 ========== -->
+      <section class="admin__panel" id="panel-form" aria-labelledby="form-mode">
+        <h2 id="form-mode">새 공지 작성</h2>
+
+        <div class="field">
+          <label for="f-title">제목</label>
+          <input id="f-title" type="text" placeholder="예) 2학기 학생회비 납부 안내" autocomplete="off">
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f-category">분류</label>
+            <select id="f-category"></select>
+          </div>
+          <div class="field">
+            <label for="f-date">날짜</label>
+            <input id="f-date" type="date">
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="check" for="f-pinned">
+            <input id="f-pinned" type="checkbox">
+            목록 맨 위에 고정하기
+          </label>
+        </div>
+
+        <div class="field">
+          <label for="f-summary">한 줄 요약 <span class="hint">— 비워두면 본문 앞부분이 자동으로 들어갑니다</span></label>
+          <input id="f-summary" type="text" placeholder="목록에서 제목 아래에 보이는 문장" autocomplete="off">
+        </div>
+
+        <div class="field">
+          <label for="f-body">내용
+            <span class="hint">— ## 소제목 / - 목록 / **굵게** / [글자](주소) / &gt; 인용 사용 가능</span>
+          </label>
+          <textarea id="f-body" placeholder="공지 내용을 입력하세요.
+
+## 신청 방법
+- 기간: 9월 8일(월) ~ 9월 12일(금)
+- 대상: 인문대학 재학생
+
+자세한 내용은 [인스타그램](https://www.instagram.com/cau_inmun/)을 확인해 주세요."></textarea>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="f-link-label">관련 링크 이름</label>
+            <input id="f-link-label" type="text" placeholder="예) 신청 폼 바로가기" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="f-link-url">관련 링크 주소</label>
+            <input id="f-link-url" type="url" placeholder="https://forms.gle/..." autocomplete="off">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-image">이미지 주소 <span class="hint">— 예) assets/poster-0901.jpg (선택)</span></label>
+          <input id="f-image" type="text" placeholder="비워두면 이미지 없이 표시됩니다" autocomplete="off">
+        </div>
+
+        <div class="admin__actions">
+          <button type="button" class="btn btn--primary" id="btn-save">목록에 추가</button>
+          <button type="button" class="btn" id="btn-cancel" hidden>수정 취소</button>
+        </div>
+      </section>
+
+      <!-- ========== 미리보기 ========== -->
+      <section class="admin__panel" aria-labelledby="preview-head">
+        <h2 id="preview-head">미리보기</h2>
+        <div id="preview"></div>
+      </section>
+
+      <!-- ========== 공지 목록 ========== -->
+      <section class="admin__panel" aria-labelledby="list-head">
+        <h2 id="list-head">공지 목록 <span class="count" id="draft-count"></span></h2>
+        <ul class="draft-list" id="draft-list"></ul>
+        <div class="admin__actions" style="margin-top:14px">
+          <button type="button" class="btn" id="btn-clear-samples">예시 공지 지우기</button>
+          <button type="button" class="btn" id="btn-reload">사이트 공지 다시 불러오기</button>
+        </div>
+      </section>
+
+      <!-- ========== 내보내기 ========== -->
+      <section class="admin__panel" aria-labelledby="export-head">
+        <h2 id="export-head">저장소에 올리기</h2>
+        <ol class="prose" style="margin-top:0;font-size:13.5px">
+          <li>아래 <strong>JSON 내려받기</strong>를 눌러 <code>notices.json</code> 을 받습니다.</li>
+          <li>GitHub 저장소의 <code>data/notices.json</code> 을 열고 방금 받은 파일 내용으로 교체합니다.</li>
+          <li>커밋하면 1~2분 안에 사이트에 반영됩니다.</li>
+        </ol>
+        <label class="sr-only" for="json-out">생성된 JSON</label>
+        <textarea class="code" id="json-out" readonly spellcheck="false"></textarea>
+        <div class="admin__actions" style="margin-top:12px">
+          <button type="button" class="btn btn--primary" id="btn-download">JSON 내려받기</button>
+          <button type="button" class="btn" id="btn-copy">클립보드에 복사</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p class="footer__copy">중앙대학교 인문대학 학생회 · 공지 작성 도구</p>
+    </div>
+  </footer>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

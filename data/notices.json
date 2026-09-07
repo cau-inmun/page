@@ -1,0 +1,42 @@
+{
+  "_readme": "공지 데이터 파일입니다. admin.html 에서 작성 후 이 파일을 통째로 교체하세요. sample:true 인 항목은 예시이므로 실제 운영 전에 지워주세요.",
+  "notices": [
+    {
+      "id": "sample-guide",
+      "title": "[예시] 이 페이지에 공지를 올리는 방법",
+      "category": "일반",
+      "date": "2026-09-07",
+      "pinned": true,
+      "sample": true,
+      "summary": "admin.html 에서 공지를 작성하고 data/notices.json 파일을 교체하면 됩니다. 실제 운영 전에 예시 공지는 삭제해 주세요.",
+      "body": "이 글은 **예시 공지**입니다. 실제 공지가 아니며, 사이트 사용법을 보여주기 위해 넣어둔 샘플입니다.\n\n## 공지 올리는 순서\n\n1. 이 사이트의 `admin.html` 을 엽니다.\n2. 제목 · 분류 · 날짜 · 내용을 채웁니다.\n3. **JSON 내려받기** 버튼을 눌러 `notices.json` 을 받습니다.\n4. 저장소의 `data/notices.json` 을 방금 받은 파일로 교체하고 커밋합니다.\n\n## 본문에서 쓸 수 있는 문법\n\n- `## 소제목` — 소제목\n- `- 항목` — 목록\n- `**굵게**`, `*기울임*`\n- `[보이는 글자](https://주소)` — 링크\n- `> 인용문`\n\n---\n\n> 예시 공지 세 개는 실제 운영을 시작하기 전에 모두 지워주세요.",
+      "links": [
+        { "label": "공지 작성 도구 열기", "url": "admin.html" }
+      ]
+    },
+    {
+      "id": "sample-recruit",
+      "title": "[예시] 모집 공고 형태의 공지",
+      "category": "모집",
+      "date": "2026-09-05",
+      "pinned": false,
+      "sample": true,
+      "summary": "신청 링크와 마감일이 있는 공지는 이런 모습으로 보입니다.",
+      "body": "이 글은 **예시 공지**입니다.\n\n모집 · 신청형 공지는 아래처럼 기간과 방법을 나눠 적으면 읽기 쉽습니다.\n\n## 모집 개요\n\n- **대상** — 인문대학 재학생\n- **기간** — 예시 기간\n- **방법** — 하단 신청 링크\n\n## 문의\n\n인스타그램 [@cau_inmun](https://www.instagram.com/cau_inmun/) DM 으로 문의해 주세요.",
+      "links": [
+        { "label": "신청 링크 (예시)", "url": "https://www.instagram.com/cau_inmun/" }
+      ]
+    },
+    {
+      "id": "sample-event",
+      "title": "[예시] 행사 안내 형태의 공지",
+      "category": "행사",
+      "date": "2026-09-01",
+      "pinned": false,
+      "sample": true,
+      "summary": "일시와 장소가 있는 행사 공지 예시입니다.",
+      "body": "이 글은 **예시 공지**입니다.\n\n## 일시 및 장소\n\n- **일시** — 예시 일시\n- **장소** — 203관(서라벌홀)\n\n행사 포스터 이미지를 넣고 싶다면 `assets/` 폴더에 이미지를 올린 뒤, 공지의 이미지 주소 칸에 `assets/파일이름.jpg` 를 적으면 됩니다.",
+      "links": []
+    }
+  ]
+}
