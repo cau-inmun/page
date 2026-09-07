@@ -2,3 +2,7 @@
 Thumbs.db
 node_modules/
 *.log
+
+# 테스트/스크린샷 산출물이 저장소로 새는 것 방지
+undefined/
+*.png.tmp
