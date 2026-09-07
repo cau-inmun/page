@@ -7,7 +7,8 @@
 (function () {
   'use strict';
 
-  const { $, $$, el, toast, tagEl, renderMarkdown, formatDate, plainText } = window.CORE;
+  const { $, $$, el, toast, tagEl, renderMarkdown, formatDate, formatDateTime,
+          toLocalInput, fromLocalInput, noticeStatus, formStatus, plainText } = window.CORE;
   const S = window.SITE;
 
   let notices = [], forms = [], linkGroups = [], subs = [];
@@ -55,7 +56,7 @@
   async function loadAll() {
     try {
       const [n, f, l] = await Promise.all([
-        STORE.getNotices(),
+        STORE.getNotices({ all: true }),
         STORE.getForms(),
         STORE.getLinks()
       ]);
@@ -88,13 +89,14 @@
      탭 1 · 공지
      ========================================================== */
   const nf = {};
-  ['title', 'category', 'date', 'pinned', 'summary', 'body', 'image', 'linkLabel', 'linkUrl']
-    .forEach((k) => { nf[k] = null; });
+  ['title', 'category', 'date', 'pinned', 'summary', 'body', 'image',
+   'linkLabel', 'linkUrl', 'publish', 'expire'].forEach((k) => { nf[k] = null; });
 
   function bindNoticeForm() {
     nf.title = $('#n-title'); nf.category = $('#n-category'); nf.date = $('#n-date');
     nf.pinned = $('#n-pinned'); nf.summary = $('#n-summary'); nf.body = $('#n-body');
     nf.image = $('#n-image'); nf.linkLabel = $('#n-link-label'); nf.linkUrl = $('#n-link-url');
+    nf.publish = $('#n-publish'); nf.expire = $('#n-expire');
 
     S.categories.filter((c) => c !== '전체').forEach((c) =>
       nf.category.appendChild(el('option', { value: c, text: c })));
@@ -138,7 +140,10 @@
       title, category: nf.category.value, date,
       pinned: nf.pinned.checked,
       summary: nf.summary.value.trim() || plainText(body, 90),
-      body, image: nf.image.value.trim(), links
+      body, image: nf.image.value.trim(), links,
+      publishAt: fromLocalInput(nf.publish.value),
+      expireAt: fromLocalInput(nf.expire.value),
+      archived: !!(editingNoticeId && (notices.find((x) => x.id === editingNoticeId) || {}).archived)
     };
   }
 
@@ -152,6 +157,8 @@
     nf.image.value = n.image || '';
     nf.linkLabel.value = (n.links && n.links[0] && n.links[0].label) || '';
     nf.linkUrl.value = (n.links && n.links[0] && n.links[0].url) || '';
+    nf.publish.value = toLocalInput(n.publishAt);
+    nf.expire.value = toLocalInput(n.expireAt);
   }
 
   function resetNoticeForm() {
@@ -214,17 +221,45 @@
   function renderNoticeList() {
     const box = $('#n-list');
     box.innerHTML = '';
-    $('#n-count').textContent = notices.length + '건';
     if (!notices.length) {
+      $('#n-count').textContent = '0건';
       box.appendChild(el('li', { class: 'empty', text: '아직 공지가 없습니다.' }));
       return;
     }
+    const counts = { live: 0, scheduled: 0, archived: 0 };
+    notices.forEach((n) => { counts[noticeStatus(n)]++; });
+    $('#n-count').textContent =
+      `게시 중 ${counts.live} · 예약 ${counts.scheduled} · 보관 ${counts.archived}`;
+
     notices.forEach((n) => {
+      const st = noticeStatus(n);
+      const when = st === 'scheduled' ? formatDateTime(n.publishAt) + ' 게시 예정'
+                 : st === 'archived' && n.expireAt ? formatDateTime(n.expireAt) + ' 보관됨'
+                 : n.expireAt ? formatDateTime(n.expireAt) + ' 까지'
+                 : '';
       box.appendChild(el('li', { class: 'draft' }, [
-        n.pinned ? tagEl('고정', 'pin') : null,
+        n.pinned && st === 'live' ? tagEl('고정', 'pin') : null,
+        st === 'scheduled' ? tagEl('예약', 'scheduled') : null,
+        st === 'archived' ? tagEl('보관', 'archived') : null,
         tagEl(n.category, null, n.category),
         el('span', { class: 'draft__title', text: n.title }),
+        when ? el('span', { class: 'draft__when', text: when }) : null,
         el('span', { class: 'notice__date', text: n.date }),
+        el('button', {
+          type: 'button', class: 'draft__btn',
+          text: n.archived ? '다시 게시' : '보관',
+          title: n.archived ? '보관을 풀고 다시 게시합니다' : '지금 바로 지난 공지로 보냅니다',
+          onclick: async () => {
+            const next = Object.assign({}, n, { archived: !n.archived });
+            if (!next.archived) next.expireAt = '';   // 되살릴 때 만료 시각도 해제
+            const i = notices.findIndex((x) => x.id === n.id);
+            if (i > -1) notices[i] = next;
+            try { await STORE.saveNotice(next); }
+            catch (e) { console.error(e); toast('저장하지 못했습니다'); return; }
+            renderNoticeList();
+            toast(next.archived ? '보관했습니다' : '다시 게시했습니다');
+          }
+        }),
         el('button', {
           type: 'button', class: 'draft__btn', text: '수정',
           onclick: () => {
@@ -378,6 +413,16 @@
     }
 
     forms.forEach((form) => {
+      const statusLine = el('p', { class: 'field__help', style: 'margin:10px 0 0' });
+      const drawStatus = () => {
+        const st = formStatus(form);
+        const label = { open: '지금 접수 중입니다.',
+                        upcoming: '아직 접수 전입니다.',
+                        closed: '지금은 접수를 받지 않습니다.' }[st];
+        statusLine.textContent = '현재 상태 — ' + label;
+      };
+      drawStatus();
+
       const fieldsBox = el('div');
       const drawFields = () => {
         fieldsBox.innerHTML = '';
@@ -421,12 +466,34 @@
             oninput: (e) => { form.title = e.target.value; } }),
           el('label', { class: 'check', style: 'font-size:12.5px;white-space:nowrap' }, [
             el('input', { type: 'checkbox', checked: form.open !== false ? '' : null,
-              onchange: (e) => { form.open = e.target.checked; } }),
-            '접수 중'
+              onchange: (e) => { form.open = e.target.checked; drawStatus(); } }),
+            '접수 허용'
           ])
         ]),
         el('input', { value: form.description || '', placeholder: '폼 설명',
           style: 'margin-bottom:10px', oninput: (e) => { form.description = e.target.value; } }),
+
+        el('div', { class: 'schedule' }, [
+          el('p', { class: 'schedule__title', text: '접수 기간' }),
+          el('p', { class: 'schedule__hint' }, [
+            '비워두면 ‘접수 중’ 체크만으로 여닫습니다. 시각을 정하면 그때 자동으로 열리고 닫힙니다. ',
+            el('strong', { text: '마감 후에는 서버에서도 제출이 거부됩니다.' })
+          ]),
+          el('div', { class: 'field-row' }, [
+            el('div', { class: 'field' }, [
+              el('label', { text: '접수 시작' }),
+              el('input', { type: 'datetime-local', value: toLocalInput(form.openAt),
+                onchange: (e) => { form.openAt = fromLocalInput(e.target.value); drawStatus(); } })
+            ]),
+            el('div', { class: 'field' }, [
+              el('label', { text: '접수 마감' }),
+              el('input', { type: 'datetime-local', value: toLocalInput(form.closeAt),
+                onchange: (e) => { form.closeAt = fromLocalInput(e.target.value); drawStatus(); } })
+            ])
+          ]),
+          statusLine
+        ]),
+
         el('p', { class: 'field__help', text: '공개 주소 — apply.html?id=' + form.id }),
         fieldsBox
       ]));

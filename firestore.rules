@@ -19,6 +19,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // 폼이 지금 접수 가능한 상태인지
+    //  open == true 이고, openAt 이 지났고, closeAt 이 아직 안 지났을 것
+    //  (openAt / closeAt 은 없어도 되며, 없으면 그 방향으로는 제한이 없다)
+    function formIsOpen(f) {
+      return f.open == true
+             && (!('openAt'  in f) || f.openAt  == null || f.openAt  <= request.time)
+             && (!('closeAt' in f) || f.closeAt == null || f.closeAt >  request.time);
+    }
+
     // 로그인한 관리자인지 확인
     function isAdmin() {
       return request.auth != null
@@ -37,13 +46,26 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ---- 공지 : 누구나 읽기, 관리자만 수정 ----
+    // ---- 공지 ----
+    //  · 예약 공지(publishAt 이 아직 안 지난 것)는 서버에서 막는다.
+    //    화면에서 숨기는 것만으로는 Firestore 를 직접 조회하면 보이므로,
+    //    발표 전 내용이 새지 않도록 규칙에서 차단한다.
+    //  · 보관(지난) 공지는 계속 읽을 수 있다 — 아카이브 페이지에서 쓴다.
+    //
+    //  ※ 이 조건 때문에 공개 페이지는 반드시
+    //       where('publishAt', '<=', now)
+    //    를 붙여 조회해야 한다. (js/store.js 가 그렇게 한다)
+    //    필터 없이 조회하면 Firestore 가 쿼리 전체를 거부한다.
     match /notices/{noticeId} {
-      allow read: if true;
+      allow read: if isAdmin()
+                  || (resource.data.publishAt is timestamp
+                      && resource.data.publishAt <= request.time);
       allow write: if isAdmin();
     }
 
     // ---- 폼 정의 : 누구나 읽기, 관리자만 수정 ----
+    //  접수 기간 자체는 숨길 이유가 없으므로 공개한다.
+    //  (실제 접수 차단은 아래 submissions 규칙이 담당)
     match /forms/{formId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -66,9 +88,10 @@ service cloud.firestore {
         && request.resource.data.data.size() <= 30
         // 시각은 서버 시각만 허용 — 임의 조작 방지
         && request.resource.data.createdAt == request.time
-        // 해당 폼이 실제로 존재하고 열려 있을 때만 접수
+        // 해당 폼이 실제로 존재하고, 열려 있으며, 접수 기간 안일 때만 받는다.
+        // 화면에서 막는 것과 별개로 서버에서도 반드시 막아야 한다.
         && exists(/databases/$(database)/documents/forms/$(request.resource.data.formId))
-        && get(/databases/$(database)/documents/forms/$(request.resource.data.formId)).data.open == true;
+        && formIsOpen(get(/databases/$(database)/documents/forms/$(request.resource.data.formId)).data);
     }
 
     // 그 밖의 모든 경로는 차단

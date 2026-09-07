@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  const { $, $$, el, icon, toast, escapeHtml } = window.CORE;
+  const { $, $$, el, icon, toast, formStatus, formatDateTime } = window.CORE;
   const S = window.SITE;
 
   let form = null;
@@ -127,6 +127,17 @@
     /* 스팸 방지용 숨김 필드 — 사람이면 비어 있다 */
     if ($('#f-website', root).value) return;
 
+    /* 페이지를 오래 열어둔 사이 마감됐을 수 있으니 보내기 직전에 다시 확인 */
+    if (formStatus(form) !== 'open') {
+      const box = $('[data-form-error]');
+      box.hidden = false;
+      box.innerHTML = '';
+      box.append(el('strong', { text: '접수가 마감되었습니다. ' }),
+                 '페이지를 새로고침하면 현재 상태를 볼 수 있습니다.');
+      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     const btn = $('#btn-submit', root);
     sending = true;
     btn.disabled = true;
@@ -173,24 +184,39 @@
     $('[data-form-title]').textContent = '신청 · 건의';
     $('[data-form-desc]').textContent = '작성할 폼을 선택해 주세요.';
 
-    const open = forms.filter((f) => f.open !== false);
-    if (!open.length) {
+    /* 마감된 폼은 목록에서 감추고, 접수 전인 폼은 시작 시각과 함께 보여준다 */
+    const shown = forms.filter((f) => formStatus(f) !== 'closed');
+    if (!shown.length) {
       root.appendChild(el('div', { class: 'empty' }, [
         el('strong', { text: '지금은 열려 있는 폼이 없습니다.' }),
         '새 신청이 열리면 공지사항으로 알려드립니다.'
       ]));
       return;
     }
-    root.appendChild(el('ul', { class: 'links' }, open.map((f) =>
-      el('li', null, [
-        el('a', { class: 'linkbtn', href: 'apply.html?id=' + encodeURIComponent(f.id) }, [
+    root.appendChild(el('ul', { class: 'links' }, shown.map((f) => {
+      const st = formStatus(f);
+      const upcoming = st === 'upcoming';
+      return el('li', null, [
+        el('a', {
+          class: 'linkbtn' + (upcoming ? ' is-disabled' : ''),
+          href: upcoming ? '#' : 'apply.html?id=' + encodeURIComponent(f.id),
+          'aria-disabled': upcoming ? 'true' : null,
+          tabindex: upcoming ? '-1' : null
+        }, [
           el('div', { class: 'linkbtn__body' }, [
-            el('div', { class: 'linkbtn__label', text: f.title }),
-            f.description ? el('div', { class: 'linkbtn__desc', text: f.description }) : null
+            el('div', { class: 'linkbtn__label' }, [
+              f.title,
+              upcoming ? el('span', { class: 'badge badge--soon', text: '접수 전' }) : null,
+              !upcoming && f.closeAt ? el('span', { class: 'badge', text: '접수 중' }) : null
+            ]),
+            el('div', { class: 'linkbtn__desc', text: upcoming && f.openAt
+              ? formatDateTime(f.openAt) + ' 접수 시작'
+              : (f.description || '') })
           ]),
           el('span', { class: 'linkbtn__arrow', html: icon('arrow') })
         ])
-      ]))));
+      ]);
+    })));
   }
 
   /* ---------- 폼 그리기 ---------- */
@@ -201,12 +227,35 @@
 
     root.innerHTML = '';
 
-    if (form.open === false) {
+    const status = formStatus(form);
+
+    if (status === 'upcoming') {
       root.appendChild(el('div', { class: 'empty' }, [
-        el('strong', { text: '지금은 접수를 받지 않습니다.' }),
-        '접수가 시작되면 공지사항과 인스타그램으로 알려드립니다.'
+        el('strong', { text: '아직 접수 전입니다.' }),
+        (form.openAt ? formatDateTime(form.openAt, { year: true }) + ' 부터 접수를 시작합니다.' : '')
       ]));
       return;
+    }
+
+    if (status === 'closed') {
+      root.appendChild(el('div', { class: 'empty' }, [
+        el('strong', { text: '접수가 마감되었습니다.' }),
+        (form.closeAt
+          ? formatDateTime(form.closeAt, { year: true }) + ' 에 마감되었습니다. 결과는 공지사항으로 안내드립니다.'
+          : '접수가 다시 열리면 공지사항과 인스타그램으로 알려드립니다.')
+      ]));
+      return;
+    }
+
+    /* 마감이 정해져 있으면 상단에 안내 */
+    if (form.closeAt) {
+      root.appendChild(el('div', { class: 'window' }, [
+        el('span', { class: 'window__icon', html: icon('clock'), 'aria-hidden': 'true' }),
+        el('span', null, [
+          el('strong', { text: formatDateTime(form.closeAt, { year: true }) }),
+          ' 까지 접수합니다.'
+        ])
+      ]));
     }
 
     if (!STORE.isFirebase) {

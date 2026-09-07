@@ -40,6 +40,36 @@
 
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
+  /* Firestore Timestamp ↔ ISO 문자열 (앱 내부는 전부 ISO 로 다룬다) */
+  function tsToIso(v) {
+    if (!v) return '';
+    if (typeof v === 'string') return v;
+    if (v.toDate) { try { return v.toDate().toISOString(); } catch (e) { return ''; } }
+    return '';
+  }
+  function isoToTs(iso) {
+    if (!iso) return null;
+    const d = new Date(iso);
+    return isNaN(d) ? null : firebase.firestore.Timestamp.fromDate(d);
+  }
+  const SCHEDULE_KEYS = ['publishAt', 'expireAt', 'openAt', 'closeAt'];
+
+  function decodeDoc(data) {
+    const out = Object.assign({}, data);
+    SCHEDULE_KEYS.forEach((k) => { if (k in out) out[k] = tsToIso(out[k]); });
+    if ('createdAt' in out) out.createdAt = tsToIso(out.createdAt);
+    return out;
+  }
+  function encodeDoc(obj) {
+    const out = Object.assign({}, obj);
+    SCHEDULE_KEYS.forEach((k) => {
+      if (!(k in out)) return;
+      const t = isoToTs(out[k]);
+      if (t) out[k] = t; else delete out[k];
+    });
+    return out;
+  }
+
   /* ---------- Firebase 준비 ---------- */
   function configured() {
     const c = window.FIREBASE_CONFIG;
@@ -140,7 +170,7 @@
   async function getForms() {
     if (mode === 'firebase') {
       const snap = await db.collection('forms').get();
-      const list = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+      const list = snap.docs.map((d) => Object.assign({ id: d.id }, decodeDoc(d.data())));
       if (list.length) return list.sort((a, b) => (a.order || 0) - (b.order || 0));
     } else {
       const list = lsGet(KEY.forms, null);
@@ -157,7 +187,7 @@
   async function saveForm(form) {
     if (mode === 'firebase') {
       const { id } = form;
-      const body = Object.assign({}, form);
+      const body = encodeDoc(form);
       delete body.id;
       await db.collection('forms').doc(id).set(body, { merge: false });
       return true;
@@ -218,26 +248,56 @@
   }
 
   /* ---------- 공지 ---------- */
-  async function getNotices() {
+  /* opts.all = true  → 예약분 포함 전체 (관리자 전용)
+     기본값        → 이미 공개된 것만. 보안 규칙과 짝을 이루는 조건이라
+                      이 where 절을 빼면 공개 사용자의 조회가 거부된다. */
+  async function getNotices(opts) {
+    const all = !!(opts && opts.all);
     if (mode === 'firebase') {
-      const snap = await db.collection('notices').get();
-      const list = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+      let snap;
+      if (all) {
+        snap = await db.collection('notices').get();
+      } else {
+        snap = await db.collection('notices')
+          .where('publishAt', '<=', firebase.firestore.Timestamp.now())
+          .get();
+      }
+      const list = snap.docs.map((d) => Object.assign({ id: d.id }, decodeDoc(d.data())));
       if (list.length) return list;
     } else {
       const list = lsGet(KEY.notices, null);
-      if (list && list.length) return list;
+      if (list && list.length) {
+        return all ? list : list.filter((n) => {
+          const t = Date.parse(n.publishAt || '');
+          return isNaN(t) || t <= Date.now();
+        });
+      }
     }
     return null;   // null = 호출한 쪽에서 data/notices.json 으로 넘어가라는 신호
   }
 
+  /* publishAt 은 반드시 있어야 한다.
+     공개 조회가 where('publishAt','<=',now) 로 걸리기 때문에,
+     값이 없는 문서는 아예 목록에 잡히지 않는다. */
+  function withPublishAt(n) {
+    const out = Object.assign({}, n);
+    if (!out.publishAt) {
+      const d = out.date ? new Date(out.date + 'T00:00:00') : new Date();
+      out.publishAt = (isNaN(d) ? new Date() : d).toISOString();
+    }
+    return out;
+  }
+
   async function saveNotice(notice) {
+    const n = withPublishAt(notice);
     if (mode === 'firebase') {
-      const body = Object.assign({}, notice);
+      const body = encodeDoc(n);
       delete body.id;
-      await db.collection('notices').doc(notice.id).set(body, { merge: false });
+      await db.collection('notices').doc(n.id).set(body, { merge: false });
       return true;
     }
-    const list = (await getNotices()) || [];
+    const list = (await getNotices({ all: true })) || [];
+    notice = n;
     const i = list.findIndex((n) => n.id === notice.id);
     if (i > -1) list[i] = notice; else list.unshift(notice);
     return lsSet(KEY.notices, list);
@@ -245,7 +305,7 @@
 
   async function deleteNotice(id) {
     if (mode === 'firebase') { await db.collection('notices').doc(id).delete(); return true; }
-    const list = ((await getNotices()) || []).filter((n) => n.id !== id);
+    const list = ((await getNotices({ all: true })) || []).filter((n) => n.id !== id);
     return lsSet(KEY.notices, list);
   }
 
@@ -254,15 +314,16 @@
       const snap = await db.collection('notices').get();
       const batch = db.batch();
       snap.docs.forEach((d) => batch.delete(d.ref));
-      list.forEach((n) => {
-        const body = Object.assign({}, n);
+      list.forEach((raw) => {
+        const n = withPublishAt(raw);
+        const body = encodeDoc(n);
         delete body.id;
         batch.set(db.collection('notices').doc(n.id), body);
       });
       await batch.commit();
       return true;
     }
-    return lsSet(KEY.notices, list);
+    return lsSet(KEY.notices, list.map(withPublishAt));
   }
 
   window.STORE = {

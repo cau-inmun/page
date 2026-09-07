@@ -5,7 +5,8 @@
   'use strict';
 
   const { $, $$, el, icon, loadNotices, noticeCard, renderMarkdown,
-          formatDate, safeUrl, isExternal, tagEl, toast, revealOnScroll } = window.CORE;
+          formatDate, formatDateTime, noticeStatus, safeUrl, isExternal,
+          tagEl, toast, revealOnScroll } = window.CORE;
 
   const S = window.SITE;
 
@@ -119,7 +120,7 @@
     const box = $('[data-recent]');
     if (box) {
       try {
-        const list = await loadNotices();
+        const list = (await loadNotices()).filter((n) => noticeStatus(n) === 'live');
         box.innerHTML = '';
         if (!list.length) {
           box.appendChild(emptyBox('아직 등록된 공지가 없습니다.', '새 소식이 올라오면 이곳에 표시됩니다.'));
@@ -146,7 +147,9 @@
     if (!box) return;
 
     let all = [];
-    let cat = new URLSearchParams(location.search).get('cat') || '전체';
+    const params = new URLSearchParams(location.search);
+    let cat = params.get('cat') || '전체';
+    let view = params.get('view') === 'archive' ? 'archive' : 'live';
     let query = '';
 
     try {
@@ -157,19 +160,48 @@
       return;
     }
 
-    /* 실제 사용된 카테고리만 노출 */
-    const used = ['전체'].concat(
-      S.categories.filter((c) => c !== '전체' && all.some((n) => n.category === c))
-    );
-    if (!used.includes(cat)) cat = '전체';
+    /* 예약 중인 공지는 공개 목록에서 아예 뺀다 */
+    all = all.filter((n) => noticeStatus(n) !== 'scheduled');
 
-    if (filters) {
+    const inView = () => all.filter((n) =>
+      view === 'archive' ? noticeStatus(n) === 'archived' : noticeStatus(n) === 'live');
+
+    /* 현재 / 지난 공지 전환 */
+    const seg = $('[data-view]');
+    if (seg) {
+      [['live', '현재 공지'], ['archive', '지난 공지']].forEach(([v, label]) => {
+        seg.appendChild(el('button', {
+          type: 'button', class: 'seg', 'aria-pressed': String(v === view), 'data-v': v,
+          text: label,
+          onclick: () => {
+            view = v;
+            $$('.seg', seg).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+            const u = new URL(location.href);
+            if (v === 'live') u.searchParams.delete('view'); else u.searchParams.set('view', v);
+            history.replaceState(null, '', u);
+            buildFilters();
+            render();
+          }
+        }));
+      });
+    }
+
+    /* 실제 사용된 카테고리만 노출 */
+    const filters2 = filters;
+    function buildFilters() {
+      if (!filters2) return;
+      const pool = inView();
+      const used = ['전체'].concat(
+        S.categories.filter((c) => c !== '전체' && pool.some((n) => n.category === c))
+      );
+      if (!used.includes(cat)) cat = '전체';
+      filters2.innerHTML = '';
       used.forEach((c) => {
-        filters.appendChild(el('button', {
+        filters2.appendChild(el('button', {
           type: 'button', class: 'filter', 'aria-pressed': String(c === cat), 'data-cat': c, text: c,
           onclick: () => {
             cat = c;
-            $$('.filter', filters).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cat === c)));
+            $$('.filter', filters2).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cat === c)));
             const u = new URL(location.href);
             if (c === '전체') u.searchParams.delete('cat'); else u.searchParams.set('cat', c);
             history.replaceState(null, '', u);
@@ -178,13 +210,14 @@
         }));
       });
     }
+    buildFilters();
 
     if (input) {
       input.addEventListener('input', () => { query = input.value.trim().toLowerCase(); render(); });
     }
 
     function render() {
-      const list = all.filter((n) => {
+      const list = inView().filter((n) => {
         if (cat !== '전체' && n.category !== cat) return false;
         if (!query) return true;
         return (n.title + ' ' + n.summary + ' ' + n.body).toLowerCase().includes(query);
@@ -195,8 +228,11 @@
       box.innerHTML = '';
       if (!list.length) {
         box.appendChild(el('li', null, [
-          emptyBox(query ? '검색 결과가 없습니다.' : '해당하는 공지가 없습니다.',
-                   query ? `‘${query}’ 와 일치하는 공지를 찾지 못했습니다.` : '다른 분류를 선택해 보세요.')
+          query
+            ? emptyBox('검색 결과가 없습니다.', `‘${query}’ 와 일치하는 공지를 찾지 못했습니다.`)
+            : view === 'archive'
+              ? emptyBox('보관된 공지가 없습니다.', '게시 기간이 끝난 공지가 이곳에 모입니다.')
+              : emptyBox('해당하는 공지가 없습니다.', '다른 분류를 선택해 보세요.')
         ]));
         return;
       }
@@ -223,6 +259,9 @@
       return;
     }
 
+    /* 예약 중인 공지는 주소를 알아도 열리지 않게 한다 */
+    list = list.filter((x) => noticeStatus(x) !== 'scheduled');
+
     const idx = list.findIndex((n) => n.id === id);
     const n = list[idx];
 
@@ -239,9 +278,12 @@
     const desc = $('meta[name="description"]');
     if (desc) desc.setAttribute('content', n.summary || n.title);
 
+    const status = noticeStatus(n);
+
     root.innerHTML = '';
     root.appendChild(el('div', { class: 'article__meta' }, [
-      n.pinned ? tagEl('고정', 'pin') : null,
+      n.pinned && status === 'live' ? tagEl('고정', 'pin') : null,
+      status === 'archived' ? tagEl('지난 공지', 'archived') : null,
       tagEl(n.category, null, n.category),
       n.sample ? tagEl('예시 데이터', 'sample') : null
     ]));
@@ -250,6 +292,15 @@
       el('time', { datetime: n.date, text: formatDate(n.date, { long: true }) }),
       el('span', { text: S.councilTerm + ' ‘' + S.councilName + '’' })
     ]));
+
+    if (status === 'archived') {
+      root.appendChild(el('div', { class: 'banner', style: 'margin-top:18px' }, [
+        el('strong', { text: '게시 기간이 끝난 공지입니다. ' }),
+        n.expireAt
+          ? formatDateTime(n.expireAt, { year: true }) + ' 에 보관되었습니다. 내용이 현재와 다를 수 있습니다.'
+          : '내용이 현재와 다를 수 있습니다.'
+      ]));
+    }
 
     if (n.image) {
       root.appendChild(el('figure', { class: 'article__hero' }, [

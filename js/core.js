@@ -69,6 +69,69 @@
     return '';
   }
 
+  /* ---------- 예약 · 보관 판정 ----------
+     정적 사이트라 서버 스케줄러가 없다. 대신 '읽는 시점'에
+     공개 여부를 판정한다. 시각은 ISO 8601 문자열로 다룬다. */
+
+  /* datetime-local 입력값(현지 시각) → ISO 문자열 */
+  function fromLocalInput(v) {
+    if (!v) return '';
+    const d = new Date(v);
+    return isNaN(d) ? '' : d.toISOString();
+  }
+
+  /* ISO 문자열 → datetime-local 입력값(현지 시각) */
+  function toLocalInput(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` +
+           `T${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  /* 사람이 읽는 일시 — 예) 9월 10일(수) 오후 2:00 */
+  function formatDateTime(iso, opts) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const week = ['일', '월', '화', '수', '목', '금', '토'][d.getDay()];
+    const h = d.getHours();
+    const ampm = h < 12 ? '오전' : '오후';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    const time = `${ampm} ${h12}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const head = (opts && opts.year)
+      ? `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일(${week})`
+      : `${d.getMonth() + 1}월 ${d.getDate()}일(${week})`;
+    return `${head} ${time}`;
+  }
+
+  const ts = (iso) => { const t = Date.parse(iso || ''); return isNaN(t) ? null : t; };
+
+  /* 공지 상태 — 'scheduled' 예약 / 'live' 게시 중 / 'archived' 보관 */
+  function noticeStatus(n, now) {
+    const at = now || Date.now();
+    if (n.archived) return 'archived';
+    const pub = ts(n.publishAt);
+    if (pub !== null && pub > at) return 'scheduled';
+    const exp = ts(n.expireAt);
+    if (exp !== null && exp <= at) return 'archived';
+    return 'live';
+  }
+
+  /* 폼 상태 — 'upcoming' 접수 전 / 'open' 접수 중 / 'closed' 마감 */
+  function formStatus(f, now) {
+    const at = now || Date.now();
+    if (f.open === false) return 'closed';
+    const o = ts(f.openAt);
+    if (o !== null && o > at) return 'upcoming';
+    const c = ts(f.closeAt);
+    if (c !== null && c <= at) return 'closed';
+    return 'open';
+  }
+
+  const NOTICE_STATUS_LABEL = { scheduled: '예약', live: '게시 중', archived: '보관' };
+
   /* ---------- 아주 작은 마크다운 렌더러 ----------
      HTML 을 먼저 이스케이프한 뒤 제한된 문법만 다시 살립니다.
      지원: ## 소제목 / - 목록 / 1. 목록 / **굵게** / *기울임*
@@ -186,6 +249,9 @@
         summary: String(n.summary || plainText(n.body, 90)),
         body: String(n.body || ''),
         image: safeUrl(n.image),
+        publishAt: String(n.publishAt || ''),
+        expireAt: String(n.expireAt || ''),
+        archived: !!n.archived,
         links: (n.links || [])
           .map((l) => ({ label: String(l.label || '바로가기'), url: safeUrl(l.url) }))
           .filter((l) => l.url)
@@ -209,6 +275,7 @@
     arrow: '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>',
     search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>',
     back: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V3.8"/><path d="m8 7.5 4-3.7 4 3.7"/><path d="M5.5 12.5v6a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-6"/></svg>'
   };
   const icon = (name) => ICONS[name] || ICONS.link;
@@ -222,8 +289,11 @@
 
   /* ---------- 공지 카드 ---------- */
   function noticeCard(n) {
+    const status = noticeStatus(n);
     const meta = el('div', { class: 'notice__meta' }, [
-      n.pinned ? tagEl('고정', 'pin') : null,
+      n.pinned && status === 'live' ? tagEl('고정', 'pin') : null,
+      status === 'scheduled' ? tagEl('예약', 'scheduled') : null,
+      status === 'archived' ? tagEl('지난 공지', 'archived') : null,
       tagEl(n.category, null, n.category),
       n.sample ? tagEl('예시 데이터', 'sample') : null,
       el('span', { class: 'notice__date', text: formatDate(n.date) + (relativeDate(n.date) ? ' · ' + relativeDate(n.date) : '') })
@@ -329,7 +399,9 @@
 
   window.CORE = {
     $, $$, el, escapeHtml, safeUrl, isExternal,
-    formatDate, relativeDate, renderMarkdown, plainText,
+    formatDate, relativeDate, formatDateTime, toLocalInput, fromLocalInput,
+    noticeStatus, formStatus, NOTICE_STATUS_LABEL,
+    renderMarkdown, plainText,
     loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, boot
   };
 })();
