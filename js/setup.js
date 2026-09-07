@@ -88,14 +88,14 @@
       finish(); return;
     }
 
-    /* ---- 4. 공개 공지 조회 (규칙 + 쿼리 조합) ---- */
+    /* ---- 4. 공개 공지 조회 ---- */
     try {
-      await firebase.firestore().collection('notices')
-        .where('publishAt', '<=', firebase.firestore.Timestamp.now()).limit(1).get();
-      row('ok', '4. 공개 공지 조회', '예약 공지를 가리는 조회가 정상 동작합니다.', '');
+      await firebase.firestore().collection('notices').limit(1).get();
+      row('ok', '4. 공개 공지 조회', '학우들이 공지를 읽을 수 있습니다.', '');
     } catch (e) {
       row('fail', '4. 공개 공지 조회', String(e.code || e.message || e),
-        'firestore.rules 가 최신인지 확인하세요. notices 규칙에 publishAt 조건이 들어 있어야 합니다.');
+        '저장소의 firestore.rules 를 콘솔 → Firestore Database → 규칙 에 다시 붙여넣고 게시하세요. ' +
+        'notices 규칙이 allow read: if true 여야 합니다.');
     }
 
     /* ---- 5. 폼 정의 ---- */

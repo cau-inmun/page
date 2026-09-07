@@ -351,37 +351,31 @@
   }
 
   /* ---------- 공지 ---------- */
-  /* opts.all = true  → 예약분 포함 전체 (관리자 전용)
-     기본값        → 이미 공개된 것만. 보안 규칙과 짝을 이루는 조건이라
-                      이 where 절을 빼면 공개 사용자의 조회가 거부된다. */
+  /* 공지는 전부 가져오고, 예약·보관 판정은 화면에서 한다.
+     (예전에는 where('publishAt','<=',now) 로 서버에서 걸렀는데,
+      Firestore 가 그런 목록 조회를 거부해서 공개 페이지가 통째로
+      막혔다. 자세한 이유는 firestore.rules 의 주석 참고) */
   async function getNotices(opts) {
     const all = !!(opts && opts.all);
+    let list = null;
     if (mode === 'firebase') {
-      let snap;
-      if (all) {
-        snap = await db.collection('notices').get();
-      } else {
-        snap = await db.collection('notices')
-          .where('publishAt', '<=', firebase.firestore.Timestamp.now())
-          .get();
-      }
-      const list = snap.docs.map((d) => Object.assign({ id: d.id }, decodeDoc(d.data())));
-      if (list.length) return list;
+      const snap = await db.collection('notices').get();
+      const docs = snap.docs.map((d) => Object.assign({ id: d.id }, decodeDoc(d.data())));
+      if (docs.length) list = docs;
     } else {
-      const list = lsGet(KEY.notices, null);
-      if (list && list.length) {
-        return all ? list : list.filter((n) => {
-          const t = Date.parse(n.publishAt || '');
-          return isNaN(t) || t <= Date.now();
-        });
-      }
+      const stored = lsGet(KEY.notices, null);
+      if (stored && stored.length) list = stored;
     }
-    return null;   // null = 호출한 쪽에서 data/notices.json 으로 넘어가라는 신호
+    if (!list) return null;   // null = 호출한 쪽에서 data/notices.json 으로 넘어가라는 신호
+    if (all) return list;
+    return list.filter((n) => {
+      const t = Date.parse(n.publishAt || '');
+      return isNaN(t) || t <= Date.now();
+    });
   }
 
-  /* publishAt 은 반드시 있어야 한다.
-     공개 조회가 where('publishAt','<=',now) 로 걸리기 때문에,
-     값이 없는 문서는 아예 목록에 잡히지 않는다. */
+  /* publishAt 이 없으면 '지금부터 공개' 로 채운다.
+     날짜순 정렬과 예약 판정이 이 값을 기준으로 하기 때문이다. */
   function withPublishAt(n) {
     const out = Object.assign({}, n);
     if (!out.publishAt) {
