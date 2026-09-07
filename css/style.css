@@ -135,7 +135,10 @@ section + section { margin-top: 44px; }
   font-family: var(--font-display); font-size: 13px; color: var(--brand-deep);
   flex: none; overflow: hidden;
 }
-.topbar__mark img { width: 100%; height: 100%; object-fit: contain; }
+.topbar__mark img {
+  width: 100%; height: 100%; object-fit: contain;
+  transform: scale(1.72); /* 테두리 글씨를 잘라내고 가운데 글씨만 보이게 */
+}
 
 .nav { margin-left: auto; display: flex; gap: 2px; }
 .nav a {
@@ -149,21 +152,22 @@ section + section { margin-top: 44px; }
 /* ---------- Hero ---------- */
 .hero { padding: 40px 0 8px; text-align: center; }
 
+/* 로고 자체가 원형 엠블럼(테두리 글씨 포함)이므로 프레임을 덧씌우지 않는다.
+   테두리 글씨가 읽히도록 크게 두고, 여백만 확보한다. */
 .hero__logo {
-  width: 132px; height: 132px; margin: 0 auto 20px;
-  border-radius: 50%;
+  width: min(196px, 52vw); aspect-ratio: 1;
+  margin: 0 auto 18px;
+  display: grid; place-items: center;
+}
+.hero__logo img { width: 100%; height: 100%; object-fit: contain; }
+
+/* 로고 파일이 없을 때만 쓰이는 대체 마크 — 이때는 원형 프레임을 준다 */
+.hero__logo.is-fallback {
+  width: 132px; border-radius: 50%;
   background: var(--paper-raise);
   border: 1px solid var(--sand-deep);
   box-shadow: var(--shadow-lg);
-  display: grid; place-items: center;
-  overflow: hidden; position: relative;
 }
-.hero__logo::after {
-  content: ''; position: absolute; inset: 6px;
-  border-radius: 50%; border: 1px solid var(--line-soft);
-  pointer-events: none;
-}
-.hero__logo img { width: 88%; height: 88%; object-fit: contain; }
 .logo-fallback {
   font-family: var(--font-display);
   font-size: 52px; font-weight: 700; color: var(--brand);

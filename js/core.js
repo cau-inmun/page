@@ -270,6 +270,7 @@
       if (!img) return;
       const fallback = () => {
         img.remove();
+        box.classList.add('is-fallback');
         if (!$('.logo-fallback', box)) {
           box.appendChild(el('span', { class: 'logo-fallback', 'aria-hidden': 'true', text: (window.SITE && SITE.councilName) || '역' }));
         }
