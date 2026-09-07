@@ -77,14 +77,40 @@
               !/^(여기에|YOUR_|<)/.test(String(c.apiKey)));
   }
 
-  function loadScript(src) {
+  /* SDK 를 못 받는 상황에서 페이지가 멈추지 않도록 하는 제한 시간.
+     요청이 '실패'하면 바로 알 수 있지만, 교내 방화벽이나 캡티브 포털처럼
+     응답도 실패도 없이 매달리는 경우가 있다. 그때 이 값이 없으면
+     공지 자리에 로딩 표시가 영원히 남는다. */
+  const SDK_TIMEOUT_MS = 8000;
+
+  function loadScript(src, timeoutMs) {
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
+      let done = false;
+      const finish = (err) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        err ? reject(err) : resolve();
+      };
+      const timer = setTimeout(
+        () => finish(new Error('시간 초과: ' + src)),
+        timeoutMs || SDK_TIMEOUT_MS);
       s.src = src;
-      s.onload = resolve;
-      s.onerror = () => reject(new Error('스크립트를 불러오지 못했습니다: ' + src));
+      s.onload = () => finish(null);
+      s.onerror = () => finish(new Error('스크립트를 불러오지 못했습니다: ' + src));
       document.head.appendChild(s);
     });
+  }
+
+  /* 전체 초기화에도 상한을 둔다. 개별 스크립트가 통과해도
+     initializeApp 이나 첫 연결에서 매달릴 수 있다. */
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('시간 초과: ' + label)), ms))
+    ]);
   }
 
   async function init() {
@@ -94,21 +120,27 @@
       const v = window.FIREBASE_SDK_VERSION || '10.14.1';
       const base = 'https://www.gstatic.com/firebasejs/' + v + '/';
       try {
-        await loadScript(base + 'firebase-app-compat.js');
-        await Promise.all([
-          loadScript(base + 'firebase-auth-compat.js'),
-          loadScript(base + 'firebase-firestore-compat.js')
-        ]);
-        firebase.initializeApp(window.FIREBASE_CONFIG);
-        db = firebase.firestore();
-        auth = firebase.auth();
-        auth.onAuthStateChanged((u) => {
-          currentUser = u;
-          userWatchers.forEach((fn) => { try { fn(u); } catch (e) {} });
-        });
+        await withTimeout((async () => {
+          await loadScript(base + 'firebase-app-compat.js');
+          await Promise.all([
+            loadScript(base + 'firebase-auth-compat.js'),
+            loadScript(base + 'firebase-firestore-compat.js')
+          ]);
+          firebase.initializeApp(window.FIREBASE_CONFIG);
+          db = firebase.firestore();
+          auth = firebase.auth();
+          auth.onAuthStateChanged((u) => {
+            currentUser = u;
+            userWatchers.forEach((fn) => { try { fn(u); } catch (e) {} });
+          });
+        })(), SDK_TIMEOUT_MS + 2000, 'Firebase 초기화');
         mode = 'firebase';
       } catch (err) {
-        console.warn('[store] Firebase 초기화 실패 — 로컬 모드로 동작합니다.', err);
+        console.warn(
+          '[store] Firebase 에 연결하지 못해 저장소 파일로 대체합니다.\n' +
+          '공지는 data/notices.json, 링크는 js/config.js 의 값이 표시되며 폼 제출은 되지 않습니다.\n' +
+          '원인을 확인하려면 setup.html 을 여세요.', err);
+        db = null; auth = null;
         mode = 'local';
       }
       return mode;

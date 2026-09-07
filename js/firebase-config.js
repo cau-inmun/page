@@ -1,39 +1,31 @@
 /* ============================================================
    Firebase 설정
    ------------------------------------------------------------
-   ▸ 지금 상태: apiKey 와 appId 가 비어 있어 '미리보기 모드'로 동작합니다.
-     두 값만 채우면 폼 접수 · 관리자 로그인이 켜집니다.
+   중앙대학교 인문대학 학생회 Firebase 프로젝트(cau-inmun) 설정입니다.
+   Firebase 콘솔 → ⚙️ 프로젝트 설정 → 내 앱 → 웹 앱의 값 그대로입니다.
 
-   ▸ 두 값 얻는 법 (1분)
-       Firebase 콘솔 → 프로젝트 개요 옆 ⚙️ → 프로젝트 설정
-       → 아래로 스크롤 → '내 앱' → 웹 앱의 firebaseConfig 에서 복사
-       (웹 앱이 없으면 </> 아이콘을 눌러 먼저 앱을 하나 등록하세요)
-
-   ▸ projectId · authDomain 은 프로젝트 이름에서 정해지므로 미리 채워뒀습니다.
-     콘솔 값과 다르면 콘솔 쪽이 맞으니 그대로 덮어쓰세요.
-
-   ※ 이 값들은 비밀이 아닙니다. 웹 앱에 공개되는 게 정상이며,
+   ※ 이 값들은 비밀이 아닙니다.
+     Firebase 웹 앱은 설계상 이 설정을 브라우저에 그대로 내려보냅니다.
+     누구나 개발자도구로 볼 수 있는 값이라, 공개 저장소에 두는 것이 정상입니다.
      실제 보안은 firestore.rules 의 보안 규칙이 담당합니다.
-     반드시 README 대로 규칙을 배포하세요.
+     → 규칙을 배포하지 않으면 제출 내용이 그대로 노출됩니다. 반드시 배포하세요.
+
+   연결이 안 될 때는 setup.html 을 열면 어디서 막혔는지 알려줍니다.
    ============================================================ */
 
 window.FIREBASE_CONFIG = {
-  /* ↓↓↓ 콘솔에서 복사해 채워야 하는 값 ↓↓↓ */
-  apiKey: '',                                  // 예) AIzaSy...  ← 필수
-  appId: '',                                   // 예) 1:123456789:web:abc...
-
-  /* ↓↓↓ 프로젝트 이름에서 정해지는 값 (이미 채워둠) ↓↓↓ */
-  projectId: 'cau-inmun',
+  apiKey: 'AIzaSyBEDpLyJ5R3VBrjb8yk2GdMrDu-PxyTwLg',
   authDomain: 'cau-inmun.firebaseapp.com',
+  projectId: 'cau-inmun',
+  storageBucket: 'cau-inmun.firebasestorage.app',
+  messagingSenderId: '957344560058',
+  appId: '1:957344560058:web:f16276d2179f115ea6a383',
 
-  /* ↓↓↓ 이 사이트에서는 쓰지 않지만 콘솔 값과 맞춰두면 좋은 값 ↓↓↓ */
-  storageBucket: '',                           // 파일 업로드를 쓰지 않으므로 비워둬도 됨
-  messagingSenderId: '',                       // 푸시 알림을 쓰지 않으므로 비워둬도 됨
-
-  /* Realtime Database 주소.
-     이 사이트는 Firestore 를 쓰므로 동작에는 영향이 없습니다.
-     콘솔 설정과 맞춰두기 위해서만 적어둡니다. */
-  databaseURL: 'https://cau-inmun-default-rtdb.asia-southeast1.firebasedatabase.app'
+  /* 아래 둘은 이 사이트가 쓰지 않습니다. 콘솔 설정과 맞춰두기 위해서만 적어둡니다.
+     databaseURL  — Realtime Database. 이 사이트는 Firestore 를 씁니다.
+     measurementId — Google 애널리틱스. 애널리틱스 SDK 를 불러오지 않습니다. */
+  databaseURL: 'https://cau-inmun-default-rtdb.asia-southeast1.firebasedatabase.app',
+  measurementId: 'G-DVF7ESNKYP'
 };
 
 /* Firebase JS SDK 버전. 새 버전으로 올리려면 이 값만 바꾸세요. */
