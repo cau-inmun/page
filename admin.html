@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>공지 작성 도구 · 인문대학 학생회</title>
+<title>관리자 · 인문대학 학생회</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#F8E9D4">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -20,140 +20,183 @@
     <div class="wrap admin topbar__inner">
       <a class="topbar__brand" href="./">
         <span class="topbar__mark" data-logo><img src="assets/logo.png" alt=""></span>
-        <span class="topbar__name">공지 작성 도구</span>
+        <span class="topbar__name">관리자</span>
       </a>
       <nav class="nav" aria-label="주요 메뉴">
         <a href="./">홈</a>
         <a href="notices.html">공지</a>
+        <a href="apply.html">신청</a>
       </nav>
     </div>
   </header>
 
   <main id="main">
-    <div class="wrap admin" style="padding-top:28px">
 
-      <div class="banner admin__note">
-        이 도구는 <strong>서버에 저장하지 않습니다.</strong> 여기서 공지를 정리한 뒤
-        <strong>JSON 내려받기</strong> → 저장소의 <code>data/notices.json</code> 교체 → 커밋 순서로 반영됩니다.
-        작성 중인 내용은 이 브라우저에만 임시 저장됩니다.
+    <!-- ============ 로그인 ============ -->
+    <section class="wrap login" id="login" hidden>
+      <div class="login__card">
+        <h1 class="login__title">관리자 로그인</h1>
+        <p class="login__sub">학생회 계정으로 로그인하면 공지 · 폼 응답 · 링크를 관리할 수 있습니다.</p>
+        <form id="login-form">
+          <div class="field">
+            <label for="login-email">이메일</label>
+            <input id="login-email" type="email" autocomplete="username" required>
+          </div>
+          <div class="field">
+            <label for="login-pw">비밀번호</label>
+            <input id="login-pw" type="password" autocomplete="current-password" required>
+          </div>
+          <p class="field__error" id="login-error" hidden role="alert"></p>
+          <button type="submit" class="btn btn--primary" id="login-btn" style="width:100%;justify-content:center">로그인</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ 콘솔 ============ -->
+    <section class="wrap admin" id="console" hidden style="padding-top:24px">
+
+      <div class="adminbar">
+        <span id="who"></span>
+        <span class="spacer"></span>
+        <button type="button" class="rowbtn" id="btn-signout" hidden>로그아웃</button>
       </div>
 
-      <div class="banner admin__note" id="restore-note" hidden>
-        이전에 작성하던 내용을 불러왔습니다. 처음부터 다시 하려면 아래 <strong>사이트 공지 다시 불러오기</strong>를 누르세요.
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab" role="tab" data-tab="notice" aria-selected="true">공지</button>
+        <button type="button" class="tab" role="tab" data-tab="subs" aria-selected="false">폼 응답</button>
+        <button type="button" class="tab" role="tab" data-tab="forms" aria-selected="false">폼 설정</button>
+        <button type="button" class="tab" role="tab" data-tab="links" aria-selected="false">링크</button>
       </div>
 
-      <!-- ========== 작성 폼 ========== -->
-      <section class="admin__panel" id="panel-form" aria-labelledby="form-mode">
-        <h2 id="form-mode">새 공지 작성</h2>
+      <!-- ---- 공지 ---- -->
+      <div data-panel="notice">
+        <div class="admin__panel" id="panel-notice-form">
+          <h2 id="n-mode">새 공지 작성</h2>
 
-        <div class="field">
-          <label for="f-title">제목</label>
-          <input id="f-title" type="text" placeholder="예) 2학기 학생회비 납부 안내" autocomplete="off">
-        </div>
-
-        <div class="field-row">
           <div class="field">
-            <label for="f-category">분류</label>
-            <select id="f-category"></select>
+            <label for="n-title">제목</label>
+            <input id="n-title" type="text" placeholder="예) 2학기 학생회비 납부 안내" autocomplete="off">
           </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="n-category">분류</label>
+              <select id="n-category"></select>
+            </div>
+            <div class="field">
+              <label for="n-date">날짜</label>
+              <input id="n-date" type="date">
+            </div>
+          </div>
+
           <div class="field">
-            <label for="f-date">날짜</label>
-            <input id="f-date" type="date">
+            <label class="check" for="n-pinned"><input id="n-pinned" type="checkbox"> 목록 맨 위에 고정하기</label>
           </div>
-        </div>
 
-        <div class="field">
-          <label class="check" for="f-pinned">
-            <input id="f-pinned" type="checkbox">
-            목록 맨 위에 고정하기
-          </label>
-        </div>
-
-        <div class="field">
-          <label for="f-summary">한 줄 요약 <span class="hint">— 비워두면 본문 앞부분이 자동으로 들어갑니다</span></label>
-          <input id="f-summary" type="text" placeholder="목록에서 제목 아래에 보이는 문장" autocomplete="off">
-        </div>
-
-        <div class="field">
-          <label for="f-body">내용
-            <span class="hint">— ## 소제목 / - 목록 / **굵게** / [글자](주소) / &gt; 인용 사용 가능</span>
-          </label>
-          <textarea id="f-body" placeholder="공지 내용을 입력하세요.
-
-## 신청 방법
-- 기간: 9월 8일(월) ~ 9월 12일(금)
-- 대상: 인문대학 재학생
-
-자세한 내용은 [인스타그램](https://www.instagram.com/cau_inmun/)을 확인해 주세요."></textarea>
-        </div>
-
-        <div class="field-row">
           <div class="field">
-            <label for="f-link-label">관련 링크 이름</label>
-            <input id="f-link-label" type="text" placeholder="예) 신청 폼 바로가기" autocomplete="off">
+            <label for="n-summary">한 줄 요약 <span class="hint">— 비워두면 본문 앞부분이 들어갑니다</span></label>
+            <input id="n-summary" type="text" placeholder="목록에서 제목 아래 보이는 문장" autocomplete="off">
           </div>
+
           <div class="field">
-            <label for="f-link-url">관련 링크 주소</label>
-            <input id="f-link-url" type="url" placeholder="https://forms.gle/..." autocomplete="off">
+            <label for="n-body">내용 <span class="hint">— ## 소제목 / - 목록 / **굵게** / [글자](주소) / &gt; 인용</span></label>
+            <textarea id="n-body" placeholder="공지 내용을 입력하세요."></textarea>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="n-link-label">관련 링크 이름</label>
+              <input id="n-link-label" type="text" placeholder="예) 신청 폼 바로가기" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="n-link-url">관련 링크 주소</label>
+              <input id="n-link-url" type="url" placeholder="https://…" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="n-image">이미지 주소 <span class="hint">— 예) assets/poster.jpg (선택)</span></label>
+            <input id="n-image" type="text" autocomplete="off">
+          </div>
+
+          <div class="admin__actions">
+            <button type="button" class="btn btn--primary" id="n-save">공지 올리기</button>
+            <button type="button" class="btn" id="n-cancel" hidden>수정 취소</button>
           </div>
         </div>
 
-        <div class="field">
-          <label for="f-image">이미지 주소 <span class="hint">— 예) assets/poster-0901.jpg (선택)</span></label>
-          <input id="f-image" type="text" placeholder="비워두면 이미지 없이 표시됩니다" autocomplete="off">
+        <div class="admin__panel">
+          <h2>미리보기</h2>
+          <div id="n-preview"></div>
         </div>
 
-        <div class="admin__actions">
-          <button type="button" class="btn btn--primary" id="btn-save">목록에 추가</button>
-          <button type="button" class="btn" id="btn-cancel" hidden>수정 취소</button>
+        <div class="admin__panel">
+          <h2>올라간 공지 <span class="count" id="n-count"></span></h2>
+          <ul class="draft-list" id="n-list"></ul>
+          <div class="admin__actions" style="margin-top:14px">
+            <button type="button" class="btn" id="n-clear-samples">예시 공지 지우기</button>
+            <button type="button" class="btn" id="n-download">notices.json 내려받기</button>
+          </div>
+          <p class="field__help" style="margin-top:10px">
+            서버가 연결돼 있으면 ‘공지 올리기’ 만으로 사이트에 바로 반영됩니다.
+            내려받기는 서버 없이 저장소 파일로 관리할 때만 쓰세요.
+          </p>
         </div>
-      </section>
+      </div>
 
-      <!-- ========== 미리보기 ========== -->
-      <section class="admin__panel" aria-labelledby="preview-head">
-        <h2 id="preview-head">미리보기</h2>
-        <div id="preview"></div>
-      </section>
-
-      <!-- ========== 공지 목록 ========== -->
-      <section class="admin__panel" aria-labelledby="list-head">
-        <h2 id="list-head">공지 목록 <span class="count" id="draft-count"></span></h2>
-        <ul class="draft-list" id="draft-list"></ul>
-        <div class="admin__actions" style="margin-top:14px">
-          <button type="button" class="btn" id="btn-clear-samples">예시 공지 지우기</button>
-          <button type="button" class="btn" id="btn-reload">사이트 공지 다시 불러오기</button>
+      <!-- ---- 폼 응답 ---- -->
+      <div data-panel="subs" hidden>
+        <div class="admin__panel">
+          <h2>폼 응답 <span class="count" id="sub-count"></span></h2>
+          <div class="filters" id="sub-forms" role="group" aria-label="폼 선택"></div>
+          <div class="admin__actions" style="margin:4px 0 14px">
+            <button type="button" class="btn" id="sub-refresh">새로고침</button>
+            <button type="button" class="btn btn--primary" id="sub-csv">CSV 내려받기</button>
+          </div>
+          <div id="sub-table"></div>
+          <p class="field__help" style="margin-top:12px">
+            CSV 는 엑셀에서 바로 열립니다. 응답에는 이름 · 학번 · 연락처가 담길 수 있으니
+            내려받은 파일은 학생회 내부에서만 다루고, 사업이 끝나면 지워주세요.
+          </p>
         </div>
-      </section>
+      </div>
 
-      <!-- ========== 내보내기 ========== -->
-      <section class="admin__panel" aria-labelledby="export-head">
-        <h2 id="export-head">저장소에 올리기</h2>
-        <ol class="prose" style="margin-top:0;font-size:13.5px">
-          <li>아래 <strong>JSON 내려받기</strong>를 눌러 <code>notices.json</code> 을 받습니다.</li>
-          <li>GitHub 저장소의 <code>data/notices.json</code> 을 열고 방금 받은 파일 내용으로 교체합니다.</li>
-          <li>커밋하면 1~2분 안에 사이트에 반영됩니다.</li>
-        </ol>
-        <label class="sr-only" for="json-out">생성된 JSON</label>
-        <textarea class="code" id="json-out" readonly spellcheck="false"></textarea>
-        <div class="admin__actions" style="margin-top:12px">
-          <button type="button" class="btn btn--primary" id="btn-download">JSON 내려받기</button>
-          <button type="button" class="btn" id="btn-copy">클립보드에 복사</button>
+      <!-- ---- 폼 설정 ---- -->
+      <div data-panel="forms" hidden>
+        <div class="admin__panel">
+          <h2>폼 설정</h2>
+          <p class="field__help" style="margin-bottom:16px">
+            항목을 추가하거나 ‘접수 중’ 을 끄면 공개 페이지에 바로 반영됩니다.
+            접수를 닫으면 학우에게는 ‘지금은 접수를 받지 않습니다’ 로 보입니다.
+          </p>
+          <div id="form-editor"></div>
         </div>
-      </section>
+      </div>
 
-    </div>
+      <!-- ---- 링크 ---- -->
+      <div data-panel="links" hidden>
+        <div class="admin__panel">
+          <h2>링크 관리</h2>
+          <p class="field__help" style="margin-bottom:16px">
+            홈 화면의 ‘링크 모음’ 을 관리합니다. 주소를 비워두면 ‘준비 중’ 으로 표시됩니다.
+          </p>
+          <div id="link-editor"></div>
+        </div>
+      </div>
+
+    </section>
   </main>
 
   <footer class="footer">
-    <div class="wrap">
-      <p class="footer__copy">중앙대학교 인문대학 학생회 · 공지 작성 도구</p>
-    </div>
+    <div class="wrap"><p class="footer__copy">중앙대학교 인문대학 학생회 · 관리자</p></div>
   </footer>
 
 </div>
 
 <script src="js/config.js"></script>
+<script src="js/firebase-config.js"></script>
 <script src="js/core.js"></script>
+<script src="js/store.js"></script>
 <script src="js/admin.js"></script>
 </body>
 </html>

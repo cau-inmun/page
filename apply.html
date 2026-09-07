@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>공지사항 · 중앙대학교 인문대학 제15대 학생회 ‘연’</title>
-<meta name="description" content="중앙대학교 인문대학 제15대 학생회 ‘연’의 전체 공지사항입니다.">
+<title>신청 · 건의 · 중앙대학교 인문대학 제15대 학생회 ‘연’</title>
+<meta name="description" content="중앙대학교 인문대학 제15대 학생회 ‘연’ 신청 및 건의 폼입니다.">
 <meta name="theme-color" content="#F8E9D4">
 
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="중앙대학교 인문대학 학생회">
-<meta property="og:title" content="공지사항 · 중앙대학교 인문대학 학생회">
-<meta property="og:description" content="인문대학 학생회의 전체 공지사항을 확인하세요.">
+<meta property="og:title" content="신청 · 건의 · 중앙대학교 인문대학 학생회">
+<meta property="og:description" content="학생회에 의견을 남기거나 사업을 신청할 수 있습니다.">
 <meta property="og:image" content="assets/logo.png">
 
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 
-<body data-page="notices">
+<body data-page="apply">
 <div class="page">
 
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -33,45 +33,36 @@
       </a>
       <nav class="nav" aria-label="주요 메뉴">
         <a href="./">홈</a>
-        <a href="notices.html" aria-current="page">공지</a>
-        <a href="apply.html">신청</a>
+        <a href="notices.html">공지</a>
+        <a href="apply.html" aria-current="page">신청</a>
         <a href="./#links">링크</a>
-        <a href="./#about">소개</a>
       </nav>
     </div>
   </header>
 
   <main id="main">
     <div class="wrap wrap--wide">
+      <a class="back" href="./">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg>
+        홈으로
+      </a>
 
-      <div class="sec-head" style="margin-top:32px">
-        <h2 style="font-size:24px">공지사항</h2>
-        <span class="count" data-count></span>
+      <div class="article">
+        <h1 class="article__title" data-form-title>신청 · 건의</h1>
+        <p class="form-desc" data-form-desc></p>
+
+        <div data-form-root>
+          <div class="skeleton" style="height:120px" aria-hidden="true"></div>
+          <p class="sr-only">폼을 불러오는 중입니다.</p>
+        </div>
       </div>
-
-      <div class="search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>
-        </svg>
-        <input type="search" data-search placeholder="제목 · 내용 검색" aria-label="공지 검색" autocomplete="off">
-      </div>
-
-      <div class="filters" data-filters role="group" aria-label="분류 필터"></div>
-
-      <ul class="notices" data-list>
-        <li class="skeleton" aria-hidden="true"></li>
-        <li class="skeleton" aria-hidden="true"></li>
-        <li class="skeleton" aria-hidden="true"></li>
-        <li class="skeleton" aria-hidden="true"></li>
-      </ul>
-
     </div>
   </main>
 
   <footer class="footer">
     <div class="wrap">
       <p class="footer__name">중앙대학교 인문대학 제15대 학생회 ‘연’</p>
-      <div class="footer__links"><a href="./">홈으로</a></div>
+      <div class="footer__links"><a href="./">홈으로</a><a href="notices.html">공지사항</a></div>
       <p class="footer__copy">© <span id="year"></span> 중앙대학교 인문대학 학생회</p>
     </div>
   </footer>
@@ -83,6 +74,6 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/core.js"></script>
 <script src="js/store.js"></script>
-<script src="js/pages.js"></script>
+<script src="js/apply.js"></script>
 </body>
 </html>

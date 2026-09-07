@@ -72,10 +72,16 @@
       });
     }
 
-    /* 링크 모음 */
+    /* 링크 모음 — 서버에 등록된 게 있으면 그걸, 없으면 config.js 기본값 */
     const linkWrap = $('[data-links]');
     if (linkWrap) {
-      S.linkGroups.forEach((g) => {
+      let groups = S.linkGroups;
+      if (window.STORE) {
+        try { await STORE.init(); groups = await STORE.getLinks(); }
+        catch (err) { console.warn('[링크] 서버에서 불러오지 못해 기본값을 씁니다.', err); }
+      }
+      linkWrap.innerHTML = '';
+      groups.forEach((g) => {
         linkWrap.appendChild(el('div', { class: 'linkgroup reveal' }, [
           el('h3', { class: 'linkgroup__title', text: g.group }),
           el('ul', { class: 'links' }, g.items.map((it) => el('li', null, [linkButton(it)])))

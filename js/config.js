@@ -17,7 +17,7 @@ const SITE = {
   quickLinks: [
     { label: '인스타그램', icon: 'instagram', url: 'https://www.instagram.com/cau_inmun/' },
     { label: '카카오톡 채널', icon: 'kakao', url: '' },
-    { label: '건의함', icon: 'mail', url: '' }
+    { label: '건의함', icon: 'mail', url: 'apply.html?id=suggestion' }
   ],
 
   /* ---- 링크 모음 (링크트리 본문) ----
@@ -27,8 +27,8 @@ const SITE = {
     {
       group: '신청 · 참여',
       items: [
-        { label: '학생회 건의함', desc: '익명으로 의견을 남겨주세요', url: '', badge: '상시' },
-        { label: '사업 신청 폼', desc: '진행 중인 학생회 사업 신청', url: '' },
+        { label: '학생회 건의함', desc: '익명으로 의견을 남겨주세요', url: 'apply.html?id=suggestion', badge: '상시' },
+        { label: '사업 신청 폼', desc: '진행 중인 학생회 사업 신청', url: 'apply.html?id=apply' },
         { label: '학생회비 납부 안내', desc: '납부 방법과 혜택 안내', url: '' }
       ]
     },
@@ -70,8 +70,68 @@ const SITE = {
     kakao: ''
   },
 
-  /* ---- 공지 카테고리 (색상은 css 의 .tag--* 와 연결) ---- */
-  categories: ['전체', '학사', '행사', '모집', '복지', '일반']
+  /* ---- 공지 카테고리 (색상은 css 의 .tag[data-cat] 와 연결) ---- */
+  categories: ['전체', '학사', '행사', '모집', '복지', '일반'],
+
+  /* ---- 인문대학 학과 (폼 선택지에 사용) ---- */
+  departments: [
+    '국어국문학과', '영어영문학과',
+    '유럽문화학부 독일어문학전공', '유럽문화학부 프랑스어문학전공', '유럽문화학부 러시아어문학전공',
+    '아시아문화학부 일본어문학전공', '아시아문화학부 중국어문학전공',
+    '철학과', '역사학과', '기타 (타 단대 · 복수전공 등)'
+  ],
+
+  /* ---- 기본 폼 정의 ----
+     Firebase 를 연결하면 관리자 페이지에서 자유롭게 수정할 수 있고,
+     그때부터는 이 값 대신 Firestore 의 내용이 쓰입니다.
+     type: text | textarea | select | radio | checkbox | email | tel | date | number */
+  defaultForms: [
+    {
+      id: 'suggestion',
+      order: 1,
+      title: '학생회 건의함',
+      description: '인문대학 학생회에 전하고 싶은 의견을 남겨주세요. 이름을 비워두면 익명으로 접수됩니다.',
+      submitLabel: '건의 보내기',
+      doneMessage: '소중한 의견 감사합니다. 학생회 회의에서 검토한 뒤 필요한 경우 연락드리겠습니다.',
+      open: true,
+      consent: true,
+      fields: [
+        { key: 'category', label: '어떤 내용인가요?', type: 'select', required: true,
+          options: ['학사 · 수업', '복지 · 시설', '행사 · 사업', '학생회 운영', '기타'] },
+        { key: 'content', label: '내용', type: 'textarea', required: true,
+          placeholder: '구체적으로 적어주실수록 도움이 됩니다.' },
+        { key: 'dept', label: '학과', type: 'select', required: false, useDepartments: true },
+        { key: 'name', label: '이름', type: 'text', required: false,
+          help: '익명으로 보내려면 비워두세요.' },
+        { key: 'contact', label: '답변받을 연락처', type: 'text', required: false,
+          help: '이메일 또는 카카오톡 ID. 답변이 필요할 때만 적어주세요.' }
+      ]
+    },
+    {
+      id: 'apply',
+      order: 2,
+      title: '사업 신청',
+      description: '학생회가 진행하는 사업 신청을 받습니다. 모집 중인 사업은 공지사항에서 확인해 주세요.',
+      submitLabel: '신청하기',
+      doneMessage: '신청이 접수되었습니다. 선정 결과는 공지사항과 인스타그램으로 안내드립니다.',
+      open: true,
+      consent: true,
+      fields: [
+        { key: 'program', label: '신청할 사업', type: 'text', required: true,
+          placeholder: '공지에 안내된 사업 이름을 적어주세요.' },
+        { key: 'name', label: '이름', type: 'text', required: true },
+        { key: 'studentId', label: '학번', type: 'text', required: true, placeholder: '예) 20251234' },
+        { key: 'dept', label: '학과', type: 'select', required: true, useDepartments: true },
+        { key: 'contact', label: '연락처', type: 'text', required: true,
+          help: '전화번호 또는 카카오톡 ID' },
+        { key: 'note', label: '남길 말', type: 'textarea', required: false }
+      ]
+    }
+  ],
+
+  /* ---- 개인정보 수집·이용 동의 문구 ---- */
+  consentText: '입력하신 이름 · 학번 · 연락처는 신청 확인과 결과 안내에만 사용하며, ' +
+               '해당 사업 종료 후 파기합니다. 동의하지 않으셔도 되지만 그 경우 접수가 어렵습니다.'
 };
 
 window.SITE = SITE;

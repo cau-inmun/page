@@ -155,10 +155,26 @@
 
   async function loadNotices() {
     if (cache) return cache;
-    const res = await fetch(DATA_URL + '?v=' + Date.now(), { cache: 'no-store' });
-    if (!res.ok) throw new Error('공지 데이터를 불러오지 못했습니다 (' + res.status + ')');
-    const json = await res.json();
-    const list = (Array.isArray(json) ? json : json.notices || [])
+
+    /* 서버(Firestore)에 공지가 있으면 그쪽을 쓰고,
+       없으면 저장소의 data/notices.json 으로 넘어간다. */
+    let source = null;
+    if (window.STORE) {
+      try {
+        await STORE.init();
+        source = await STORE.getNotices();
+      } catch (err) {
+        console.warn('[공지] 서버에서 불러오지 못해 파일로 대체합니다.', err);
+      }
+    }
+    if (!source) {
+      const res = await fetch(DATA_URL + '?v=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error('공지 데이터를 불러오지 못했습니다 (' + res.status + ')');
+      const json = await res.json();
+      source = Array.isArray(json) ? json : json.notices || [];
+    }
+
+    const list = source
       .filter((n) => n && n.title)
       .map((n, idx) => ({
         id: String(n.id || 'notice-' + idx),
