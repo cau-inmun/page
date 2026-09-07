@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>연결 진단 · 인문대학 학생회</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#F8E9D4">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="css/fonts.css">
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body data-page="setup">
+<div class="page">
+
+  <header class="topbar">
+    <div class="wrap admin topbar__inner">
+      <a class="topbar__brand" href="./">
+        <span class="topbar__mark" data-logo><img src="assets/logo.png" alt=""></span>
+        <span class="topbar__name">연결 진단</span>
+      </a>
+      <nav class="nav" aria-label="주요 메뉴">
+        <a href="./">홈</a>
+        <a href="admin.html">관리자</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap admin" style="padding-top:26px">
+
+      <div class="admin__panel">
+        <h2 style="margin-bottom:6px">Firebase 연결 진단</h2>
+        <p class="field__help" style="margin-bottom:18px">
+          설정이 어디까지 됐는지 확인합니다. ✕ 표시된 항목의 ‘해야 할 일’ 만 따라 하면 됩니다.
+        </p>
+
+        <div class="banner" id="verdict" hidden></div>
+
+        <ul class="checks" id="checks">
+          <li class="check-row"><span class="check-row__mark">…</span>
+            <div class="check-row__body"><div class="check-row__title">점검 중입니다…</div></div></li>
+        </ul>
+
+        <div class="admin__actions" style="margin-top:16px">
+          <button type="button" class="btn btn--primary" id="btn-recheck">다시 점검</button>
+          <a class="btn" href="admin.html">관리자 페이지</a>
+        </div>
+
+        <p class="field__help" id="uid-line" hidden style="margin-top:14px">
+          내 계정 UID — <code id="uid-value"></code>
+          <br>이 값을 Firestore 의 <code>admins</code> 컬렉션 문서 ID 로 넣으면 관리자가 됩니다.
+        </p>
+      </div>
+
+      <form class="admin__panel" id="setup-login" hidden>
+        <h2>관리자 로그인해서 이어서 점검</h2>
+        <div class="field">
+          <label for="su-email">이메일</label>
+          <input id="su-email" type="email" autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="su-pw">비밀번호</label>
+          <input id="su-pw" type="password" autocomplete="current-password">
+        </div>
+        <p class="field__error" id="setup-login-error" hidden role="alert"></p>
+        <button type="submit" class="btn btn--primary">로그인</button>
+      </form>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap"><p class="footer__copy">중앙대학교 인문대학 학생회 · 연결 진단</p></div>
+  </footer>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/store.js"></script>
+<script src="js/setup.js"></script>
+</body>
+</html>

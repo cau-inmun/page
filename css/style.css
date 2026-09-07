@@ -822,3 +822,41 @@ table.subs td.when { color: var(--ink-3); font-variant-numeric: tabular-nums; }
   font-size: 11.5px; color: var(--ink-3); white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+/* ==========================================================================
+   연결 진단 (setup.html)
+   ========================================================================== */
+.checks { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+
+.check-row {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px 15px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--paper-raise);
+}
+.check-row__mark {
+  flex: none; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 13px; font-weight: 700; line-height: 1;
+  background: var(--sand); color: var(--brand-deep); border: 1px solid var(--sand-deep);
+}
+.check-row__body { min-width: 0; flex: 1; }
+.check-row__title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.check-row__detail {
+  font-size: 12.5px; color: var(--ink-3); margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.check-row__fix {
+  font-size: 12.5px; color: var(--ink-2); line-height: 1.7; margin-top: 9px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--sand-tint); border: 1px solid var(--line-soft);
+  overflow-wrap: anywhere;
+}
+.check-row__fix strong { color: var(--brand-deep); }
+
+.check-row--ok   { border-color: #CFE0D4; background: #FAFDFB; }
+.check-row--ok   .check-row__mark { background: #E4F0E7; border-color: #C3DCC9; color: #35704A; }
+.check-row--fail { border-color: #EFCDC2; background: #FEFAF8; }
+.check-row--fail .check-row__mark { background: #FAE3DB; border-color: #EDC3B4; color: #A8412A; }
+.check-row--warn .check-row__mark { background: var(--sand); border-color: var(--sand-deep); color: var(--brand-deep); }
+.check-row--skip { opacity: .6; }
+.check-row--skip .check-row__mark { background: var(--sand-soft); border-color: var(--line); color: var(--ink-3); }

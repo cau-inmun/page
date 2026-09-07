@@ -31,6 +31,7 @@ notices.html        전체 공지 목록 (현재 / 지난 공지 · 분류 필�
 notice.html         공지 상세  (notice.html?id=공지아이디)
 apply.html          신청 · 건의 폼  (apply.html?id=폼아이디)
 admin.html          관리자 콘솔 ★ 학생회에서 실제로 쓰는 화면
+setup.html          연결 진단 — Firebase 설정이 어디서 막혔는지 알려줌
 
 js/config.js        ★ 링크 · 폼 · 학과 · 소개 · 연락처 기본값
 js/firebase-config.js ★ Firebase 설정 (여기를 채워야 폼이 동작)
@@ -51,6 +52,25 @@ assets/             로고 · 아이콘 · 공지 이미지
 
 ## 3. Firebase 연결하기 (최초 1회, 약 15분)
 
+> ### ⚠ Realtime Database 가 아니라 **Firestore** 입니다
+>
+> Firebase 에는 데이터베이스가 두 종류 있습니다.
+>
+> | | Realtime Database | **Cloud Firestore** ← 이 사이트가 쓰는 것 |
+> | --- | --- | --- |
+> | 주소 모양 | `...-default-rtdb.<리전>.firebasedatabase.app` | 주소 없음 (프로젝트 ID 로 접속) |
+> | 콘솔 메뉴 | 빌드 → Realtime Database | 빌드 → **Firestore Database** |
+>
+> 둘은 이름만 비슷하고 완전히 다른 제품이라 **서로 호환되지 않습니다.**
+> Realtime Database 를 이미 만들었더라도 그냥 두고, **Firestore 를 따로 만드세요.**
+> (같은 프로젝트에 둘 다 있어도 문제없고, 안 쓰는 쪽은 요금도 들지 않습니다.)
+>
+> **왜 Firestore 인가** — 예약 공지를 발표 전까지 감추려면 ‘문서 한 건마다’ 읽기를
+> 막아야 합니다. Firestore 는 보안 규칙에서 문서의 `publishAt` 을 현재 시각과
+> 비교해 차단할 수 있지만, Realtime Database 는 노드 단위로만 허용/차단이 되어
+> 목록을 읽을 수 있으면 예약분까지 전부 읽힙니다. 발표 전 공지가 새는 걸
+> 막을 수 없어서 Firestore 를 씁니다.
+
 ### 3-1. 프로젝트 만들기
 
 1. <https://console.firebase.google.com> → **프로젝트 추가**
@@ -59,18 +79,9 @@ assets/             로고 · 아이콘 · 공지 이미지
 ### 3-2. 웹 앱 등록 → 설정 붙여넣기
 
 1. 프로젝트 개요 → **웹(`</>`)** 아이콘 클릭 → 앱 닉네임 입력 → 등록
-2. 화면에 나오는 `firebaseConfig` 의 값들을 `js/firebase-config.js` 에 옮겨 적습니다.
-
-```js
-window.FIREBASE_CONFIG = {
-  apiKey: 'AIza...',
-  authDomain: 'cau-inmun.firebaseapp.com',
-  projectId: 'cau-inmun',
-  storageBucket: 'cau-inmun.appspot.com',
-  messagingSenderId: '123456789',
-  appId: '1:123456789:web:abc...'
-};
-```
+2. 화면에 나오는 `firebaseConfig` 에서 **`apiKey` 와 `appId`** 를
+   `js/firebase-config.js` 에 옮겨 적습니다.
+   (`projectId` · `authDomain` 은 이미 채워져 있습니다)
 
 > 이 값들은 **비밀이 아닙니다.** 웹 앱에 공개되는 게 정상이고,
 > 실제 보안은 다음 단계의 보안 규칙이 담당합니다.
@@ -79,6 +90,8 @@ window.FIREBASE_CONFIG = {
 
 **빌드 → Firestore Database → 데이터베이스 만들기** → **프로덕션 모드**로 시작
 → 위치는 `asia-northeast3 (서울)` 권장.
+
+(Realtime Database 를 만들었더라도 이 단계는 따로 해야 합니다.)
 
 ### 3-4. 보안 규칙 배포 ⚠ 가장 중요
 
@@ -108,10 +121,29 @@ window.FIREBASE_CONFIG = {
 **Authentication → Settings → 승인된 도메인**에
 `cau-inmun.github.io` (실제 배포 주소)를 추가합니다. 없으면 로그인이 막힙니다.
 
-### 3-7. 확인
+### 3-7. 확인 — `setup.html`
 
-`admin.html` 을 열어 로그인 화면이 뜨면 성공입니다.
-로그인 후 폼 응답 · 링크 · 공지를 바로 관리할 수 있습니다.
+**`setup.html`** 을 열면 어디까지 됐는지 항목별로 점검해 줍니다.
+
+```
+✓ 1. 설정값 입력
+✓ 2. Firebase SDK 불러오기
+✕ 3. Firestore 연결        ← 여기서 막히면 3-3 을 안 한 것
+  해야 할 일 — Firestore Database 를 아직 만들지 않았을 가능성이 큽니다…
+```
+
+✕ 표시된 항목의 **‘해야 할 일’** 만 따라 하면 됩니다.
+로그인까지 하면 내 계정 UID 도 보여주므로, 3-5 의 `admins` 등록에 그대로 쓰면 됩니다.
+
+전부 ✓ 가 되면 `admin.html` 에서 바로 관리할 수 있습니다.
+
+### 3-8. 기본 폼을 서버에 올리기
+
+연결 직후에는 Firestore 에 폼이 하나도 없어서, 화면에는 `js/config.js` 의 기본 폼이
+보이지만 **실제 제출은 되지 않습니다.** (보안 규칙이 ‘존재하는 폼’ 만 접수하기 때문)
+
+관리자 → **폼 설정** → 맨 아래 **‘폼 설정 저장’** 을 한 번 누르세요.
+기본 폼 2개가 서버에 등록되면서 접수가 시작됩니다.
 
 ---
 
@@ -253,8 +285,14 @@ Firebase 를 연결하면 로그인 화면이 막습니다. 로그인해도 `adm
 (미리보기 모드에서는 로그인이 없지만, 그때는 저장되는 실제 데이터도 없습니다.)
 
 **Q. 폼 제출이 안 됩니다.**
-① `js/firebase-config.js` 가 채워졌는지 ② `firestore.rules` 를 게시했는지
-③ 해당 폼이 ‘접수 중’ 인지 확인하세요. F12 → Console 에 원인이 찍힙니다.
+**`setup.html`** 을 여세요. 어디서 막혔는지 항목별로 짚어줍니다.
+가장 흔한 원인은 ③ **폼 설정 저장을 안 눌러 서버에 폼이 없는 경우**(3-8),
+그리고 ② **`firestore.rules` 미배포**(3-4) 입니다.
+
+**Q. Realtime Database 를 만들었는데 왜 안 되나요?**
+이 사이트는 **Firestore** 를 씁니다. 이름이 비슷하지만 다른 제품입니다.
+3장 맨 위 설명을 보고 **Firestore Database** 를 따로 만드세요.
+Realtime Database 는 지우지 않아도 되고, 안 쓰면 요금도 들지 않습니다.
 
 **Q. 스팸이 들어오면요?**
 숨김 필드로 단순 봇은 거르고, 보안 규칙이 필드 개수와 형식을 제한합니다.

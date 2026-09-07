@@ -226,20 +226,26 @@
     return record.id;
   }
 
+  /* 정렬은 서버가 아니라 여기서 한다.
+     where('formId') + orderBy('createdAt') 조합은 Firestore 에서 복합 색인을
+     따로 만들어야 하는데, 학생회 규모(폼당 수백 건)에서는 굳이 필요 없고
+     색인 생성이 설치 단계를 하나 더 늘린다. */
   async function listSubmissions(formId) {
+    let list;
     if (mode === 'firebase') {
       let q = db.collection('submissions');
       if (formId) q = q.where('formId', '==', formId);
-      const snap = await q.orderBy('createdAt', 'desc').limit(500).get();
-      return snap.docs.map((d) => {
+      const snap = await q.limit(1000).get();
+      list = snap.docs.map((d) => {
         const v = d.data();
-        const ts = v.createdAt && v.createdAt.toDate ? v.createdAt.toDate() : null;
         return { id: d.id, formId: v.formId, data: v.data || {},
-                 createdAt: ts ? ts.toISOString() : '' };
+                 createdAt: tsToIso(v.createdAt) };
       });
+    } else {
+      list = lsGet(KEY.submissions, []);
+      if (formId) list = list.filter((s) => s.formId === formId);
     }
-    const list = lsGet(KEY.submissions, []);
-    return formId ? list.filter((s) => s.formId === formId) : list;
+    return list.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   }
 
   async function deleteSubmission(id) {
