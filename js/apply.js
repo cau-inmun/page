@@ -185,7 +185,8 @@
     $('[data-form-desc]').textContent = '작성할 폼을 선택해 주세요.';
 
     /* 마감된 폼은 목록에서 감추고, 접수 전인 폼은 시작 시각과 함께 보여준다 */
-    const shown = forms.filter((f) => formStatus(f) !== 'closed');
+    const notReady = (f) => STORE.isFirebase && f._seed;
+    const shown = forms.filter((f) => formStatus(f) !== 'closed' || notReady(f));
     if (!shown.length) {
       root.appendChild(el('div', { class: 'empty' }, [
         el('strong', { text: '지금은 열려 있는 폼이 없습니다.' }),
@@ -195,7 +196,7 @@
     }
     root.appendChild(el('ul', { class: 'links' }, shown.map((f) => {
       const st = formStatus(f);
-      const upcoming = st === 'upcoming';
+      const upcoming = st === 'upcoming' || notReady(f);
       return el('li', null, [
         el('a', {
           class: 'linkbtn' + (upcoming ? ' is-disabled' : ''),
@@ -209,9 +210,11 @@
               upcoming ? el('span', { class: 'badge badge--soon', text: '접수 전' }) : null,
               !upcoming && f.closeAt ? el('span', { class: 'badge', text: '접수 중' }) : null
             ]),
-            el('div', { class: 'linkbtn__desc', text: upcoming && f.openAt
-              ? formatDateTime(f.openAt) + ' 접수 시작'
-              : (f.description || '') })
+            el('div', { class: 'linkbtn__desc', text: notReady(f)
+              ? '접수 준비 중입니다'
+              : (upcoming && f.openAt
+                  ? formatDateTime(f.openAt) + ' 접수 시작'
+                  : (f.description || '')) })
           ]),
           el('span', { class: 'linkbtn__arrow', html: icon('arrow') })
         ])
@@ -226,6 +229,19 @@
     $('[data-form-desc]').textContent = form.description || '';
 
     root.innerHTML = '';
+
+    /* 서버에 등록되지 않은 폼은 제출이 서버에서 거부된다.
+       다 채운 뒤에 실패하지 않도록 아예 폼을 그리지 않는다. */
+    if (STORE.isFirebase && form._seed) {
+      root.appendChild(el('div', { class: 'empty' }, [
+        el('strong', { text: '아직 접수 준비 중입니다.' }),
+        '준비가 끝나면 공지사항과 인스타그램으로 알려드립니다.'
+      ]));
+      console.warn(
+        '[폼] 이 폼이 아직 Firestore 에 등록되지 않았습니다.\n' +
+        '관리자 페이지 → 폼 설정 → 맨 아래 ‘폼 설정 저장’ 을 한 번 누르면 접수가 시작됩니다.');
+      return;
+    }
 
     const status = formStatus(form);
 

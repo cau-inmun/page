@@ -251,8 +251,14 @@
   }
 
   /* ---------- 폼 정의 ---------- */
+  /* config.js 의 기본 폼.
+     서버에 아직 등록되지 않았다는 표시(_seed)를 달아서 돌려준다.
+     보안 규칙은 'Firestore 에 실제로 존재하는 폼' 에만 제출을 허용하므로,
+     이 표시가 붙은 폼은 화면에서도 접수를 막아야 한다.
+     그러지 않으면 학우가 폼을 다 채운 뒤에야 거부당한다. */
   function defaultForms() {
-    return clone((window.SITE && window.SITE.defaultForms) || []);
+    return clone((window.SITE && window.SITE.defaultForms) || [])
+      .map((f) => Object.assign({}, f, { _seed: true }));
   }
 
   async function getForms() {
@@ -277,12 +283,15 @@
       const { id } = form;
       const body = encodeDoc(form);
       delete body.id;
+      delete body._seed;
       await db.collection('forms').doc(id).set(body, { merge: false });
       return true;
     }
-    const list = await getForms();
-    const i = list.findIndex((f) => f.id === form.id);
-    if (i > -1) list[i] = form; else list.push(form);
+    const clean = Object.assign({}, form);
+    delete clean._seed;
+    const list = (await getForms()).map((f) => { const c = Object.assign({}, f); delete c._seed; return c; });
+    const i = list.findIndex((f) => f.id === clean.id);
+    if (i > -1) list[i] = clean; else list.push(clean);
     return lsSet(KEY.forms, list);
   }
 
