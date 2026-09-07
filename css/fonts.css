@@ -1,0 +1,40 @@
+@charset "UTF-8";
+/* ==========================================================================
+   웹폰트 정의
+   --------------------------------------------------------------------------
+   제목 — 학교안심 포스터  (교육부 · 한국교육학술정보원, 상업적 이용 무료)
+   본문 — 나눔휴먼        (네이버, 상업적 이용 무료)
+
+   ⚠ 주소가 바뀌어 글꼴이 안 보이면 눈누에서 최신 @font-face 를 복사해
+      이 파일의 해당 블록만 통째로 교체하세요. 다른 파일은 손대지 않아도 됩니다.
+        · 학교안심 포스터 : https://noonnu.cc/font_page/1710
+        · 나눔휴먼        : https://noonnu.cc/font_page/1552
+      (눈누 폰트 페이지 → ‘웹폰트로 사용’ 탭에 @font-face 코드가 있습니다)
+
+   글꼴을 못 불러와도 페이지는 시스템 한글 글꼴로 정상 표시됩니다.
+   ========================================================================== */
+
+/* ---------- 제목: 학교안심 포스터 ---------- */
+@font-face {
+  font-family: 'HakgyoansimPoster';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2511-1@1.0/HakgyoansimPosterB.woff2') format('woff2');
+  font-weight: 400 800;   /* 단일 굵기 파일을 이 범위 전체에 사용 */
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------- 본문: 나눔휴먼 ---------- */
+@font-face {
+  font-family: 'NanumHuman';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2501-1@1.1/NanumHumanTTFRegular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'NanumHuman';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2501-1@1.1/NanumHumanTTFBold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

@@ -272,7 +272,7 @@
         img.remove();
         box.classList.add('is-fallback');
         if (!$('.logo-fallback', box)) {
-          box.appendChild(el('span', { class: 'logo-fallback', 'aria-hidden': 'true', text: (window.SITE && SITE.councilName) || '역' }));
+          box.appendChild(el('span', { class: 'logo-fallback', 'aria-hidden': 'true', text: (window.SITE && SITE.councilName) || '연' }));
         }
       };
       if (img.complete && img.naturalWidth === 0) fallback();
@@ -280,11 +280,35 @@
     });
   }
 
+  /* ---------- 웹폰트 로딩 점검 ----------
+     글꼴이 안 보일 때 원인을 바로 알 수 있도록 콘솔에 알려준다.
+     (실패해도 시스템 글꼴로 정상 표시되므로 화면에는 영향 없음) */
+  function checkFonts() {
+    if (!document.fonts || !document.fonts.ready) return;
+    const want = [
+      ['HakgyoansimPoster', '제목 — 학교안심 포스터'],
+      ['NanumHuman', '본문 — 나눔휴먼']
+    ];
+    document.fonts.ready.then(() => setTimeout(() => {
+      const missing = want.filter(([family]) => {
+        try { return !document.fonts.check('700 16px "' + family + '"', '가'); }
+        catch (e) { return false; }
+      });
+      if (!missing.length) return;
+      console.warn(
+        '[글꼴] 불러오지 못했습니다: ' + missing.map((m) => m[1]).join(', ') +
+        '\ncss/fonts.css 의 @font-face 주소가 만료됐을 수 있습니다. ' +
+        '눈누 폰트 페이지의 최신 코드로 해당 블록을 교체하세요.'
+      );
+    }, 400));
+  }
+
   /* ---------- 공통 초기화 ---------- */
   function boot() {
     stickyHeader();
     initLogos();
     revealOnScroll();
+    checkFonts();
   }
 
   window.CORE = {
