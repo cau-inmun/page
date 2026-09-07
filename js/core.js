@@ -34,14 +34,31 @@
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
   /* ---------- 안전한 URL 판별 ----------
-     javascript:, data: 등 위험한 스킴은 링크로 만들지 않습니다. */
+     · javascript:, data: 같은 위험한 스킴은 링크로 만들지 않는다.
+     · 'human.cau.ac.kr' 처럼 스킴을 생략한 외부 주소는 https 를 붙인다.
+     · 'apply.html?id=suggestion' 같은 사이트 안 경로는 그대로 둔다.
+       (예전에는 이런 상대 경로를 거부해서 '준비 중' 으로 표시했고,
+        'apply.html' 은 'https://apply.html' 이라는 없는 주소로 바꿨다) */
   function safeUrl(raw) {
     const url = String(raw || '').trim();
     if (!url) return '';
-    if (/^(https?:|mailto:|tel:)/i.test(url)) return url;
-    if (/^(\/|\.\/|\.\.\/|#)/.test(url)) return url;
-    if (/^[\w.-]+\.[a-z]{2,}(\/|$)/i.test(url)) return 'https://' + url; // 'human.cau.ac.kr' 처럼 스킴 생략 허용
-    return '';
+
+    // 스킴이 있으면 허용 목록에 있는 것만 통과
+    if (/^[a-z][a-z0-9+.\-]*:/i.test(url)) {
+      return /^(https?|mailto|tel):/i.test(url) ? url : '';
+    }
+
+    // 경로·앵커·질의로 시작하면 사이트 안 주소
+    if (/^(\/|\.\/|\.\.\/|#|\?)/.test(url)) return url;
+
+    // 도메인처럼 생겼고 파일 이름이 아니면 외부 주소로 보고 https 를 붙인다
+    const path = url.split(/[?#]/)[0];
+    const looksLikeDomain = /^[\w-]+(\.[\w-]+)+(\/|$)/.test(url);
+    const looksLikeFile = /\.(html?|php|aspx?|jsp|pdf|png|jpe?g|gif|svg|webp|json|css|js)$/i.test(path);
+    if (looksLikeDomain && !looksLikeFile) return 'https://' + url;
+
+    // 나머지는 사이트 안의 상대 경로
+    return url;
   }
 
   const isExternal = (url) => /^https?:/i.test(url) && !url.startsWith(location.origin);

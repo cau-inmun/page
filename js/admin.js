@@ -452,92 +452,229 @@
   /* ==========================================================
      탭 3 · 폼 설정
      ========================================================== */
+  const FIELD_TYPES = [
+    ['text',     '한 줄 입력'],
+    ['textarea', '여러 줄 입력'],
+    ['select',   '고르기 (드롭다운)'],
+    ['radio',    '하나만 고르기'],
+    ['checkbox', '여러 개 고르기'],
+    ['email',    '이메일'],
+    ['tel',      '전화번호'],
+    ['date',     '날짜'],
+    ['number',   '숫자']
+  ];
+  const CHOICE_TYPES = ['select', 'radio', 'checkbox'];
+  const STATUS_BADGE = {
+    open:     ['접수 중', 'pin'],
+    upcoming: ['접수 전', 'scheduled'],
+    closed:   ['마감', 'archived']
+  };
+
+  /* 학우에게 보이는 모습 그대로 그려주는 미리보기.
+     실제 폼과 같은 CSS 클래스를 써서 눈으로 바로 확인할 수 있게 한다. */
+  function previewField(fd) {
+    const opts = fd.useDepartments ? (S.departments || []) : (fd.options || []);
+    let input;
+    if (fd.type === 'textarea') {
+      input = el('textarea', { rows: '3', placeholder: fd.placeholder || '', disabled: '' });
+    } else if (fd.type === 'select') {
+      input = el('select', { disabled: '' },
+        [el('option', { text: fd.placeholder || '선택해 주세요' })]
+          .concat(opts.map((o) => el('option', { text: o }))));
+    } else if (fd.type === 'radio' || fd.type === 'checkbox') {
+      input = el('div', { class: 'choices' }, opts.length
+        ? opts.map((o) => el('label', { class: 'choice' }, [
+            el('input', { type: fd.type, disabled: '' }), el('span', { text: o })
+          ]))
+        : [el('p', { class: 'field__help', text: '선택지를 입력하면 여기에 보입니다.' })]);
+    } else {
+      input = el('input', { type: fd.type || 'text', placeholder: fd.placeholder || '', disabled: '' });
+    }
+    return el('div', { class: 'field' }, [
+      el('label', null, [
+        fd.label || '(이름 없음)',
+        fd.required ? el('span', { class: 'req', text: '필수' }) : null
+      ]),
+      fd.help ? el('p', { class: 'field__help', text: fd.help }) : null,
+      input
+    ]);
+  }
+
   function renderFormSettings() {
     const box = $('#form-editor');
     box.innerHTML = '';
+
     if (!forms.length) {
-      box.appendChild(el('div', { class: 'empty', text: '등록된 폼이 없습니다.' }));
-      return;
+      box.appendChild(el('div', { class: 'empty' }, [
+        el('strong', { text: '등록된 폼이 없습니다.' }),
+        '아래 ‘새 폼 만들기’ 로 시작하세요.'
+      ]));
     }
 
     forms.forEach((form) => {
-      const statusLine = el('p', { class: 'field__help', style: 'margin:10px 0 0' });
-      const drawStatus = () => {
-        const st = formStatus(form);
-        const label = { open: '지금 접수 중입니다.',
-                        upcoming: '아직 접수 전입니다.',
-                        closed: '지금은 접수를 받지 않습니다.' }[st];
-        statusLine.textContent = '현재 상태 — ' + label;
-      };
-      drawStatus();
+      const card = el('div', { class: 'fcard' });
+      const body = el('div', { class: 'fcard__body', hidden: true });
+      let open = false;
 
-      const fieldsBox = el('div');
+      /* ---- 머리말 : 접힌 상태에서도 상태를 알 수 있게 ---- */
+      const badge = el('span');
+      const summary = el('span', { class: 'fcard__meta' });
+      const redrawHead = () => {
+        const [label, variant] = STATUS_BADGE[formStatus(form)];
+        badge.innerHTML = '';
+        badge.appendChild(tagEl(label, variant));
+        summary.textContent = `항목 ${form.fields.length}개`;
+        title.textContent = form.title || '(이름 없음)';
+      };
+      const title = el('span', { class: 'fcard__title' });
+      const caret = el('span', { class: 'fcard__caret', text: '▾' });
+
+      const head = el('button', {
+        type: 'button', class: 'fcard__head', 'aria-expanded': 'false',
+        onclick: () => {
+          open = !open;
+          body.hidden = !open;
+          head.setAttribute('aria-expanded', String(open));
+          caret.style.transform = open ? 'rotate(180deg)' : '';
+          if (open) redrawPreview();
+        }
+      }, [caret, title, badge, summary]);
+
+      /* ---- 미리보기 ---- */
+      const preview = el('div', { class: 'fpreview' });
+      const redrawPreview = () => {
+        preview.innerHTML = '';
+        preview.append(
+          el('p', { class: 'fpreview__label', text: '학우에게 보이는 모습' }),
+          el('h4', { class: 'article__title', style: 'font-size:19px', text: form.title || '(이름 없음)' })
+        );
+        if (form.description) {
+          preview.appendChild(el('p', { class: 'form-desc', style: 'margin-bottom:14px', text: form.description }));
+        }
+        form.fields.forEach((fd) => preview.appendChild(previewField(fd)));
+        preview.appendChild(el('button', {
+          type: 'button', class: 'btn btn--primary', disabled: '',
+          text: form.submitLabel || '제출하기'
+        }));
+      };
+
+      /* ---- 항목 편집 ---- */
+      const fieldsBox = el('div', { class: 'frows' });
       const drawFields = () => {
         fieldsBox.innerHTML = '';
+        if (!form.fields.length) {
+          fieldsBox.appendChild(el('p', { class: 'field__help', text: '항목이 없습니다. 아래에서 추가하세요.' }));
+        }
         form.fields.forEach((fd, i) => {
-          fieldsBox.appendChild(el('div', { class: 'editor-row' }, [
-            el('input', { value: fd.label || '', placeholder: '항목 이름',
-              oninput: (e) => { fd.label = e.target.value; } }),
-            el('select', {
-              onchange: (e) => { fd.type = e.target.value; }
-            }, ['text', 'textarea', 'select', 'radio', 'checkbox', 'email', 'tel', 'date', 'number']
-                 .map((t) => el('option', { value: t, text: t, selected: (fd.type || 'text') === t ? '' : null }))),
-            el('input', {
-              value: (fd.options || []).join(', '),
-              placeholder: '선택지 (쉼표로 구분)',
-              oninput: (e) => { fd.options = e.target.value.split(',').map((x) => x.trim()).filter(Boolean); }
-            }),
-            el('div', { class: 'editor-row__tools' }, [
-              el('label', { class: 'check', style: 'font-size:12px' }, [
-                el('input', { type: 'checkbox', checked: fd.required ? '' : null,
-                  onchange: (e) => { fd.required = e.target.checked; } }),
-                '필수'
+          const isChoice = CHOICE_TYPES.includes(fd.type);
+          const extra = el('div', { class: 'frow__extra' });
+          const drawExtra = () => {
+            extra.innerHTML = '';
+            if (CHOICE_TYPES.includes(fd.type) && !fd.useDepartments) {
+              extra.appendChild(el('input', {
+                class: 'frow__opts', value: (fd.options || []).join(', '),
+                placeholder: '선택지를 쉼표로 구분해 입력  예) 학사, 복지, 행사',
+                oninput: (e) => {
+                  fd.options = e.target.value.split(',').map((x) => x.trim()).filter(Boolean);
+                  redrawPreview();
+                }
+              }));
+            }
+            if (fd.useDepartments) {
+              extra.appendChild(el('p', { class: 'field__help', style: 'margin:0',
+                text: '선택지는 사이트 정보 탭의 ‘학과 목록’ 을 따릅니다.' }));
+            }
+            extra.appendChild(el('input', {
+              class: 'frow__help', value: fd.help || '',
+              placeholder: '항목 아래 안내문구 (선택)',
+              oninput: (e) => { fd.help = e.target.value; redrawPreview(); }
+            }));
+          };
+          drawExtra();
+
+          fieldsBox.appendChild(el('div', { class: 'frow' }, [
+            el('span', { class: 'frow__num', text: String(i + 1).padStart(2, '0') }),
+            el('div', { class: 'frow__main' }, [
+              el('div', { class: 'frow__top' }, [
+                el('input', {
+                  class: 'frow__label', value: fd.label || '', placeholder: '항목 이름',
+                  oninput: (e) => { fd.label = e.target.value; redrawPreview(); }
+                }),
+                el('select', {
+                  class: 'frow__type',
+                  onchange: (e) => { fd.type = e.target.value; drawExtra(); redrawPreview(); }
+                }, FIELD_TYPES.map(([v, ko]) =>
+                    el('option', { value: v, text: ko, selected: (fd.type || 'text') === v ? '' : null }))),
+                el('label', { class: 'check frow__req' }, [
+                  el('input', { type: 'checkbox', checked: fd.required ? '' : null,
+                    onchange: (e) => { fd.required = e.target.checked; redrawPreview(); } }),
+                  '필수'
+                ])
               ]),
-              el('button', { type: 'button', class: 'rowbtn', text: '삭제',
-                onclick: () => { form.fields.splice(i, 1); drawFields(); } })
+              extra
+            ]),
+            el('div', { class: 'frow__tools' }, [
+              el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑',
+                onclick: () => { if (i > 0) { [form.fields[i-1], form.fields[i]] = [form.fields[i], form.fields[i-1]]; drawFields(); redrawPreview(); } } }),
+              el('button', { type: 'button', class: 'rowbtn', title: '아래로', text: '↓',
+                onclick: () => { if (i < form.fields.length-1) { [form.fields[i+1], form.fields[i]] = [form.fields[i], form.fields[i+1]]; drawFields(); redrawPreview(); } } }),
+              el('button', { type: 'button', class: 'rowbtn', title: '삭제', text: '×',
+                onclick: () => {
+                  if (!confirm(`‘${fd.label || '이름 없음'}’ 항목을 지울까요?`)) return;
+                  form.fields.splice(i, 1); drawFields(); redrawHead(); redrawPreview();
+                } })
             ])
           ]));
         });
-        fieldsBox.appendChild(el('button', {
-          type: 'button', class: 'btn', text: '+ 항목 추가',
-          onclick: () => {
-            form.fields.push({ key: 'f_' + uid(), label: '새 항목', type: 'text', required: false });
-            drawFields();
-          }
-        }));
       };
       drawFields();
 
-      box.appendChild(el('div', { class: 'editor-group' }, [
-        el('div', { class: 'editor-group__head' }, [
-          el('input', { value: form.title, placeholder: '폼 이름',
-            oninput: (e) => { form.title = e.target.value; } }),
-          el('label', { class: 'check', style: 'font-size:12.5px;white-space:nowrap' }, [
-            el('input', { type: 'checkbox', checked: form.open !== false ? '' : null,
-              onchange: (e) => { form.open = e.target.checked; drawStatus(); } }),
-            '접수 허용'
-          ]),
-          el('button', {
-            type: 'button', class: 'rowbtn', text: '폼 삭제',
-            onclick: async () => {
-              if (!confirm(`‘${form.title}’ 폼을 지울까요?\n` +
-                           '이미 접수된 응답은 남지만 새 제출은 받을 수 없게 됩니다.')) return;
-              try { await STORE.deleteForm(form.id); }
-              catch (e) { console.error(e); toast('삭제하지 못했습니다'); return; }
-              forms = forms.filter((f) => f.id !== form.id);
-              renderFormSettings(); renderFormTabs();
-              toast('폼을 지웠습니다');
-            }
-          })
+      /* ---- 기본 정보 ---- */
+      const statusLine = el('p', { class: 'field__help', style: 'margin:10px 0 0' });
+      const drawStatus = () => {
+        statusLine.textContent = '현재 상태 — ' + ({
+          open: '지금 접수 중입니다.', upcoming: '아직 접수 전입니다.',
+          closed: '지금은 접수를 받지 않습니다.'
+        })[formStatus(form)];
+        redrawHead();
+      };
+      drawStatus();
+
+      const url = 'apply.html?id=' + form.id;
+      body.append(
+        el('div', { class: 'field' }, [
+          el('label', { text: '폼 이름' }),
+          el('input', { value: form.title || '', placeholder: '예) 총회 참석 신청',
+            oninput: (e) => { form.title = e.target.value; redrawHead(); redrawPreview(); } })
         ]),
-        el('input', { value: form.description || '', placeholder: '폼 설명',
-          style: 'margin-bottom:10px', oninput: (e) => { form.description = e.target.value; } }),
+        el('div', { class: 'field' }, [
+          el('label', { text: '설명' }),
+          el('input', { value: form.description || '', placeholder: '폼 위에 보이는 안내문',
+            oninput: (e) => { form.description = e.target.value; redrawPreview(); } })
+        ]),
+        el('div', { class: 'field-row' }, [
+          el('div', { class: 'field' }, [
+            el('label', { text: '제출 버튼 글자' }),
+            el('input', { value: form.submitLabel || '', placeholder: '제출하기',
+              oninput: (e) => { form.submitLabel = e.target.value; redrawPreview(); } })
+          ]),
+          el('div', { class: 'field' }, [
+            el('label', { text: '제출 후 안내' }),
+            el('input', { value: form.doneMessage || '', placeholder: '접수되었습니다. 감사합니다.',
+              oninput: (e) => { form.doneMessage = e.target.value; } })
+          ])
+        ]),
 
         el('div', { class: 'schedule' }, [
           el('p', { class: 'schedule__title', text: '접수 기간' }),
           el('p', { class: 'schedule__hint' }, [
-            '비워두면 ‘접수 중’ 체크만으로 여닫습니다. 시각을 정하면 그때 자동으로 열리고 닫힙니다. ',
+            '비워두면 아래 ‘접수 허용’ 만으로 여닫습니다. 시각을 정하면 그때 자동으로 열리고 닫힙니다. ',
             el('strong', { text: '마감 후에는 서버에서도 제출이 거부됩니다.' })
+          ]),
+          el('label', { class: 'check', style: 'margin-bottom:12px' }, [
+            el('input', { type: 'checkbox', checked: form.open !== false ? '' : null,
+              onchange: (e) => { form.open = e.target.checked; drawStatus(); } }),
+            '접수 허용'
           ]),
           el('div', { class: 'field-row' }, [
             el('div', { class: 'field' }, [
@@ -554,20 +691,65 @@
           statusLine
         ]),
 
-        el('p', { class: 'field__help', text: '공개 주소 — apply.html?id=' + form.id }),
-        fieldsBox
-      ]));
+        el('div', { class: 'fsection' }, [
+          el('p', { class: 'schedule__title', text: '입력 항목' }),
+          fieldsBox,
+          el('button', {
+            type: 'button', class: 'btn', style: 'margin-top:10px', text: '+ 항목 추가',
+            onclick: () => {
+              form.fields.push({ key: 'f_' + uid(), label: '', type: 'text', required: false });
+              drawFields(); redrawHead(); redrawPreview();
+            }
+          })
+        ]),
+
+        preview,
+
+        el('div', { class: 'fcard__actions' }, [
+          el('button', {
+            type: 'button', class: 'btn btn--primary', text: '이 폼 저장',
+            onclick: async () => {
+              try { await STORE.saveForm(form); toast('저장했습니다'); renderFormTabs(); }
+              catch (e) { console.error(e); toast('저장하지 못했습니다'); }
+            }
+          }),
+          el('a', { class: 'btn', href: url, target: '_blank', rel: 'noopener' }, ['새 창에서 열기']),
+          el('button', {
+            type: 'button', class: 'btn', text: '공개 주소 복사',
+            onclick: async () => {
+              const full = new URL(url, location.href).href;
+              try { await navigator.clipboard.writeText(full); toast('복사했습니다'); }
+              catch (e) { toast(full); }
+            }
+          }),
+          el('button', {
+            type: 'button', class: 'rowbtn', style: 'margin-left:auto', text: '폼 삭제',
+            onclick: async () => {
+              if (!confirm(`‘${form.title}’ 폼을 지울까요?\n` +
+                           '이미 접수된 응답은 남지만 새 제출은 받을 수 없게 됩니다.')) return;
+              try { await STORE.deleteForm(form.id); }
+              catch (e) { console.error(e); toast('삭제하지 못했습니다'); return; }
+              forms = forms.filter((f) => f.id !== form.id);
+              renderFormSettings(); renderFormTabs();
+              toast('폼을 지웠습니다');
+            }
+          })
+        ])
+      );
+
+      redrawHead();
+      card.append(head, body);
+      box.appendChild(card);
     });
 
-    box.appendChild(el('div', { class: 'admin__actions', style: 'margin-top:14px' }, [
+    box.appendChild(el('div', { class: 'admin__actions', style: 'margin-top:16px' }, [
       el('button', {
         type: 'button', class: 'btn', text: '+ 새 폼 만들기',
         onclick: async () => {
           const title = prompt('새 폼의 이름을 입력하세요.\n예) 총회 참석 신청');
           if (!title || !title.trim()) return;
-          let id = 'form-' + uid();
           const form = {
-            id, order: forms.length + 1, title: title.trim(),
+            id: 'form-' + uid(), order: forms.length + 1, title: title.trim(),
             description: '', submitLabel: '제출하기',
             doneMessage: '접수되었습니다. 감사합니다.',
             open: false, consent: true,
@@ -584,14 +766,16 @@
           toast('폼을 만들었습니다. 항목을 정리한 뒤 ‘접수 허용’ 을 켜세요.');
         }
       }),
-      el('button', { type: 'button', class: 'btn btn--primary', text: '폼 설정 저장',
+      el('button', {
+        type: 'button', class: 'btn btn--primary', text: '전체 저장',
         onclick: async () => {
           try {
             for (const f of forms) await STORE.saveForm(f);
-            toast('폼 설정을 저장했습니다');
+            toast('폼 설정을 모두 저장했습니다');
             renderFormTabs();
           } catch (e) { console.error(e); toast('저장하지 못했습니다'); }
-        } })
+        }
+      })
     ]));
   }
 

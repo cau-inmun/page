@@ -875,3 +875,83 @@ table.subs td.when { color: var(--ink-3); font-variant-numeric: tabular-nums; }
    로그인이 막고 있으므로 보여도 안전하지만, 학우의 시선을 끌 이유는 없다. */
 .footer__admin { color: var(--ink-3); text-decoration: underline; text-underline-offset: 2px; }
 .footer__admin:hover { color: var(--brand-deep); }
+
+/* ==========================================================================
+   폼 편집기 (관리자 → 폼 설정)
+   ========================================================================== */
+.fcard {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--paper-raise); margin-bottom: 12px; overflow: hidden;
+}
+.fcard__head {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 14px 16px; cursor: pointer; text-align: left;
+  background: var(--sand-tint); border: 0; border-bottom: 1px solid transparent;
+  transition: background-color .15s var(--ease);
+}
+.fcard__head:hover { background: var(--sand-soft); }
+.fcard__head[aria-expanded='true'] { border-bottom-color: var(--line); }
+.fcard__caret {
+  flex: none; color: var(--ink-3); font-size: 11px;
+  transition: transform .18s var(--ease);
+}
+.fcard__title {
+  font-weight: 700; font-size: 14.5px; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fcard__meta { margin-left: auto; font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.fcard__body { padding: 18px 16px 16px; }
+.fcard__actions {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-soft);
+}
+
+.fsection { margin-top: 18px; padding-top: 16px; border-top: 1px dashed var(--line); }
+
+/* 항목 한 줄 */
+.frows { display: flex; flex-direction: column; gap: 8px; }
+.frow {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--sand-tint);
+}
+.frow__num {
+  flex: none; width: 22px; padding-top: 10px;
+  font-size: 11px; font-weight: 700; color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.frow__main { flex: 1; min-width: 0; }
+.frow__top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.frow__label { flex: 2 1 180px; min-width: 0; }
+.frow__type  { flex: 1 1 150px; min-width: 0; }
+.frow__req   { flex: none; font-size: 12.5px; white-space: nowrap; }
+.frow__extra { display: flex; flex-direction: column; gap: 7px; margin-top: 8px; }
+.frow input, .frow select {
+  padding: 9px 11px; font-size: 13px; font-family: inherit;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--paper-raise); color: var(--ink);
+}
+.frow input:focus, .frow select:focus { outline: none; border-color: var(--brand); }
+.frow__tools { flex: none; display: flex; gap: 4px; padding-top: 4px; }
+@media (max-width: 560px) {
+  .frow { flex-wrap: wrap; }
+  .frow__num { padding-top: 0; }
+  .frow__tools { width: 100%; justify-content: flex-end; }
+}
+
+/* 미리보기 */
+.fpreview {
+  margin-top: 18px; padding: 18px 16px;
+  border: 1px dashed var(--sand-edge); border-radius: var(--radius);
+  background: var(--sand-tint);
+}
+.fpreview__label {
+  font-size: 11px; font-weight: 700; letter-spacing: .08em;
+  color: var(--ink-3); margin-bottom: 12px;
+}
+.fpreview .field:last-of-type { margin-bottom: 16px; }
+.fpreview input:disabled, .fpreview textarea:disabled, .fpreview select:disabled {
+  background: var(--paper-raise); color: var(--ink-3); opacity: 1; cursor: default;
+}
+.fpreview .choice { cursor: default; }
+.fpreview .btn:disabled { opacity: .75; cursor: default; }
