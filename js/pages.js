@@ -48,12 +48,18 @@
      1) 홈
      ========================================================== */
   async function initHome() {
+    /* 저장된 사이트 정보를 먼저 반영한다 (없으면 config.js 기본값) */
+    if (window.STORE) { try { await STORE.init(); } catch (e) {} }
+
     /* 기본 텍스트 */
     const setText = (sel, value) => { const n = $(sel); if (n && value) n.textContent = value; };
     setText('[data-site="college"]', S.college);
     setText('[data-site="tagline"]', S.tagline);
     $$('[data-site="council"]').forEach((n) => { n.textContent = S.councilTerm; });
     $$('[data-site="name"]').forEach((n) => { n.textContent = S.councilName; });
+    document.title = `${S.college} ${S.councilTerm} ‘${S.councilName}’`;
+    const metaDesc = $('meta[name="description"]');
+    if (metaDesc && S.description) metaDesc.setAttribute('content', S.description);
 
     /* 빠른 실행 칩 */
     const quick = $('[data-quick]');
@@ -112,6 +118,11 @@
         href: S.contact.instagram, target: '_blank', rel: 'noopener noreferrer', text: '인스타그램'
       }));
     }
+    if (fLinks && S.contact.kakao) {
+      fLinks.appendChild(el('a', {
+        href: S.contact.kakao, target: '_blank', rel: 'noopener noreferrer', text: '카카오톡 채널'
+      }));
+    }
     if (fLinks && S.contact.email) {
       fLinks.appendChild(el('a', { href: 'mailto:' + S.contact.email, text: '이메일 문의' }));
     }
@@ -146,6 +157,7 @@
     const count  = $('[data-count]');
     if (!box) return;
 
+    if (window.STORE) { try { await STORE.init(); } catch (e) {} }
     let all = [];
     const params = new URLSearchParams(location.search);
     let cat = params.get('cat') || '전체';

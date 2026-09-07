@@ -15,6 +15,7 @@
 
   const KEY = {
     links: 'cau-inmun:links',
+    site: 'cau-inmun:site',
     forms: 'cau-inmun:forms',
     submissions: 'cau-inmun:submissions',
     notices: 'cau-inmun:notices'
@@ -39,6 +40,12 @@
   }
 
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  /* config.js 의 기본값을 그대로 돌려주면, 화면에서 그 배열을 고칠 때
+     원본까지 같이 바뀐다. 저장 함수가 기본값을 다시 읽어 항목을 덧붙이는
+     경로에서는 같은 항목이 두 번 들어가기도 한다.
+     기본값을 내보낼 때는 항상 복사본을 준다. */
+  const clone = (v) => (v == null ? v : JSON.parse(JSON.stringify(v)));
 
   /* Firestore Timestamp ↔ ISO 문자열 (앱 내부는 전부 ISO 로 다룬다) */
   function tsToIso(v) {
@@ -116,7 +123,7 @@
   async function init() {
     if (initPromise) return initPromise;
     initPromise = (async () => {
-      if (!configured()) { mode = 'local'; return mode; }
+      if (!configured()) { mode = 'local'; await loadSite(); return mode; }
       const v = window.FIREBASE_SDK_VERSION || '10.14.1';
       const base = 'https://www.gstatic.com/firebasejs/' + v + '/';
       try {
@@ -143,6 +150,8 @@
         db = null; auth = null;
         mode = 'local';
       }
+      /* 화면이 그려지기 전에 사이트 정보를 반영해 둔다 */
+      await loadSite();
       return mode;
     })();
     return initPromise;
@@ -169,6 +178,53 @@
     }
   };
 
+  /* ---------- 사이트 정보 ----------
+     학생회 이름 · 소개 · 연락처 · 상단 버튼처럼 '코드가 아니라 내용'인 것들.
+     저장된 값이 있으면 js/config.js 의 기본값 위에 덮어쓴다.
+
+     주의: window.SITE 를 새 객체로 바꾸지 않고 '내용만' 덮어쓴다.
+     각 화면 스크립트가 const S = window.SITE 로 참조를 붙잡고 있어서,
+     객체를 교체하면 그 참조들이 옛 값을 계속 보게 된다. */
+  const SITE_KEYS = [
+    'college', 'councilTerm', 'councilName', 'tagline', 'description',
+    'quickLinks', 'about', 'contact', 'categories', 'departments', 'consentText'
+  ];
+
+  async function loadSite() {
+    let stored = null;
+    try {
+      if (mode === 'firebase') {
+        const snap = await db.collection('config').doc('site').get();
+        if (snap.exists) stored = snap.data();
+      } else {
+        stored = lsGet(KEY.site, null);
+      }
+    } catch (e) {
+      console.warn('[store] 사이트 정보를 불러오지 못해 기본값을 씁니다.', e);
+    }
+    if (stored && window.SITE) {
+      SITE_KEYS.forEach((k) => {
+        if (stored[k] !== undefined && stored[k] !== null) window.SITE[k] = stored[k];
+      });
+    }
+    return window.SITE;
+  }
+
+  function getSite() { return window.SITE; }
+
+  async function saveSite(patch) {
+    const body = {};
+    SITE_KEYS.forEach((k) => { if (patch[k] !== undefined) body[k] = patch[k]; });
+    if (mode === 'firebase') {
+      await db.collection('config').doc('site').set(
+        Object.assign({}, body, { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }));
+    } else {
+      lsSet(KEY.site, body);
+    }
+    SITE_KEYS.forEach((k) => { if (body[k] !== undefined) window.SITE[k] = body[k]; });
+    return true;
+  }
+
   /* ---------- 링크 ---------- */
   async function getLinks() {
     if (mode === 'firebase') {
@@ -177,10 +233,10 @@
       if (groups.length) return groups;
     } else {
       const groups = lsGet(KEY.links, null);
-      if (groups && groups.length) return groups;
+      if (groups && groups.length) return clone(groups);
     }
     /* 아직 등록된 게 없으면 js/config.js 의 기본값을 쓴다 */
-    return (window.SITE && window.SITE.linkGroups) || [];
+    return clone((window.SITE && window.SITE.linkGroups) || []);
   }
 
   async function saveLinks(groups) {
@@ -196,7 +252,7 @@
 
   /* ---------- 폼 정의 ---------- */
   function defaultForms() {
-    return (window.SITE && window.SITE.defaultForms) || [];
+    return clone((window.SITE && window.SITE.defaultForms) || []);
   }
 
   async function getForms() {
@@ -370,6 +426,7 @@
     get isFirebase() { return mode === 'firebase'; },
     configured,
     auth: auth$,
+    getSite, saveSite, loadSite,
     getLinks, saveLinks,
     getForms, getForm, saveForm, deleteForm,
     submit, listSubmissions, deleteSubmission,

@@ -16,7 +16,7 @@ const SITE = {
   /* ---- 상단 빠른 실행 버튼 (최대 3개 권장) ---- */
   quickLinks: [
     { label: '인스타그램', icon: 'instagram', url: 'https://www.instagram.com/cau_inmun/' },
-    { label: '카카오톡 채널', icon: 'kakao', url: '' },
+    { label: '카카오톡 채널', icon: 'kakao', url: 'https://pf.kakao.com/_iITuX' },
     { label: '건의함', icon: 'mail', url: 'apply.html?id=suggestion' }
   ],
 
@@ -44,7 +44,8 @@ const SITE = {
       group: '함께 보는 계정',
       items: [
         { label: '인문대학 학생회 인스타그램', desc: '@cau_inmun', url: 'https://www.instagram.com/cau_inmun/' },
-        { label: '인문대학 인권위원회', desc: '@humanrights_inmun.cau', url: 'https://www.instagram.com/humanrights_inmun.cau/' }
+        { label: '인문대학 인권위원회', desc: '@humanrights_inmun.cau', url: 'https://www.instagram.com/humanrights_inmun.cau/' },
+        { label: '카카오톡 채널', desc: '문의는 이곳으로 편하게', url: 'https://pf.kakao.com/_iITuX' }
       ]
     }
   ],
@@ -67,7 +68,7 @@ const SITE = {
     place: '서울특별시 동작구 흑석로 84 중앙대학교 서울캠퍼스 203관(서라벌홀)',
     email: '',
     instagram: 'https://www.instagram.com/cau_inmun/',
-    kakao: ''
+    kakao: 'https://pf.kakao.com/_iITuX'
   },
 
   /* ---- 공지 카테고리 (색상은 css 의 .tag[data-cat] 와 연결) ---- */
@@ -125,6 +126,29 @@ const SITE = {
         { key: 'contact', label: '연락처', type: 'text', required: true,
           help: '전화번호 또는 카카오톡 ID' },
         { key: 'note', label: '남길 말', type: 'textarea', required: false }
+      ]
+    },
+    {
+      id: 'example',
+      order: 3,
+      title: '[예시] 간담회 사전 질문 받기',
+      description: '관리자 페이지의 폼 편집 기능을 보여주기 위한 예시 폼입니다. ' +
+                   '항목 유형이 어떻게 보이는지 확인한 뒤, 실제로 쓸 때는 내용을 바꾸거나 폼을 지우세요.',
+      submitLabel: '질문 보내기',
+      doneMessage: '질문 감사합니다. 간담회 때 정리해서 답변드리겠습니다.',
+      open: true,
+      consent: true,
+      fields: [
+        { key: 'topic', label: '어느 분야에 대한 질문인가요?', type: 'radio', required: true,
+          options: ['학사 · 커리큘럼', '장학 · 등록금', '시설 · 공간', '학생회 사업'] },
+        { key: 'question', label: '질문 내용', type: 'textarea', required: true,
+          placeholder: '간담회에서 다뤄주셨으면 하는 내용을 적어주세요.' },
+        { key: 'attend', label: '참석 가능한 시간대 (여러 개 선택 가능)', type: 'checkbox', required: false,
+          options: ['평일 점심', '평일 오후', '평일 저녁'] },
+        { key: 'preferDate', label: '희망 날짜', type: 'date', required: false },
+        { key: 'dept', label: '학과', type: 'select', required: false, useDepartments: true },
+        { key: 'name', label: '이름', type: 'text', required: false,
+          help: '익명으로 보내려면 비워두세요.' }
       ]
     }
   ],

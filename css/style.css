@@ -39,10 +39,10 @@
   --wrap: 560px;
   --wrap-wide: 760px;
 
-  /* 제목 — 학교안심 포스터 / 본문 — 나눔휴먼 (정의는 css/fonts.css) */
-  --font-body: 'NanumHuman', -apple-system, BlinkMacSystemFont,
+  /* 제목 — 페이퍼로지 / 본문 — 프리텐다드 (정의는 css/fonts.css) */
+  --font-body: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
                'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
-  --font-display: 'HakgyoansimPoster', 'NanumHuman',
+  --font-display: 'Paperlogy', 'Pretendard Variable', Pretendard,
                   'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
 
   --ease: cubic-bezier(.22, .61, .36, 1);

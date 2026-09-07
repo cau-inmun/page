@@ -372,19 +372,28 @@
   function checkFonts() {
     if (!document.fonts || !document.fonts.ready) return;
     const want = [
-      ['HakgyoansimPoster', '제목 — 학교안심 포스터'],
-      ['NanumHuman', '본문 — 나눔휴먼']
+      ['Paperlogy', '제목 — 페이퍼로지'],
+      ['Pretendard Variable', '본문 — 프리텐다드']
     ];
     document.fonts.ready.then(() => setTimeout(() => {
+      /* check() 만으로는 부족하다. @font-face 규칙 자체가 등록되지 않으면
+         (예: fonts.css 의 @import 가 실패한 경우) 브라우저가 시스템 글꼴로
+         대체하면서 check() 가 true 를 돌려준다. 규칙 등록 여부도 함께 본다. */
+      const registered = new Set();
+      try { document.fonts.forEach((ff) => registered.add(ff.family.replace(/^["']|["']$/g, ''))); }
+      catch (e) { /* 순회를 지원하지 않으면 이 검사만 건너뛴다 */ }
+
       const missing = want.filter(([family]) => {
+        if (registered.size && !registered.has(family)) return true;
         try { return !document.fonts.check('700 16px "' + family + '"', '가'); }
         catch (e) { return false; }
       });
       if (!missing.length) return;
       console.warn(
         '[글꼴] 불러오지 못했습니다: ' + missing.map((m) => m[1]).join(', ') +
-        '\ncss/fonts.css 의 @font-face 주소가 만료됐을 수 있습니다. ' +
-        '눈누 폰트 페이지의 최신 코드로 해당 블록을 교체하세요.'
+        '\ncss/fonts.css 의 주소가 만료됐을 수 있습니다. 아래에서 최신 코드를 가져와 교체하세요.' +
+        '\n  페이퍼로지  https://github.com/fonts-archive/Paperlogy' +
+        '\n  프리텐다드  https://github.com/orioncactus/pretendard'
       );
     }, 400));
   }

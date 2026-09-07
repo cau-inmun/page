@@ -72,6 +72,7 @@
     renderNoticeList();
     renderFormTabs();
     renderFormSettings();
+    renderSite();
     renderLinks();
     await loadSubs();
   }
@@ -468,7 +469,19 @@
             el('input', { type: 'checkbox', checked: form.open !== false ? '' : null,
               onchange: (e) => { form.open = e.target.checked; drawStatus(); } }),
             '접수 허용'
-          ])
+          ]),
+          el('button', {
+            type: 'button', class: 'rowbtn', text: '폼 삭제',
+            onclick: async () => {
+              if (!confirm(`‘${form.title}’ 폼을 지울까요?\n` +
+                           '이미 접수된 응답은 남지만 새 제출은 받을 수 없게 됩니다.')) return;
+              try { await STORE.deleteForm(form.id); }
+              catch (e) { console.error(e); toast('삭제하지 못했습니다'); return; }
+              forms = forms.filter((f) => f.id !== form.id);
+              renderFormSettings(); renderFormTabs();
+              toast('폼을 지웠습니다');
+            }
+          })
         ]),
         el('input', { value: form.description || '', placeholder: '폼 설명',
           style: 'margin-bottom:10px', oninput: (e) => { form.description = e.target.value; } }),
@@ -500,6 +513,30 @@
     });
 
     box.appendChild(el('div', { class: 'admin__actions', style: 'margin-top:14px' }, [
+      el('button', {
+        type: 'button', class: 'btn', text: '+ 새 폼 만들기',
+        onclick: async () => {
+          const title = prompt('새 폼의 이름을 입력하세요.\n예) 총회 참석 신청');
+          if (!title || !title.trim()) return;
+          let id = 'form-' + uid();
+          const form = {
+            id, order: forms.length + 1, title: title.trim(),
+            description: '', submitLabel: '제출하기',
+            doneMessage: '접수되었습니다. 감사합니다.',
+            open: false, consent: true,
+            fields: [
+              { key: 'f_' + uid(), label: '이름', type: 'text', required: true },
+              { key: 'f_' + uid(), label: '학과', type: 'select', required: false, useDepartments: true },
+              { key: 'f_' + uid(), label: '내용', type: 'textarea', required: true }
+            ]
+          };
+          try { await STORE.saveForm(form); }
+          catch (e) { console.error(e); toast('만들지 못했습니다'); return; }
+          forms.push(form);
+          renderFormSettings(); renderFormTabs();
+          toast('폼을 만들었습니다. 항목을 정리한 뒤 ‘접수 허용’ 을 켜세요.');
+        }
+      }),
       el('button', { type: 'button', class: 'btn btn--primary', text: '폼 설정 저장',
         onclick: async () => {
           try {
@@ -512,7 +549,155 @@
   }
 
   /* ==========================================================
-     탭 4 · 링크
+     탭 4 · 사이트 정보
+     ========================================================== */
+  function textField(label, value, help, onInput, opts) {
+    const input = el((opts && opts.multiline) ? 'textarea' : 'input', {
+      value: value || '', placeholder: (opts && opts.placeholder) || '',
+      rows: (opts && opts.multiline) ? '3' : null,
+      oninput: (e) => onInput(e.target.value)
+    });
+    if (opts && opts.multiline) input.value = value || '';
+    return el('div', { class: 'field' }, [
+      el('label', { text: label }),
+      help ? el('p', { class: 'field__help', text: help }) : null,
+      input
+    ]);
+  }
+
+  function renderSite() {
+    const box = $('#site-editor');
+    box.innerHTML = '';
+
+    /* 저장 버튼이 실제로 쓸 작업본 — 저장 전까지 원본을 건드리지 않는다 */
+    const d = {
+      college: S.college, councilTerm: S.councilTerm, councilName: S.councilName,
+      tagline: S.tagline, description: S.description,
+      quickLinks: JSON.parse(JSON.stringify(S.quickLinks || [])),
+      about: JSON.parse(JSON.stringify(S.about || { intro: '', departments: [] })),
+      contact: JSON.parse(JSON.stringify(S.contact || {})),
+      categories: (S.categories || []).slice(),
+      departments: (S.departments || []).slice(),
+      consentText: S.consentText
+    };
+
+    /* --- 이름 · 제목 --- */
+    box.appendChild(el('div', { class: 'editor-group' }, [
+      el('p', { class: 'schedule__title', style: 'margin-bottom:10px', text: '이름과 제목' }),
+      textField('대학 이름', d.college, '홈 상단과 푸터에 나옵니다.', (v) => { d.college = v; }),
+      el('div', { class: 'field-row' }, [
+        textField('기수', d.councilTerm, '예) 제15대 학생회', (v) => { d.councilTerm = v; }),
+        textField('학생회 이름', d.councilName, '예) 연', (v) => { d.councilName = v; })
+      ]),
+      textField('한 줄 소개', d.tagline, '홈 제목 아래 문구', (v) => { d.tagline = v; }),
+      textField('공유 미리보기 문구', d.description,
+        '카카오톡 · 검색 결과에 나오는 설명', (v) => { d.description = v; }, { multiline: true })
+    ]));
+
+    /* --- 상단 빠른 버튼 --- */
+    const quickBox = el('div');
+    const drawQuick = () => {
+      quickBox.innerHTML = '';
+      d.quickLinks.forEach((q, i) => {
+        quickBox.appendChild(el('div', { class: 'editor-row' }, [
+          el('input', { value: q.label || '', placeholder: '버튼 이름',
+            oninput: (e) => { q.label = e.target.value; } }),
+          el('select', { onchange: (e) => { q.icon = e.target.value; } },
+            ['instagram', 'kakao', 'mail', 'link'].map((t) =>
+              el('option', { value: t, text: t, selected: (q.icon || 'link') === t ? '' : null }))),
+          el('input', { value: q.url || '', placeholder: 'https://… (비우면 준비 중)',
+            oninput: (e) => { q.url = e.target.value; } }),
+          el('div', { class: 'editor-row__tools' }, [
+            el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑',
+              onclick: () => { if (i > 0) { [d.quickLinks[i-1], d.quickLinks[i]] = [d.quickLinks[i], d.quickLinks[i-1]]; drawQuick(); } } }),
+            el('button', { type: 'button', class: 'rowbtn', text: '삭제',
+              onclick: () => { d.quickLinks.splice(i, 1); drawQuick(); } })
+          ])
+        ]));
+      });
+      quickBox.appendChild(el('button', {
+        type: 'button', class: 'btn', text: '+ 버튼 추가',
+        onclick: () => { d.quickLinks.push({ label: '새 버튼', icon: 'link', url: '' }); drawQuick(); }
+      }));
+    };
+    drawQuick();
+    box.appendChild(el('div', { class: 'editor-group' }, [
+      el('p', { class: 'schedule__title', text: '상단 빠른 버튼' }),
+      el('p', { class: 'schedule__hint', text: '홈 로고 아래 동그란 버튼들입니다. 주소를 비우면 ‘준비 중’ 으로 보입니다.' }),
+      quickBox
+    ]));
+
+    /* --- 학생회 소개 --- */
+    const deptBox = el('div');
+    const drawDepts = () => {
+      deptBox.innerHTML = '';
+      (d.about.departments || []).forEach((dep, i) => {
+        deptBox.appendChild(el('div', { class: 'editor-row' }, [
+          el('input', { value: dep.name || '', placeholder: '국 이름',
+            oninput: (e) => { dep.name = e.target.value; } }),
+          el('input', { value: dep.desc || '', placeholder: '하는 일',
+            oninput: (e) => { dep.desc = e.target.value; } }),
+          el('span'),
+          el('div', { class: 'editor-row__tools' }, [
+            el('button', { type: 'button', class: 'rowbtn', text: '삭제',
+              onclick: () => { d.about.departments.splice(i, 1); drawDepts(); } })
+          ])
+        ]));
+      });
+      deptBox.appendChild(el('button', {
+        type: 'button', class: 'btn', text: '+ 국 추가',
+        onclick: () => { d.about.departments.push({ name: '', desc: '' }); drawDepts(); }
+      }));
+    };
+    drawDepts();
+    box.appendChild(el('div', { class: 'editor-group' }, [
+      el('p', { class: 'schedule__title', style: 'margin-bottom:10px', text: '학생회 소개' }),
+      textField('소개 글', d.about.intro, '', (v) => { d.about.intro = v; }, { multiline: true }),
+      deptBox
+    ]));
+
+    /* --- 연락처 --- */
+    box.appendChild(el('div', { class: 'editor-group' }, [
+      el('p', { class: 'schedule__title', style: 'margin-bottom:10px', text: '연락처 (푸터)' }),
+      textField('주소', d.contact.place, '', (v) => { d.contact.place = v; }),
+      el('div', { class: 'field-row' }, [
+        textField('인스타그램 주소', d.contact.instagram, '', (v) => { d.contact.instagram = v; }),
+        textField('카카오톡 채널 주소', d.contact.kakao, '', (v) => { d.contact.kakao = v; })
+      ]),
+      textField('이메일', d.contact.email, '비워두면 푸터에 표시되지 않습니다.', (v) => { d.contact.email = v; })
+    ]));
+
+    /* --- 목록형 설정 --- */
+    box.appendChild(el('div', { class: 'editor-group' }, [
+      el('p', { class: 'schedule__title', style: 'margin-bottom:10px', text: '선택지 목록' }),
+      textField('공지 분류', d.categories.join(', '),
+        '쉼표로 구분합니다. ‘전체’ 는 그대로 두세요.',
+        (v) => { d.categories = v.split(',').map((x) => x.trim()).filter(Boolean); }),
+      textField('학과 목록', d.departments.join(', '),
+        '폼의 ‘학과’ 선택지로 쓰입니다. 쉼표로 구분합니다.',
+        (v) => { d.departments = v.split(',').map((x) => x.trim()).filter(Boolean); },
+        { multiline: true }),
+      textField('개인정보 동의 문구', d.consentText, '폼 아래 동의 칸에 나옵니다.',
+        (v) => { d.consentText = v; }, { multiline: true })
+    ]));
+
+    box.appendChild(el('div', { class: 'admin__actions', style: 'margin-top:14px' }, [
+      el('button', {
+        type: 'button', class: 'btn btn--primary', text: '사이트 정보 저장',
+        onclick: async () => {
+          try {
+            await STORE.saveSite(d);
+            toast('저장했습니다. 홈을 새로고침하면 반영됩니다.');
+            renderSite();
+          } catch (e) { console.error(e); toast('저장하지 못했습니다'); }
+        }
+      }),
+      el('button', { type: 'button', class: 'btn', text: '되돌리기', onclick: renderSite })
+    ]));
+  }
+
+  /* ==========================================================
+     탭 5 · 링크
      ========================================================== */
   function renderLinks() {
     const box = $('#link-editor');
