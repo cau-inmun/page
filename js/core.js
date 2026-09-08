@@ -611,6 +611,55 @@
     }
   }
 
+  /* ---------- 새 배포 스스로 받아오기 ----------
+     GitHub Pages 는 파일을 한동안 캐시에 둔다. js·css·이미지에는 ?v= 를
+     붙여 해결했지만, 정작 html 자체에는 붙일 수가 없다. 그래서 html 이
+     옛것으로 남으면 그 안에 적힌 ?v= 도 옛것이라 모든 파일이 옛것이 된다.
+     실제로 이 때문에 '고쳤는데 화면이 그대로' 가 여러 번 있었다.
+
+     그래서 서버의 config.js 를 캐시를 건너뛰고 한 번 읽어 배포 번호를
+     견줘본다. 다르면 주소에 표시를 붙여 새로 받아온다 (한 세션에 한 번).
+     한 번 받아왔는데도 여전히 다르면, 그때는 사람이 손봐야 하므로
+     화면에 알린다. */
+  const RELOAD_KEY = 'cau-inmun:reloaded-for';
+
+  async function checkForUpdate() {
+    const mine = (window.SITE && window.SITE.APP_VERSION) || '';
+    if (!mine || !window.fetch) return;
+
+    let latest = '';
+    try {
+      const res = await fetch('js/config.js?fresh=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return;
+      const m = (await res.text()).match(/APP_VERSION:\s*'([^']+)'/);
+      latest = m ? m[1] : '';
+    } catch (e) { return; }          // 못 읽으면 조용히 넘어간다
+    if (!latest || latest === mine) return;
+
+    let tried = '';
+    try { tried = sessionStorage.getItem(RELOAD_KEY) || ''; } catch (e) { /* 무시 */ }
+    if (tried !== latest) {
+      try { sessionStorage.setItem(RELOAD_KEY, latest); } catch (e) { /* 무시 */ }
+      const u = new URL(location.href);
+      u.searchParams.set('_v', latest);
+      location.replace(u.toString());
+      return;
+    }
+    staleBanner(mine, latest);
+  }
+
+  function staleBanner(mine, latest) {
+    if ($('#stale-bar')) return;
+    document.body.insertBefore(el('div', {
+      id: 'stale-bar', class: 'banner banner--error',
+      style: 'position:sticky; top:0; z-index:60; border-radius:0; text-align:center'
+    }, [
+      el('strong', { text: '새 버전이 있는데 예전 화면이 열려 있습니다. ' }),
+      '윈도우는 Ctrl+Shift+R, 맥은 Cmd+Shift+R 로 새로고침해 주세요. ',
+      el('code', { text: mine + ' → ' + latest })
+    ]), document.body.firstChild);
+  }
+
   /* ---------- 공통 초기화 ---------- */
   function boot() {
     /* 먼저 config.js 기본값으로 그려두고 (JS 지연에도 빈 자리가 없게),
@@ -621,6 +670,7 @@
     if (window.STORE) {
       STORE.init().then(applyBrand).catch(() => {});
     }
+    checkForUpdate();
     watchBrandFit();
     stickyHeader();
     initLogos();
@@ -634,6 +684,6 @@
     seoulNow, maskName, maskSid, describeError, errorBoxFor,
     noticeStatus, formStatus, formVisibility, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
-    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, fitBrandName, boot
+    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, fitBrandName, checkForUpdate, boot
   };
 })();

@@ -40,8 +40,22 @@
        Firebase 를 보기도 전에 이것부터 짚는다. */
     const NEED = ['getSeats', 'reserveSeat', 'releaseSeat', 'listSeatLogs',
                   'listSeatReleases', 'cancelSeat'];
+    const mine = (window.SITE && window.SITE.APP_VERSION) || '(없음)';
+    let latest = '';
+    try {
+      const res = await fetch('js/config.js?fresh=' + Date.now(), { cache: 'no-store' });
+      const m = (await res.text()).match(/APP_VERSION:\s*'([^']+)'/);
+      latest = m ? m[1] : '';
+    } catch (e) { /* 못 읽으면 배포 번호 비교는 건너뛴다 */ }
+
     const lacking = NEED.filter((k) => typeof (window.STORE || {})[k] !== 'function');
-    if (lacking.length) {
+    if (latest && latest !== mine) {
+      row('fail', '먼저 · 사이트 파일 최신 여부',
+        `이 화면은 ${mine} 인데 서버에는 ${latest} 가 올라가 있습니다.`,
+        '브라우저가 예전 화면을 들고 있습니다. 윈도우는 Ctrl+Shift+R, ' +
+        '맥은 Cmd+Shift+R 로 강제 새로고침하세요. 휴대폰은 브라우저를 완전히 닫았다 여세요. ' +
+        '아래 항목들이 실패해도 먼저 이것부터 해결해야 합니다.');
+    } else if (lacking.length) {
       row('fail', '먼저 · 사이트 파일 최신 여부',
         '예전 파일을 쓰고 있습니다. 없는 기능: ' + lacking.join(', '),
         '브라우저가 옛 js 를 캐시에 들고 있습니다. 윈도우는 Ctrl+Shift+R, ' +
@@ -49,7 +63,8 @@
         '그래도 그대로면 GitHub Pages 배포가 아직 안 끝났을 수 있으니 1~2분 뒤 다시 보세요. ' +
         '아래 항목들이 실패해도 먼저 이것부터 해결해야 합니다.');
     } else {
-      row('ok', '먼저 · 사이트 파일 최신 여부', '열람실 기능까지 모두 들어 있습니다.', '');
+      row('ok', '먼저 · 사이트 파일 최신 여부',
+        '배포 번호 ' + mine + ' · 열람실 기능까지 모두 들어 있습니다.', '');
     }
 
     /* ---- 1. 설정값 ---- */
