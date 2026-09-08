@@ -278,6 +278,7 @@ Firestore 에도 그대로 저장되므로, 시트는 보기 편하라고 하나
    - **배포** → 권한 승인
 5. 나오는 **웹 앱 URL** (`https://script.google.com/macros/s/…/exec`) 를 복사합니다.
 6. `js/firebase-config.js` 가 아니라 **`js/config.js`** 의 `sheetWebhookUrl` 에 붙여넣고 커밋합니다.
+   (이미 연결돼 있습니다. 시트를 새로 만들 때만 이 주소를 바꾸면 됩니다)
 
 ```js
 sheetWebhookUrl: 'https://script.google.com/macros/s/AKfyc.../exec',
@@ -292,6 +293,12 @@ sheetWebhookUrl: 'https://script.google.com/macros/s/AKfyc.../exec',
 >
 > ‘액세스 권한: 모든 사용자’ 는 **이 스크립트로 쓰기만** 허용하는 것이고,
 > 시트 자체가 공개되는 게 아닙니다. 시트 공유 설정은 그대로 비공개입니다.
+>
+> 다만 이 주소는 사이트 코드에 들어가므로 누구나 볼 수 있고, 마음먹으면
+> 시트에 아무 줄이나 넣을 수 있습니다. 구글폼도 같은 성격이라 큰 문제는
+> 아니지만, **정본은 Firestore 이고 시트는 보기 편하라고 두는 사본**이라는
+> 점은 알고 계세요. 이상한 줄이 들어오면 시트에서 지우면 되고, 심하면
+> Apps Script 배포를 지웠다 새로 만들어 주소를 바꾸면 됩니다.
 
 ### 폼 만들고 여닫기
 
