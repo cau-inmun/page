@@ -39,19 +39,17 @@
   --wrap: 560px;
   --wrap-wide: 760px;
 
-  /* Apple SD Gothic Neo 를 맨 앞에 둔다.
-     애플 기기에서는 한글도 영문도 숫자도 전부 이 하나로 그려진다.
-     (SF 를 앞에 두면 한글만 SD Gothic Neo 로 넘어가 한 문장 안에서
-      글꼴이 섞였다. 그걸 없애려고 순서를 바꾼 것이다)
-     -apple-system 은 이 글꼴에 없는 글자(기호 · 이모지)를 받는 자리다.
-     윈도우 · 안드로이드에는 이 글꼴이 없으므로 프리텐다드가 대신한다 —
-     애플 시스템 글꼴을 다른 환경에서 쓰려고 만든 글꼴이다.
-     이 글꼴을 웹폰트로 심지 못하는 이유는 README 6장 참고. */
-  --font-apple: 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont,
-                'Pretendard Variable', Pretendard, 'Malgun Gothic',
-                system-ui, sans-serif;
-  --font-body: var(--font-apple);
-  --font-display: var(--font-apple);
+  /* 프리텐다드 하나로 통일한다.
+     제목 · 본문은 물론 한글 · 영문 · 숫자가 전부 같은 글꼴이고,
+     보는 기기가 무엇이든 같은 모습으로 보인다.
+     뒤에 남긴 것들은 프리텐다드를 못 받았을 때의 대비다 —
+     애플 기기는 Apple SD Gothic Neo, 윈도우는 맑은 고딕으로 내려간다.
+     (프리텐다드는 애플 시스템 글꼴을 다른 환경에서 쓰려고 만든 글꼴이라
+      대체되더라도 인상이 크게 달라지지 않는다) */
+  --font-ui: 'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo',
+             'Malgun Gothic', system-ui, sans-serif;
+  --font-body: var(--font-ui);
+  --font-display: var(--font-ui);
 
   --ease: cubic-bezier(.22, .61, .36, 1);
 }

@@ -396,60 +396,44 @@ sheetWebhookUrl: 'https://script.google.com/macros/s/AKfyc.../exec',
 
 ## 6. 글꼴
 
-사이트 전체가 애플의 한글 시스템 글꼴 **Apple SD Gothic Neo** 하나로 통일돼 있습니다.
-제목 · 본문은 물론 **한글 · 영문 · 숫자까지 같은 글꼴**이고, 굵기와 크기로만 위계를 줍니다.
+사이트 전체가 **프리텐다드 Pretendard** 하나입니다.
+제목 · 본문은 물론 **한글 · 영문 · 숫자까지 같은 글꼴**이고, 굵기와 크기로만
+위계를 줍니다. 맥이든 윈도우든 안드로이드든 **같은 모습으로 보입니다.**
 
-| 보는 기기 | 실제로 쓰이는 글꼴 |
+| | |
 | --- | --- |
-| 맥 · 아이폰 · 아이패드 | **Apple SD Gothic Neo** — 기기에 이미 있는 것 |
-| 윈도우 · 안드로이드 | **프리텐다드 Pretendard** (OFL, 상업적 이용 무료) |
+| 글꼴 | 프리텐다드 Pretendard (길형진) |
+| 라이선스 | SIL Open Font License — 상업적 이용 무료 |
+| 받는 곳 | jsDelivr CDN (`css/fonts.css` 의 `@import`) |
 
-### 글꼴 파일을 직접 넣지 않은 이유
+프리텐다드는 애플 시스템 글꼴(Apple SD Gothic Neo)을 다른 환경에서도 쓰려고
+만든 글꼴입니다. 애플 글꼴 자체는 웹사이트에 심을 수 없습니다 — 애플이 따로
+배포하지 않고 운영체제에 딸려 오는 것이라, 파일을 꺼내 퍼뜨리는 것은 허용
+범위가 아닙니다. (`developer.apple.com/fonts` 의 **SF Pro** 도 마찬가지이고,
+그쪽은 **한글이 아예 없어서** 한글이 다른 글꼴로 갈라집니다)
 
-**Apple SD Gothic Neo 는 웹사이트에 심을 수 없습니다.** 애플이 따로 배포하지
-않는 글꼴이라 (`developer.apple.com/fonts` 에도 없습니다) 운영체제에 딸려 오는
-파일을 꺼내 퍼뜨리는 셈이 되고, 이는 허용 범위가 아닙니다.
-
-> 애플 개발자 사이트에서 받을 수 있는 **SF Pro** 도 답이 아닙니다.
-> 애플 플랫폼용으로 쓰임이 한정돼 웹폰트 배포가 허용되지 않고,
-> 무엇보다 **한글이 없습니다.** 그래서 SF 를 앞에 두면 영문 · 숫자만 SF 로,
-> 한글은 Apple SD Gothic Neo 로 그려져 **한 문장 안에서 글꼴이 섞입니다.**
-> 지금은 Apple SD Gothic Neo 를 맨 앞에 두어 그 섞임을 없앤 상태입니다.
-
-애플 기기에서는 **이미 그 기기에 있는 글꼴을 부르는 것**이라 라이선스 문제가
-없습니다. 파일을 배포하는 게 아니기 때문입니다. 다른 환경에서는
-**프리텐다드**로 대신합니다. 프리텐다드는 애플 시스템 글꼴을 다른 환경에서
-쓰려고 만든 글꼴이라 인상이 거의 같습니다.
+**가변 글꼴 + 동적 서브셋**이라 실제로 쓰인 글자만 내려받습니다.
+굵기 45~920 을 파일 하나로 처리하므로 용량 부담이 적습니다.
 
 ### 어디를 고치나
 
-순서는 `css/style.css` 의 **`--font-apple`** 한 줄에 모여 있고,
+순서는 `css/style.css` 의 **`--font-ui`** 한 줄에 모여 있고,
 `--font-body` · `--font-display` 가 그것을 가리킵니다.
-실제로 내려받는 것은 `css/fonts.css` 의 프리텐다드뿐입니다.
-
-프리텐다드는 **가변 글꼴 + 동적 서브셋**이라 실제로 쓰인 글자만 내려받습니다.
-굵기 45~920 을 파일 하나로 처리하므로 용량 부담이 적습니다.
+`--font-ui` 뒤쪽에 적힌 이름들은 프리텐다드를 못 받았을 때의 대비입니다
+(애플 기기는 Apple SD Gothic Neo, 윈도우는 맑은 고딕).
 
 ### 바꾸고 싶을 때 (각각 한 줄)
 
-`css/style.css` 에서 한 줄만 고치면 됩니다.
-
 ```css
-/* 모든 기기에서 완전히 같은 모습으로 — 애플 기기에서도 프리텐다드를 쓴다 */
---font-apple: 'Pretendard Variable', Pretendard, 'Malgun Gothic', system-ui, sans-serif;
-
-/* 영문 · 숫자만 애플 SF 로 (한글은 Apple SD Gothic Neo — 예전 상태) */
---font-apple: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
-              'Pretendard Variable', Pretendard, 'Malgun Gothic', system-ui, sans-serif;
+/* 애플 기기에서만 그 기기의 글꼴을 쓰기 — 한글·영문·숫자 모두 통일된다 */
+--font-ui: 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont,
+           'Pretendard Variable', Pretendard, 'Malgun Gothic', system-ui, sans-serif;
 
 /* 제목만 페이퍼로지로 되돌리기 (@font-face 는 css/fonts.css 에 남겨두었습니다) */
---font-display: 'Paperlogy', var(--font-apple);
+--font-display: 'Paperlogy', var(--font-ui);
 ```
 
 ### 글꼴이 안 보일 때
-
-맥 · 아이폰에서는 운영체제 글꼴이라 이런 일이 없습니다.
-윈도우 · 안드로이드에서 프리텐다드를 못 받은 경우입니다.
 
 1. **F12 → Console** 에서 `[글꼴] 불러오지 못했습니다: …` 경고를 확인합니다.
 2. <https://github.com/orioncactus/pretendard> 의 최신 코드로
