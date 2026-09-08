@@ -169,19 +169,14 @@ section + section { margin-top: 52px; }
   color: var(--ink); white-space: nowrap;
 }
 .topbar__brand:hover { text-decoration: none; }
-/* 로고 글씨가 옅은 베이지(#D8C3A5)라 밝은 바탕에서는 26px 에서 거의 안 보인다.
-   그래서 상단바에서는 짙은 원 위에 얹어 배지처럼 쓴다. 색은 원본 그대로 둔다. */
+/* 배경 프레임 없이 로고만 놓는다. 틀이 없으니 조금 크게 둔다. */
 .topbar__mark {
-  width: 26px; height: 26px; border-radius: 50%;
-  background: var(--brand-deep); border: 1px solid var(--brand-deep);
+  width: 34px; height: 26px;
   display: grid; place-items: center;
-  font-family: var(--font-display); font-size: 13px; color: var(--sand);
-  flex: none; overflow: hidden;
+  font-family: var(--font-display); font-size: 13px; color: var(--brand-deep);
+  flex: none;
 }
-.topbar__mark img {
-  width: 100%; height: 100%; object-fit: contain;
-  padding: 4px;   /* 원 안에서 글씨가 가장자리에 닿지 않게 */
-}
+.topbar__mark img { width: 100%; height: 100%; object-fit: contain; }
 
 .nav {
   margin-left: auto; display: flex; gap: 2px;
@@ -221,9 +216,9 @@ section + section { margin-top: 52px; }
 .hero { padding: 40px 0 8px; text-align: center; }
 
 /* 붓글씨 '연' 한 글자라 프레임을 덧씌우지 않는다.
-   가로로 넓은 글씨여서 정사각형 대신 실제 비율(900:636)을 따른다. */
+   가로로 넓은 글씨여서 정사각형 대신 실제 비율(900:673)을 따른다. */
 .hero__logo {
-  width: min(230px, 60vw); aspect-ratio: 900 / 636;
+  width: min(230px, 60vw); aspect-ratio: 900 / 673;
   margin: 0 auto 18px;
   display: grid; place-items: center;
 }

@@ -87,7 +87,7 @@
         ? '아직 개방 전입니다. ' : '오늘 예약은 마감되었습니다. ' }),
       st.why === 'before'
         ? '오늘 ' + two(OPEN) + ':00 부터 예약할 수 있습니다.'
-        : '내일 ' + two(OPEN) + ':00 에 좌석표가 새로 열립니다.',
+        : two(CLOSE) + ':00 에 좌석표가 비워졌습니다. 내일 ' + two(OPEN) + ':00 에 새로 열립니다.',
       el('br'),
       '지금은 ' + st.now.date + ' ' + two(st.now.hour) + ':' + two(st.now.minute) + ' (한국 시각) 입니다.'
     );
@@ -107,6 +107,10 @@
     box.innerHTML = '';
     const st = roomState();
     const mine = myBooking();
+    /* 마감 시각이 지나면 좌석표를 비운 채로 보여준다.
+       그날 자리는 그때 정리되므로, 남아 있는 이름을 계속 띄우면
+       아직 누가 앉아 있는 것처럼 보인다. 기록은 관리자 화면에 남는다. */
+    const reset = !st.open && st.why === 'after';
     let taken = 0;
 
     ROWS.forEach((rowName, ri) => {
@@ -123,7 +127,7 @@
           line.appendChild(el('span', { class: 'seatrow__aisle', 'aria-hidden': 'true' }));
         }
         const n = ri * PER_ROW + i;
-        const info = seats[String(n)];
+        const info = reset ? null : seats[String(n)];
         if (info) taken++;
         line.appendChild(seatButton(n, info, st.open, mine && mine.seat === n));
       }
@@ -133,9 +137,10 @@
 
     box.appendChild(el('p', { class: 'seatmap__front', text: '↑ ' + (ROWS[0] || 'A') + '열 방향이 창가입니다' }));
 
-    $('[data-seat-count]').textContent =
-      '남은 자리 ' + (TOTAL - taken) + '석 / 전체 ' + TOTAL + '석' +
-      (mine ? ' · 내 자리 ' + seatLabel(mine.seat) : '');
+    $('[data-seat-count]').textContent = reset
+      ? '오늘 이용이 끝났습니다 · 좌석 ' + TOTAL + '석'
+      : '남은 자리 ' + (TOTAL - taken) + '석 / 전체 ' + TOTAL + '석' +
+        (mine ? ' · 내 자리 ' + seatLabel(mine.seat) : '');
   }
 
   function seatButton(n, info, roomOpen, isMine) {
@@ -439,7 +444,8 @@
     }, 30000);
     window.addEventListener('pagehide', () => clearInterval(timer));
 
+    /* 마감 뒤에는 확인증도 내린다 — 그날 이용이 끝났기 때문 */
     const mine = myBooking();
-    if (mine) showTicket(mine);
+    if (mine && roomState().open) showTicket(mine);
   });
 })();

@@ -171,8 +171,8 @@ const SITE = {
   readingRoom: {
     name: '인문대학 열람실',
     place: '203관(서라벌홀) 7층',
-    openHour: 9,        // 09시부터 예약 가능
-    closeHour: 21,      // 21시가 되면 닫힘 (매일 이 시각 이후 새 예약 불가)
+    openHour: 8,        // 08시부터 예약 가능
+    closeHour: 18,      // 18시가 되면 좌석표가 비워지고 그날 예약이 끝납니다
     rowNames: ['A', 'B', 'C', 'D', 'E'],
     perRow: 12,         // 한 줄에 놓인 좌석 수
     aisleAfter: 6,      // 이 번째 자리 뒤에 통로를 둡니다

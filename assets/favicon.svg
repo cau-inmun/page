@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- 상단바의 로고 배지와 같은 모습: 짙은 갈색 원 위에 옅은 '연' -->
-  <circle cx="32" cy="32" r="31" fill="#6E5334"/>
+  <circle cx="32" cy="32" r="31" fill="#F8E9D4"/>
+  <circle cx="32" cy="32" r="28.5" fill="none" stroke="#E0C9A4" stroke-width="1.5"/>
   <text x="32" y="33" text-anchor="middle" dominant-baseline="central"
         font-family="'Gowun Batang','Nanum Myeongjo','Apple SD Gothic Neo','Malgun Gothic',serif"
-        font-size="38" font-weight="700" fill="#EBD9BE">연</text>
+        font-size="36" font-weight="700" fill="#8A6B45">연</text>
 </svg>

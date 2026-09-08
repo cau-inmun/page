@@ -993,7 +993,7 @@
           el('input', { value: q.label || '', placeholder: '버튼 이름',
             oninput: (e) => { q.label = e.target.value; } }),
           el('select', { onchange: (e) => { q.icon = e.target.value; } },
-            ['instagram', 'kakao', 'mail', 'link'].map((t) =>
+            ['instagram', 'kakao', 'mail', 'clock', 'link'].map((t) =>
               el('option', { value: t, text: t, selected: (q.icon || 'link') === t ? '' : null }))),
           el('input', { value: q.url || '', placeholder: 'https://… (비우면 준비 중)',
             oninput: (e) => { q.url = e.target.value; } }),
