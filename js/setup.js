@@ -20,7 +20,7 @@
         el('div', { class: 'check-row__title', text: title }),
         detail ? el('div', { class: 'check-row__detail', text: detail }) : null,
         fix ? el('div', { class: 'check-row__fix' }, [
-          el('strong', { text: '해야 할 일 — ' }), fix
+          el('strong', { text: '해야 할 일 : ' }), fix
         ]) : null
       ])
     ]);

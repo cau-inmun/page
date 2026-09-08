@@ -105,7 +105,7 @@
             text: 'UID 복사',
             onclick: async () => {
               try { await navigator.clipboard.writeText(user.uid); toast('복사했습니다'); }
-              catch (e) { toast('복사 실패 — 직접 선택해 주세요'); }
+              catch (e) { toast('복사 실패. 직접 선택해 주세요'); }
             }
           })
         ]));
@@ -614,11 +614,11 @@
               extra
             ]),
             el('div', { class: 'frow__tools' }, [
-              el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑',
+              el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑', 'aria-label': '위로 옮기기',
                 onclick: () => { if (i > 0) { [form.fields[i-1], form.fields[i]] = [form.fields[i], form.fields[i-1]]; drawFields(); redrawPreview(); } } }),
-              el('button', { type: 'button', class: 'rowbtn', title: '아래로', text: '↓',
+              el('button', { type: 'button', class: 'rowbtn', title: '아래로', text: '↓', 'aria-label': '아래로 옮기기',
                 onclick: () => { if (i < form.fields.length-1) { [form.fields[i+1], form.fields[i]] = [form.fields[i], form.fields[i+1]]; drawFields(); redrawPreview(); } } }),
-              el('button', { type: 'button', class: 'rowbtn', title: '삭제', text: '×',
+              el('button', { type: 'button', class: 'rowbtn', title: '삭제', text: '×', 'aria-label': '항목 삭제',
                 onclick: () => {
                   if (!confirm(`‘${fd.label || '이름 없음'}’ 항목을 지울까요?`)) return;
                   form.fields.splice(i, 1); drawFields(); redrawHead(); redrawPreview();
@@ -632,7 +632,7 @@
       /* ---- 기본 정보 ---- */
       const statusLine = el('p', { class: 'field__help', style: 'margin:10px 0 0' });
       const drawStatus = () => {
-        statusLine.textContent = '현재 상태 — ' + ({
+        statusLine.textContent = '현재 상태 : ' + ({
           open: '지금 접수 중입니다.', upcoming: '아직 접수 전입니다.',
           closed: '지금은 접수를 받지 않습니다.'
         })[formStatus(form)];
@@ -845,7 +845,7 @@
           el('input', { value: q.url || '', placeholder: 'https://… (비우면 준비 중)',
             oninput: (e) => { q.url = e.target.value; } }),
           el('div', { class: 'editor-row__tools' }, [
-            el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑',
+            el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑', 'aria-label': '위로 옮기기',
               onclick: () => { if (i > 0) { [d.quickLinks[i-1], d.quickLinks[i]] = [d.quickLinks[i], d.quickLinks[i-1]]; drawQuick(); } } }),
             el('button', { type: 'button', class: 'rowbtn', text: '삭제',
               onclick: () => { d.quickLinks.splice(i, 1); drawQuick(); } })
@@ -953,9 +953,9 @@
             el('input', { value: it.url || '', placeholder: 'https://… (비우면 준비 중)',
               oninput: (e) => { it.url = e.target.value; } }),
             el('div', { class: 'editor-row__tools' }, [
-              el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑',
+              el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑', 'aria-label': '위로 옮기기',
                 onclick: () => { if (ii > 0) { [g.items[ii-1], g.items[ii]] = [g.items[ii], g.items[ii-1]]; draw(); } } }),
-              el('button', { type: 'button', class: 'rowbtn', title: '아래로', text: '↓',
+              el('button', { type: 'button', class: 'rowbtn', title: '아래로', text: '↓', 'aria-label': '아래로 옮기기',
                 onclick: () => { if (ii < g.items.length-1) { [g.items[ii+1], g.items[ii]] = [g.items[ii], g.items[ii+1]]; draw(); } } }),
               el('button', { type: 'button', class: 'rowbtn', text: '삭제',
                 onclick: () => { g.items.splice(ii, 1); draw(); } })

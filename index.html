@@ -33,7 +33,7 @@
   <header class="topbar">
     <div class="wrap topbar__inner">
       <a class="topbar__brand" href="./">
-        <span class="topbar__mark" data-logo><img src="assets/logo.png" alt=""></span>
+        <span class="topbar__mark" data-logo><img src="assets/logo.png" alt="" width="1080" height="1080"></span>
         <span class="topbar__name"><span class="topbar__name--long">중앙대학교 제15대 인문대학 학생회 ‘연(聯)’</span><span class="topbar__name--short">제15대 학생회 ‘연(聯)’</span></span>
       </a>
       <nav class="nav" aria-label="주요 메뉴">
@@ -50,15 +50,19 @@
 
     <!-- ================= HERO ================= -->
     <section class="hero wrap" aria-labelledby="hero-title">
-      <div class="hero__logo" data-logo>
-        <img src="assets/logo.png" alt="중앙대학교 인문대학 제15대 학생회 ‘연’ 로고">
+      <div class="hero__inner">
+        <div>
+          <p class="hero__eyebrow" data-site="college">중앙대학교 인문대학</p>
+          <h1 class="hero__title" id="hero-title">
+            <span data-site="council">제15대 학생회</span>
+            <span class="quote">‘<span data-site="name">연</span>’</span>
+          </h1>
+          <p class="hero__tagline" data-site="tagline">인문대학의 모든 소식을 한곳에서</p>
+        </div>
+        <div class="hero__logo" data-logo>
+          <img src="assets/logo.png" alt="중앙대학교 인문대학 제15대 학생회 ‘연’ 로고" width="1080" height="1080" fetchpriority="high">
+        </div>
       </div>
-      <p class="hero__eyebrow" data-site="college">중앙대학교 인문대학</p>
-      <h1 class="hero__title" id="hero-title">
-        <span data-site="council">제15대 학생회</span>
-        <span class="quote">‘<span data-site="name">연</span>’</span>
-      </h1>
-      <p class="hero__tagline" data-site="tagline">인문대학의 모든 소식을 한곳에서</p>
 
       <div class="quick" data-quick></div>
     </section>

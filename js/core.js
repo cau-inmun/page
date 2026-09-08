@@ -389,8 +389,8 @@
   function checkFonts() {
     if (!document.fonts || !document.fonts.ready) return;
     const want = [
-      ['Paperlogy', '제목 — 페이퍼로지'],
-      ['Pretendard Variable', '본문 — 프리텐다드']
+      ['Paperlogy', '제목(페이퍼로지)'],
+      ['Pretendard Variable', '본문(프리텐다드)']
     ];
     document.fonts.ready.then(() => setTimeout(() => {
       /* check() 만으로는 부족하다. @font-face 규칙 자체가 등록되지 않으면
