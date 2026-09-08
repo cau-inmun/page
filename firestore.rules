@@ -20,12 +20,21 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // 폼이 지금 접수 가능한 상태인지
-    //  open == true 이고, openAt 이 지났고, closeAt 이 아직 안 지났을 것
-    //  (openAt / closeAt 은 없어도 되며, 없으면 그 방향으로는 제한이 없다)
+    //  기간이 둘이다. 게시 기간(publishAt~expireAt)은 폼이 사이트에 보이는
+    //  기간이고, 접수 기간(openAt~closeAt)은 응답을 받는 기간이다.
+    //  게시 중이 아니면 접수도 받지 않는다 — 화면과 같은 규칙을 서버에도 건다.
+    //  (네 시각 모두 없어도 되며, 없으면 그 방향으로는 제한이 없다)
+    //
+    //  이 함수는 목록 조회가 아니라 get() 으로 읽은 문서 하나를 보므로,
+    //  공지에서 문제가 됐던 '목록 조회에서 resource.data 참조 불가' 제약에
+    //  걸리지 않는다. 그래서 폼은 서버에서도 시각을 따질 수 있다.
     function formIsOpen(f) {
       return f.open == true
-             && (!('openAt'  in f) || f.openAt  == null || f.openAt  <= request.time)
-             && (!('closeAt' in f) || f.closeAt == null || f.closeAt >  request.time);
+             && (!('archived'  in f) || f.archived  != true)
+             && (!('publishAt' in f) || f.publishAt == null || f.publishAt <= request.time)
+             && (!('expireAt'  in f) || f.expireAt  == null || f.expireAt  >  request.time)
+             && (!('openAt'    in f) || f.openAt    == null || f.openAt    <= request.time)
+             && (!('closeAt'   in f) || f.closeAt   == null || f.closeAt   >  request.time);
     }
 
     // 로그인한 관리자인지 확인

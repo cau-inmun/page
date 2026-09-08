@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  const { $, $$, el, icon, toast, formStatus, formatDateTime } = window.CORE;
+  const { $, $$, el, icon, toast, formStatus, formVisibility, formatDateTime } = window.CORE;
   const S = window.SITE;
 
   let form = null;
@@ -188,9 +188,14 @@
     $('[data-form-title]').textContent = '신청 · 건의';
     $('[data-form-desc]').textContent = '작성할 폼을 선택해 주세요.';
 
-    /* 마감된 폼은 목록에서 감추고, 접수 전인 폼은 시작 시각과 함께 보여준다 */
+    /* 게시 전이거나 게시가 끝난 폼은 아예 감춘다.
+       게시 중인 폼 가운데 마감된 것도 감추고, 접수 전인 것은 시작 시각과 함께 보여준다 */
     const notReady = (f) => STORE.isFirebase && f._seed;
-    const shown = forms.filter((f) => formStatus(f) !== 'closed' || notReady(f));
+    const shown = forms.filter((f) => {
+      if (notReady(f)) return true;
+      if (formVisibility(f) !== 'live') return false;
+      return formStatus(f) !== 'closed';
+    });
     if (!shown.length) {
       root.appendChild(el('div', { class: 'empty' }, [
         el('strong', { text: '지금은 열려 있는 폼이 없습니다.' }),
@@ -244,6 +249,17 @@
       console.warn(
         '[폼] 이 폼이 아직 Firestore 에 등록되지 않았습니다.\n' +
         '관리자 페이지 → 폼 설정 → 맨 아래 ‘폼 설정 저장’ 을 한 번 누르면 접수가 시작됩니다.');
+      return;
+    }
+
+    /* 게시 기간이 끝난 폼 — 접수 마감과는 다른 상태라 따로 안내한다 */
+    if (formVisibility(form) === 'archived') {
+      root.appendChild(el('div', { class: 'empty' }, [
+        el('strong', { text: '게시가 끝난 폼입니다.' }),
+        (form.expireAt
+          ? formatDateTime(form.expireAt, { year: true }) + ' 에 게시가 끝났습니다. 결과는 공지사항으로 안내드립니다.'
+          : '지금은 열려 있지 않습니다. 다시 열리면 공지사항과 인스타그램으로 알려드립니다.')
+      ]));
       return;
     }
 
@@ -349,6 +365,8 @@
     if (!id) { renderList(forms); return; }
 
     form = forms.find((f) => f.id === id);
+    /* 게시 전인 폼은 주소를 알아도 열리지 않게 한다 (공지와 같은 규칙) */
+    if (form && formVisibility(form) === 'scheduled') form = null;
     if (!form) {
       root.innerHTML = '';
       root.appendChild(el('div', { class: 'empty' }, [

@@ -8,7 +8,8 @@
   'use strict';
 
   const { $, $$, el, toast, tagEl, renderMarkdown, formatDate, formatDateTime,
-          toLocalInput, fromLocalInput, noticeStatus, formStatus, plainText } = window.CORE;
+          toLocalInput, fromLocalInput, noticeStatus, formStatus, formVisibility,
+          plainText } = window.CORE;
   const S = window.SITE;
 
   let notices = [], forms = [], linkGroups = [], subs = [];
@@ -470,6 +471,13 @@
     upcoming: ['접수 전', 'scheduled'],
     closed:   ['마감', 'archived']
   };
+  /* 게시 중이 아니면 접수 상태보다 그 사실이 먼저다.
+     '마감' 이라고만 적으면 왜 안 보이는지 알 수 없기 때문. */
+  const VISIBILITY_BADGE = {
+    scheduled: ['게시 예약', 'scheduled'],
+    archived:  ['게시 끝', 'archived']
+  };
+  const formBadge = (f) => VISIBILITY_BADGE[formVisibility(f)] || STATUS_BADGE[formStatus(f)];
 
   /* 학우에게 보이는 모습 그대로 그려주는 미리보기.
      실제 폼과 같은 CSS 클래스를 써서 눈으로 바로 확인할 수 있게 한다. */
@@ -521,7 +529,7 @@
       const badge = el('span');
       const summary = el('span', { class: 'fcard__meta' });
       const redrawHead = () => {
-        const [label, variant] = STATUS_BADGE[formStatus(form)];
+        const [label, variant] = formBadge(form);
         badge.innerHTML = '';
         badge.appendChild(tagEl(label, variant));
         summary.textContent = `항목 ${form.fields.length}개`;
@@ -631,12 +639,26 @@
       drawFields();
 
       /* ---- 기본 정보 ---- */
-      const statusLine = el('p', { class: 'field__help', style: 'margin:10px 0 0' });
+      /* 게시 기간과 접수 기간은 다른 것이라, 지금 상태를 두 줄로 나눠 보여준다.
+         한 줄로 뭉뚱그리면 '왜 안 보이지' 와 '왜 제출이 안 되지' 를 구분할 수 없다. */
+      const statusLine = el('p', { class: 'field__help fcard__status', style: 'margin:0 2px' });
       const drawStatus = () => {
-        statusLine.textContent = '현재 상태 : ' + ({
-          open: '지금 접수 중입니다.', upcoming: '아직 접수 전입니다.',
-          closed: '지금은 접수를 받지 않습니다.'
-        })[formStatus(form)];
+        const vis = formVisibility(form);
+        const visText = {
+          scheduled: form.publishAt
+            ? formatDateTime(form.publishAt) + ' 부터 사이트에 보입니다.'
+            : '아직 게시 전이라 사이트에 보이지 않습니다.',
+          live: '지금 사이트에 게시 중입니다.',
+          archived: form.expireAt && !form.archived
+            ? formatDateTime(form.expireAt) + ' 에 게시가 끝났습니다. 아카이브 탭에 있습니다.'
+            : '내려둔 상태라 사이트에 보이지 않습니다. 아카이브 탭에 있습니다.'
+        }[vis];
+        const subText = vis !== 'live'
+          ? '게시 중이 아니라 접수도 받지 않습니다.'
+          : ({ open: '지금 접수 중입니다.', upcoming: '아직 접수 전입니다.',
+               closed: '지금은 접수를 받지 않습니다.' })[formStatus(form)];
+        statusLine.innerHTML = '';
+        statusLine.append('게시 : ' + visText, el('br'), '접수 : ' + subText);
         redrawHead();
       };
       drawStatus();
@@ -667,6 +689,31 @@
         ]),
 
         el('div', { class: 'schedule' }, [
+          el('p', { class: 'schedule__title', text: '게시 기간' }),
+          el('p', { class: 'schedule__hint' }, [
+            '폼이 사이트에 보이는 기간입니다. 비워두면 계속 게시됩니다. ',
+            el('strong', { text: '게시 전에는 주소를 알아도 열리지 않고, 게시가 끝나면 아카이브 탭으로 들어갑니다.' })
+          ]),
+          el('label', { class: 'check', style: 'margin-bottom:12px' }, [
+            el('input', { type: 'checkbox', checked: form.archived ? null : '',
+              onchange: (e) => { form.archived = !e.target.checked; drawStatus(); } }),
+            '사이트에 게시'
+          ]),
+          el('div', { class: 'field-row' }, [
+            el('div', { class: 'field' }, [
+              el('label', { text: '게시 시작' }),
+              el('input', { type: 'datetime-local', value: toLocalInput(form.publishAt),
+                onchange: (e) => { form.publishAt = fromLocalInput(e.target.value); drawStatus(); } })
+            ]),
+            el('div', { class: 'field' }, [
+              el('label', { text: '게시 종료' }),
+              el('input', { type: 'datetime-local', value: toLocalInput(form.expireAt),
+                onchange: (e) => { form.expireAt = fromLocalInput(e.target.value); drawStatus(); } })
+            ])
+          ])
+        ]),
+
+        el('div', { class: 'schedule' }, [
           el('p', { class: 'schedule__title', text: '접수 기간' }),
           el('p', { class: 'schedule__hint' }, [
             '비워두면 아래 ‘접수 허용’ 만으로 여닫습니다. 시각을 정하면 그때 자동으로 열리고 닫힙니다. ',
@@ -688,9 +735,10 @@
               el('input', { type: 'datetime-local', value: toLocalInput(form.closeAt),
                 onchange: (e) => { form.closeAt = fromLocalInput(e.target.value); drawStatus(); } })
             ])
-          ]),
-          statusLine
+          ])
         ]),
+
+        statusLine,
 
         el('div', { class: 'fsection' }, [
           el('p', { class: 'schedule__title', text: '입력 항목' }),
@@ -831,28 +879,32 @@
       });
     }
 
-    /* --- 마감된 폼 --- */
+    /* --- 지난 폼 (게시가 끝났거나 접수가 마감된 것) --- */
     const fb = $('#arc-forms');
     fb.innerHTML = '';
+    /* 게시가 끝난 폼은 formStatus 도 'closed' 라 이 한 줄로 둘 다 걸린다.
+       (게시 전인 폼은 'upcoming' 이라 여기 오지 않는다 — 아직 지난 것이 아니므로) */
     const closed = forms.filter((f) => formStatus(f) === 'closed');
     $('#arc-form-count').textContent = closed.length + '건';
 
     if (!closed.length) {
       fb.appendChild(el('li', { class: 'empty' }, [
-        el('strong', { text: '마감된 폼이 없습니다.' }),
-        '접수가 끝난 폼이 이곳에 모입니다.'
+        el('strong', { text: '지난 폼이 없습니다.' }),
+        '게시 기간이 끝나거나 접수가 마감된 폼이 이곳에 모입니다.'
       ]));
       return;
     }
     closed.forEach((f) => {
+      const down = formVisibility(f) === 'archived';   // 게시가 끝난 것인지, 접수만 마감된 것인지
       fb.appendChild(el('li', { class: 'draft' }, [
-        tagEl('마감', 'archived'),
+        tagEl(down ? '게시 끝' : '마감', 'archived'),
         el('a', {
           class: 'draft__title', href: 'apply.html?id=' + encodeURIComponent(f.id),
           target: '_blank', rel: 'noopener', title: '새 창에서 열기', text: f.title
         }),
-        el('span', { class: 'draft__when',
-          text: f.closeAt ? formatDateTime(f.closeAt) + ' 마감' : '접수 중지' }),
+        el('span', { class: 'draft__when', text: down
+          ? (f.expireAt && !f.archived ? formatDateTime(f.expireAt) + ' 게시 종료' : '내려둠')
+          : (f.closeAt ? formatDateTime(f.closeAt) + ' 마감' : '접수 중지') }),
         el('button', {
           type: 'button', class: 'draft__btn', text: '응답 보기',
           onclick: () => {
@@ -863,15 +915,17 @@
           }
         }),
         el('button', {
-          type: 'button', class: 'draft__btn', text: '다시 열기',
+          type: 'button', class: 'draft__btn', text: down ? '다시 게시' : '다시 열기',
           onclick: async () => {
-            const next = Object.assign({}, f, { open: true, closeAt: '' });
+            const next = down
+              ? Object.assign({}, f, { archived: false, expireAt: '' })
+              : Object.assign({}, f, { open: true, closeAt: '' });
             const i = forms.findIndex((x) => x.id === f.id);
             if (i > -1) forms[i] = next;
             try { await STORE.saveForm(next); }
             catch (e) { console.error(e); toast('저장하지 못했습니다'); return; }
             renderFormSettings(); renderFormTabs(); renderArchive();
-            toast('접수를 다시 열었습니다');
+            toast(down ? '다시 게시했습니다' : '접수를 다시 열었습니다');
           }
         })
       ]));

@@ -125,20 +125,35 @@
 
   const ts = (iso) => { const t = Date.parse(iso || ''); return isNaN(t) ? null : t; };
 
-  /* 공지 상태 — 'scheduled' 예약 / 'live' 게시 중 / 'archived' 보관 */
-  function noticeStatus(n, now) {
+  /* 게시 상태 — 'scheduled' 게시 전 / 'live' 게시 중 / 'archived' 내려감
+     공지와 폼이 같은 규칙을 쓴다. publishAt 전이면 예약, expireAt 이 지났거나
+     archived 가 켜져 있으면 보관. */
+  function scheduleStatus(o, now) {
     const at = now || Date.now();
-    if (n.archived) return 'archived';
-    const pub = ts(n.publishAt);
+    if (o.archived) return 'archived';
+    const pub = ts(o.publishAt);
     if (pub !== null && pub > at) return 'scheduled';
-    const exp = ts(n.expireAt);
+    const exp = ts(o.expireAt);
     if (exp !== null && exp <= at) return 'archived';
     return 'live';
   }
 
-  /* 폼 상태 — 'upcoming' 접수 전 / 'open' 접수 중 / 'closed' 마감 */
+  /* 공지 상태 — 'scheduled' 예약 / 'live' 게시 중 / 'archived' 보관 */
+  function noticeStatus(n, now) { return scheduleStatus(n, now); }
+
+  /* 폼 게시 상태 — 공지와 같은 규칙.
+     '접수 기간' 과는 별개다. 게시 기간은 폼이 사이트에 보이는지,
+     접수 기간은 그 폼이 응답을 받는지를 정한다. */
+  function formVisibility(f, now) { return scheduleStatus(f, now); }
+
+  /* 폼 접수 상태 — 'upcoming' 접수 전 / 'open' 접수 중 / 'closed' 마감
+     게시되지 않은 폼은 접수도 열리지 않는다. 게시가 끝났는데 접수만
+     열려 있는 상태를 만들지 않기 위해서다. */
   function formStatus(f, now) {
     const at = now || Date.now();
+    const vis = formVisibility(f, at);
+    if (vis === 'archived') return 'closed';
+    if (vis === 'scheduled') return 'upcoming';
     if (f.open === false) return 'closed';
     const o = ts(f.openAt);
     if (o !== null && o > at) return 'upcoming';
@@ -444,7 +459,7 @@
   window.CORE = {
     $, $$, el, escapeHtml, safeUrl, isExternal,
     formatDate, relativeDate, formatDateTime, toLocalInput, fromLocalInput,
-    noticeStatus, formStatus, NOTICE_STATUS_LABEL,
+    noticeStatus, formStatus, formVisibility, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
     loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, boot
   };
