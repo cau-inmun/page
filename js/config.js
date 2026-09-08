@@ -25,8 +25,8 @@ const SITE = {
   quickLinks: [
     { label: '인스타그램', icon: 'instagram', url: 'https://www.instagram.com/cau_inmun/' },
     { label: '카카오톡 채널', icon: 'kakao', url: 'https://pf.kakao.com/_iITuX' },
-    { label: '건의함', icon: 'mail', url: 'apply.html?id=suggestion' },
-    { label: '열람실 예약', icon: 'clock', url: 'seats.html' }
+    { label: '열람실 예약', icon: 'clock', url: 'seats.html' },
+    { label: '건의함', icon: 'mail', url: 'apply.html?id=suggestion' }
   ],
 
   /* ---- 링크 모음 (링크트리 본문) ----

@@ -528,9 +528,87 @@
      관리자에서 이름을 바꾸면 이 함수가 덮어쓴다. */
   function applyBrand() {
     const b = (window.SITE && window.SITE.brand) || null;
-    if (!b) return;
-    $$('.topbar__name--long').forEach((n) => { if (b.long) n.textContent = b.long; });
-    $$('.topbar__name--short').forEach((n) => { if (b.short) n.textContent = b.short; });
+    if (b) {
+      $$('.topbar__name--long').forEach((n) => { if (b.long) n.textContent = b.long; });
+      $$('.topbar__name--short').forEach((n) => { if (b.short) n.textContent = b.short; });
+    }
+    fitBrandName();
+  }
+
+  /* 상단바 이름을 자리에 맞춰 고른다.
+     긴 이름 → 안 들어가면 짧은 이름 → 그것도 안 들어가면 감춘다.
+     화면 폭 기준(중단점)으로 하지 않는 이유: 메뉴가 하나 늘거나 이름이
+     길어지면 들어가는 폭이 달라지는데, 그때마다 중단점을 고쳐야 한다.
+     실제로 메뉴에 '열람실' 을 넣자 긴 이름이 '중앙대학교 제15대 …' 로
+     잘렸다. 재서 고르면 그런 일이 생기지 않는다. */
+  function fitBrandName() {
+    $$('.topbar__name').forEach((box) => {
+      const brand = box.closest('.topbar__brand');
+      const inner = box.closest('.topbar__inner');
+      if (!brand || !inner) return;
+
+      /* 이름 칸에 실제로 남는 폭을 직접 센다.
+         box.scrollWidth 로는 알 수 없다 — 이미 잘린 폭을 그대로 돌려준다. */
+      const nav = $('.nav', inner);
+      const mark = $('.topbar__mark', brand);
+      const gapOf = (el) => {
+        const cs = getComputedStyle(el);
+        return parseFloat(cs.columnGap || cs.gap) || 0;
+      };
+      /* clientWidth 에는 좌우 안쪽 여백이 포함된다. 그걸 빼지 않으면
+         남는 폭을 40px 쯤 넉넉하게 잡아 이름이 잘린다. */
+      const ics = getComputedStyle(inner);
+      let avail = inner.clientWidth
+                - parseFloat(ics.paddingLeft) - parseFloat(ics.paddingRight);
+      if (nav) avail -= nav.getBoundingClientRect().width + gapOf(inner);
+      if (mark) avail -= mark.getBoundingClientRect().width + gapOf(brand);
+      avail -= 1;   // 반올림 여유
+
+      const long = $('.topbar__name--long', box);
+      const short = $('.topbar__name--short', box);
+      const fits = (el) => el && textWidth(box, el.textContent) <= avail;
+
+      box.classList.remove('is-short', 'is-hidden');
+      if (short) {
+        if (fits(long)) return;
+        box.classList.add('is-short');
+        if (fits(short)) return;
+      } else if (textWidth(box, box.textContent) <= avail) {
+        return;
+      }
+      box.classList.add('is-hidden');
+    });
+  }
+
+  /* 글자가 실제로 몇 px 인지. 화면 밖에 같은 글꼴로 한 번 그려 재는 방식이라
+     잘림 여부와 상관없이 정확하다. */
+  function textWidth(ref, text) {
+    const cs = getComputedStyle(ref);
+    const probe = document.createElement('span');
+    probe.style.cssText = 'position:absolute;left:-9999px;top:-9999px;visibility:hidden;white-space:nowrap';
+    probe.style.fontFamily = cs.fontFamily;
+    probe.style.fontSize = cs.fontSize;
+    probe.style.fontWeight = cs.fontWeight;
+    probe.style.fontStyle = cs.fontStyle;
+    probe.style.letterSpacing = cs.letterSpacing;
+    probe.textContent = String(text || '');
+    document.body.appendChild(probe);
+    const w = probe.getBoundingClientRect().width;
+    probe.remove();
+    return w;
+  }
+
+  /* 창 크기가 바뀌면 다시 고른다 (연달아 오는 이벤트는 한 번으로 묶는다) */
+  function watchBrandFit() {
+    let t = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(t);
+      t = setTimeout(fitBrandName, 120);
+    });
+    /* 글꼴이 늦게 도착하면 글자 폭이 달라진다 */
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(fitBrandName).catch(() => {});
+    }
   }
 
   /* ---------- 공통 초기화 ---------- */
@@ -543,6 +621,7 @@
     if (window.STORE) {
       STORE.init().then(applyBrand).catch(() => {});
     }
+    watchBrandFit();
     stickyHeader();
     initLogos();
     revealOnScroll();
@@ -555,6 +634,6 @@
     seoulNow, maskName, maskSid, describeError, errorBoxFor,
     noticeStatus, formStatus, formVisibility, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
-    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, boot
+    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, fitBrandName, boot
   };
 })();

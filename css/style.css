@@ -169,16 +169,18 @@ section + section { margin-top: 52px; }
   color: var(--ink); white-space: nowrap;
 }
 .topbar__brand:hover { text-decoration: none; }
+/* 로고 글씨가 옅은 베이지(#D8C3A5)라 밝은 바탕에서는 26px 에서 거의 안 보인다.
+   그래서 상단바에서는 짙은 원 위에 얹어 배지처럼 쓴다. 색은 원본 그대로 둔다. */
 .topbar__mark {
   width: 26px; height: 26px; border-radius: 50%;
-  background: var(--sand); border: 1px solid var(--sand-edge);
+  background: var(--brand-deep); border: 1px solid var(--brand-deep);
   display: grid; place-items: center;
-  font-family: var(--font-display); font-size: 13px; color: var(--brand-deep);
+  font-family: var(--font-display); font-size: 13px; color: var(--sand);
   flex: none; overflow: hidden;
 }
 .topbar__mark img {
   width: 100%; height: 100%; object-fit: contain;
-  transform: scale(1.72); /* 테두리 글씨를 잘라내고 가운데 글씨만 보이게 */
+  padding: 4px;   /* 원 안에서 글씨가 가장자리에 닿지 않게 */
 }
 
 .nav {
@@ -196,20 +198,21 @@ section + section { margin-top: 52px; }
 .nav a:hover { background: var(--sand-soft); color: var(--ink); text-decoration: none; }
 .nav a[aria-current='page'] { background: var(--sand); color: var(--brand-deep); }
 
-/* 상단바 이름 — 넓은 화면은 긴 버전, 좁은 화면은 짧은 버전.
+/* 상단바 이름 — 자리에 들어가면 긴 버전, 아니면 짧은 버전, 그것도 안 되면 감춘다.
    문구는 js/config.js 의 brand.long / brand.short 에서 관리한다.
-   좁은 화면에서는 메뉴 5개와 자리를 다투므로 짧은 쪽만 남긴다. */
+
+   화면 폭으로 자르지 않고 js 가 실제로 재서 고른다 (core.js 의 fitBrandName).
+   메뉴 항목이 하나 늘거나 이름이 길어지면 들어가는 폭이 달라지는데,
+   그때마다 중단점을 다시 맞추는 것은 사람이 잊기 쉽다.
+   '…' 로 잘린 이름을 보여주느니 짧은 이름을 온전히 보여주는 편이 낫다. */
 .topbar__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar__name--short { display: none; }
+.topbar__name.is-short .topbar__name--long  { display: none; }
+.topbar__name.is-short .topbar__name--short { display: inline; }
+.topbar__name.is-hidden { display: none; }
 
-@media (max-width: 440px) {
-  .topbar__name--long  { display: none; }
-  .topbar__name--short { display: inline; }
-}
-
-/* 메뉴 5개와 이름이 함께 들어가지 않는 폭에서는 로고 마크만 남긴다 */
+/* 아주 좁은 화면에서는 메뉴가 더 중요하다 */
 @media (max-width: 430px) {
-  .topbar__name { display: none; }
   .nav { margin-left: 0; }
   .nav a { padding: 7px 10px; font-size: 13px; }
 }
@@ -217,10 +220,10 @@ section + section { margin-top: 52px; }
 /* ---------- Hero ---------- */
 .hero { padding: 40px 0 8px; text-align: center; }
 
-/* 로고 자체가 원형 엠블럼(테두리 글씨 포함)이므로 프레임을 덧씌우지 않는다.
-   테두리 글씨가 읽히도록 크게 두고, 여백만 확보한다. */
+/* 붓글씨 '연' 한 글자라 프레임을 덧씌우지 않는다.
+   가로로 넓은 글씨여서 정사각형 대신 실제 비율(900:636)을 따른다. */
 .hero__logo {
-  width: min(196px, 52vw); aspect-ratio: 1;
+  width: min(230px, 60vw); aspect-ratio: 900 / 636;
   margin: 0 auto 18px;
   display: grid; place-items: center;
 }
