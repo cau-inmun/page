@@ -160,10 +160,11 @@ service cloud.firestore {
       // 자리를 비우면 명단에서도 지워야 그 자리를 다시 예약할 수 있다
       allow delete: if isAdmin() || releasedAfterBooking(day, seatNo);
       allow create: if seatOk(seatNo, request.resource.data)
-        && request.resource.data.keys().hasOnly(['seat', 'name', 'dept', 'sid', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['seat', 'name', 'dept', 'sid', 'tel', 'createdAt'])
         && request.resource.data.name is string && request.resource.data.name.size() <= 20
         && request.resource.data.dept is string && request.resource.data.dept.size() <= 40
-        && request.resource.data.sid  is string && request.resource.data.sid.size()  <= 12;
+        && request.resource.data.sid  is string && request.resource.data.sid.size()  <= 12
+        && request.resource.data.tel  is string && request.resource.data.tel.size()  <= 16;
     }
 
     // ---- 자리 비우기 기록 (반납 · 취소) ----

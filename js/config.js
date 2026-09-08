@@ -200,3 +200,9 @@ const SITE = {
 };
 
 window.SITE = SITE;
+
+/* 이 파일의 기본값을 그대로 한 벌 남겨둔다.
+   관리자에서 '사이트 정보 저장' 을 한 번 누르면 그 내용이 window.SITE 를
+   덮어쓰기 때문에, 나중에 이 파일에 버튼을 추가해도 화면에는 나오지 않는다.
+   무엇이 새로 생겼는지 관리자 화면에서 짚어주려고 원본을 보관한다. */
+window.SITE_DEFAULTS = JSON.parse(JSON.stringify(SITE));

@@ -1001,7 +1001,7 @@
             el('button', { type: 'button', class: 'rowbtn', title: '위로', text: '↑', 'aria-label': '위로 옮기기',
               onclick: () => { if (i > 0) { [d.quickLinks[i-1], d.quickLinks[i]] = [d.quickLinks[i], d.quickLinks[i-1]]; drawQuick(); } } }),
             el('button', { type: 'button', class: 'rowbtn', text: '삭제',
-              onclick: () => { d.quickLinks.splice(i, 1); drawQuick(); } })
+              onclick: () => { d.quickLinks.splice(i, 1); drawQuick(); drawMissing(); } })
           ])
         ]));
       });
@@ -1010,10 +1010,46 @@
         onclick: () => { d.quickLinks.push({ label: '새 버튼', icon: 'link', url: '' }); drawQuick(); }
       }));
     };
+    /* js/config.js 에 기본으로 들어 있는데 저장된 설정에는 없는 버튼을 짚어준다.
+       '사이트 정보 저장' 을 한 번 누르면 그때의 목록이 통째로 저장되므로,
+       나중에 코드에 버튼이 추가돼도 화면에는 나오지 않는다.
+       그때마다 학생회가 손으로 다시 만들어야 하는 것을 덜어주는 안내다. */
+    const missingBox = el('div');
+    const drawMissing = () => {
+      missingBox.innerHTML = '';
+      const defs = (window.SITE_DEFAULTS && window.SITE_DEFAULTS.quickLinks) || [];
+      const have = new Set(d.quickLinks.map((q) => String(q.url || '').trim()));
+      const missing = defs.filter((q) => q.url && !have.has(String(q.url).trim()));
+      if (!missing.length) return;
+      missingBox.appendChild(el('div', { class: 'banner', style: 'margin-bottom:12px' }, [
+        el('strong', { text: '기본 설정에 있는데 여기엔 없는 버튼이 있습니다. ' }),
+        '아래를 누르면 같은 자리에 넣어드립니다. 넣은 뒤 ',
+        el('strong', { text: '사이트 정보 저장' }), ' 을 눌러주세요.',
+        el('div', { style: 'margin-top:10px; display:flex; gap:8px; flex-wrap:wrap' },
+          missing.map((q) => el('button', {
+            type: 'button', class: 'btn', text: '+ ' + q.label,
+            onclick: () => {
+              /* 기본 목록에서의 순서를 그대로 살려 끼워 넣는다 */
+              const at = defs.indexOf(q);
+              const before = defs.slice(0, at).map((x) => String(x.url || '').trim());
+              let pos = d.quickLinks.length;
+              for (let i = 0; i < d.quickLinks.length; i++) {
+                if (!before.includes(String(d.quickLinks[i].url || '').trim())) { pos = i; break; }
+              }
+              d.quickLinks.splice(pos, 0, JSON.parse(JSON.stringify(q)));
+              drawQuick(); drawMissing();
+              toast('‘' + q.label + '’ 을 넣었습니다. 사이트 정보 저장을 눌러주세요');
+            }
+          })))
+      ]));
+    };
+
     drawQuick();
+    drawMissing();
     box.appendChild(el('div', { class: 'editor-group' }, [
       el('p', { class: 'schedule__title', text: '상단 빠른 버튼' }),
       el('p', { class: 'schedule__hint', text: '홈 로고 아래 동그란 버튼들입니다. 주소를 비우면 ‘준비 중’ 으로 보입니다.' }),
+      missingBox,
       quickBox
     ]));
 
@@ -1265,7 +1301,7 @@
       return;
     }
 
-    const head = ['좌석', '이름', '학과', '학번', '예약 시각', ''];
+    const head = ['좌석', '이름', '학과', '학번', '전화번호', '예약 시각', ''];
     const table = el('table', { class: 'table' });
     table.appendChild(el('thead', null, [
       el('tr', null, head.map((h) => el('th', { text: h })))
@@ -1278,6 +1314,7 @@
         el('td', { text: r.name || '' }),
         el('td', { text: r.dept || '' }),
         el('td', { text: r.sid || '' }),
+        el('td', { text: telText(r.tel) }),
         el('td', { text: r.createdAt ? formatDateTime(r.createdAt) : '' }),
         el('td', null, [
           el('button', {
@@ -1299,6 +1336,15 @@
   }
 
   const RELEASE_WORD = { return: '반납', cancel: '취소' };
+
+  /* 010-1234-5678 처럼 보기 좋게 */
+  function telText(v) {
+    const d = String(v || '').replace(/\D/g, '');
+    if (d.length === 11) return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    if (d.length === 10) return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
+    if (d.length === 9)  return d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);
+    return d;
+  }
 
   function renderSeatReleases() {
     const box = $('#seat-releases');
@@ -1337,8 +1383,8 @@
   function exportSeatCsv() {
     if (!seatLogs.length) { toast('내보낼 예약이 없습니다'); return; }
     const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const head = ['좌석', '이름', '학과', '학번', '예약 시각'];
-    const rows = seatLogs.map((r) => [r.seat || r.id, r.name, r.dept, r.sid,
+    const head = ['좌석', '이름', '학과', '학번', '전화번호', '예약 시각'];
+    const rows = seatLogs.map((r) => [r.seat || r.id, r.name, r.dept, r.sid, telText(r.tel),
       r.createdAt ? formatWhen(r.createdAt) : ''].map(esc).join(','));
     const csv = '\ufeff' + [head.map(esc).join(',')].concat(rows).join('\r\n') + '\r\n';
     download(`열람실-${seatDay()}.csv`, csv, 'text/csv;charset=utf-8');

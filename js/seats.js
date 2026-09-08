@@ -32,6 +32,15 @@
 
   /* 예약 시각도 한국 시각으로 적는다.
      브라우저 지역 설정을 따르면 해외에서 볼 때 엉뚱한 시각이 찍힌다. */
+  /* 010-1234-5678 처럼 보기 좋게 */
+  function formatTel(v) {
+    const d = String(v || '').replace(/\D/g, '');
+    if (d.length === 11) return d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7);
+    if (d.length === 10) return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
+    if (d.length === 9)  return d.slice(0, 2) + '-' + d.slice(2, 5) + '-' + d.slice(5);
+    return d;
+  }
+
   function seoulClock(iso) {
     const t = seoulNow(new Date(iso));
     const h12 = t.hour % 12 === 0 ? 12 : t.hour % 12;
@@ -200,18 +209,24 @@
     ].concat((S.departments || []).map((d) => el('option', { value: d, text: d }))));
     const sidIn = el('input', { type: 'text', id: 'r-sid', inputmode: 'numeric',
       maxlength: '12', autocomplete: 'off', placeholder: '예) 20241234' });
+    const telIn = el('input', { type: 'tel', id: 'r-tel', inputmode: 'tel',
+      maxlength: '16', autocomplete: 'tel', placeholder: '예) 010-1234-5678' });
 
     const err = el('p', { class: 'field__error', hidden: true });
 
     box.append(el('div', { class: 'admin__panel' }, [
       el('h2', { class: 'ticket__head', text: seatLabel(picking) + ' 예약' }),
       el('p', { class: 'field__help', style: 'margin:-6px 0 16px',
-        text: '좌석표에는 가린 이름과 학번 앞 5자리만 보입니다. 나머지는 학생회만 확인합니다.' }),
+        text: '좌석표에는 가린 이름과 학번 앞 5자리만 보입니다. 학과 · 전화번호를 포함한 나머지는 학생회만 확인합니다.' }),
       el('div', { class: 'field' }, [ el('label', { for: 'r-name', text: '이름' }), nameIn ]),
       el('div', { class: 'field' }, [ el('label', { for: 'r-dept', text: '학과' }), deptIn ]),
       el('div', { class: 'field' }, [
         el('label', { for: 'r-sid', text: '학번' }), sidIn,
         el('p', { class: 'field__help', text: '숫자만 적어주세요. 좌석표에는 앞 5자리만 보입니다.' })
+      ]),
+      el('div', { class: 'field' }, [
+        el('label', { for: 'r-tel', text: '전화번호' }), telIn,
+        el('p', { class: 'field__help', text: '자리 관련 연락이 필요할 때만 씁니다. 좌석표에는 보이지 않습니다.' })
       ]),
       err,
       el('div', { class: 'fcard__actions' }, [
@@ -232,10 +247,12 @@
     const name = $('#r-name').value.trim();
     const dept = $('#r-dept').value;
     const sid = $('#r-sid').value.replace(/\D/g, '');
+    const tel = $('#r-tel').value.replace(/\D/g, '');
 
     if (!name) return fail(err, '이름을 적어주세요.');
     if (!dept) return fail(err, '학과를 선택해 주세요.');
     if (sid.length < 6 || sid.length > 10) return fail(err, '학번을 숫자로 정확히 적어주세요.');
+    if (tel.length < 9 || tel.length > 11) return fail(err, '전화번호를 숫자로 정확히 적어주세요. 예) 01012345678');
     err.hidden = true;
 
     /* 누르는 사이에 시간이 지났을 수 있으므로 다시 본다 */
@@ -247,7 +264,7 @@
     const btn = $('#r-submit');
     btn.disabled = true; btn.textContent = '예약하는 중…';
     try {
-      await STORE.reserveSeat(today, picking, { name: name, dept: dept, sid: sid });
+      await STORE.reserveSeat(today, picking, { name: name, dept: dept, sid: sid, tel: tel });
     } catch (e) {
       btn.disabled = false; btn.textContent = '이 자리로 예약하기';
       if (e && e.code === 'taken') {
@@ -259,7 +276,7 @@
       return fail(err, '예약하지 못했습니다. ' + d.title + d.text);
     }
 
-    const booked = { date: today, seat: picking, name: name, dept: dept, sid: sid,
+    const booked = { date: today, seat: picking, name: name, dept: dept, sid: sid, tel: tel,
                      at: new Date().toISOString() };
     rememberBooking(booked);
     $('[data-seat-form]').hidden = true;
@@ -374,6 +391,7 @@
         el('div', null, [el('dt', { text: '이름' }), el('dd', { text: b.name })]),
         el('div', null, [el('dt', { text: '학과' }), el('dd', { text: b.dept })]),
         el('div', null, [el('dt', { text: '학번' }), el('dd', { text: b.sid })]),
+        b.tel ? el('div', null, [el('dt', { text: '전화번호' }), el('dd', { text: formatTel(b.tel) })]) : null,
         el('div', null, [el('dt', { text: '이용 날짜' }), el('dd', { text: b.date })]),
         el('div', null, [el('dt', { text: '이용 시간' }),
                          el('dd', { text: two(OPEN) + ':00 – ' + two(CLOSE) + ':00' })]),

@@ -457,11 +457,13 @@
       nameMasked: window.CORE.maskName(person.name),
       sidHead: window.CORE.maskSid(person.sid)
     };
+    /* 전화번호는 좌석표에 실리는 pub 이 아니라 관리자만 읽는 logs 에만 담는다 */
     const full = {
       seat: Number(seat),
       name: String(person.name || '').trim(),
       dept: String(person.dept || '').trim(),
-      sid: String(person.sid || '').replace(/\D/g, '')
+      sid: String(person.sid || '').replace(/\D/g, ''),
+      tel: String(person.tel || '').replace(/\D/g, '')
     };
 
     if (mode === 'firebase') {
