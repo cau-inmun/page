@@ -39,11 +39,17 @@
   --wrap: 560px;
   --wrap-wide: 760px;
 
-  /* 제목 — 페이퍼로지 / 본문 — 프리텐다드 (정의는 css/fonts.css) */
-  --font-body: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
-               'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
-  --font-display: 'Paperlogy', 'Pretendard Variable', Pretendard,
-                  'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  /* 애플 San Francisco 를 앞세운다.
+     맥 · 아이폰 · 아이패드에서는 운영체제가 가진 SF 가 그대로 쓰이고
+     (한글은 Apple SD Gothic Neo), 윈도우 · 안드로이드에서는 프리텐다드가
+     같은 얼굴을 대신한다. 프리텐다드는 애플 시스템 글꼴을 다른 환경에서
+     쓰려고 만든 글꼴이라 두 경우의 인상이 거의 같다.
+     SF 자체를 웹폰트로 심지 않는 이유는 README 6장 참고. */
+  --font-sf: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display',
+             'Apple SD Gothic Neo', 'Pretendard Variable', Pretendard,
+             'Malgun Gothic', system-ui, sans-serif;
+  --font-body: var(--font-sf);
+  --font-display: var(--font-sf);
 
   --ease: cubic-bezier(.22, .61, .36, 1);
 }

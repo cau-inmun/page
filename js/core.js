@@ -403,9 +403,10 @@
      (실패해도 시스템 글꼴로 정상 표시되므로 화면에는 영향 없음) */
   function checkFonts() {
     if (!document.fonts || !document.fonts.ready) return;
+    /* 애플 기기에서는 운영체제의 San Francisco 를 쓰므로 확인할 것이 없다.
+       확인이 필요한 쪽은 그 대역으로 쓰는 프리텐다드뿐이다. */
     const want = [
-      ['Paperlogy', '제목(페이퍼로지)'],
-      ['Pretendard Variable', '본문(프리텐다드)']
+      ['Pretendard Variable', '프리텐다드']
     ];
     document.fonts.ready.then(() => setTimeout(() => {
       /* check() 만으로는 부족하다. @font-face 규칙 자체가 등록되지 않으면
@@ -423,8 +424,9 @@
       if (!missing.length) return;
       console.warn(
         '[글꼴] 불러오지 못했습니다: ' + missing.map((m) => m[1]).join(', ') +
-        '\ncss/fonts.css 의 주소가 만료됐을 수 있습니다. 아래에서 최신 코드를 가져와 교체하세요.' +
-        '\n  페이퍼로지  https://github.com/fonts-archive/Paperlogy' +
+        '\n맥 · 아이폰에서는 운영체제의 San Francisco 를 쓰므로 화면에 차이가 없습니다.' +
+        '\n윈도우 · 안드로이드에서만 시스템 글꼴로 바뀝니다.' +
+        '\ncss/fonts.css 의 주소가 만료됐다면 아래에서 최신 코드를 가져와 교체하세요.' +
         '\n  프리텐다드  https://github.com/orioncactus/pretendard'
       );
     }, 400));

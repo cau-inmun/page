@@ -2,12 +2,19 @@
 /* ==========================================================================
    웹폰트 정의
    --------------------------------------------------------------------------
-   제목 — 페이퍼로지 Paperlogy   (산돌, 상업적 이용 무료 / OFL)
-   본문 — 프리텐다드 Pretendard  (길형진, 상업적 이용 무료 / OFL)
+   이 사이트는 애플 San Francisco 를 씁니다. 다만 SF 는 웹폰트로 심을 수
+   없어서(애플 플랫폼 전용 라이선스, 한글도 없음) 이렇게 나눠 씁니다.
 
-   ⚠ 글꼴이 안 보이면 css/fonts.css 의 해당 블록만 교체하면 됩니다.
-      다른 파일은 'Paperlogy' · 'Pretendard' 라는 이름만 참조합니다.
-        · 페이퍼로지  https://github.com/fonts-archive/Paperlogy
+     맥 · 아이폰 · 아이패드 → 운영체제가 가진 SF 를 그대로 사용
+                              (한글은 Apple SD Gothic Neo)
+     윈도우 · 안드로이드    → 프리텐다드 Pretendard 로 대체
+
+   프리텐다드는 애플 시스템 글꼴을 다른 환경에서 쓰려고 만든 글꼴이라
+   두 경우의 인상이 거의 같습니다. 순서는 css/style.css 의 --font-sf 에
+   적혀 있고, 여기서는 프리텐다드만 실제로 내려받습니다.
+
+   ⚠ 글꼴이 안 보이면 아래 블록만 교체하면 됩니다.
+      다른 파일은 'Pretendard' 라는 이름만 참조합니다.
         · 프리텐다드  https://github.com/orioncactus/pretendard
 
    글꼴을 못 불러와도 시스템 한글 글꼴로 정상 표시됩니다.
@@ -18,7 +25,11 @@
    용량이 작습니다. 굵기 45~920 을 이 하나로 모두 처리합니다. */
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
 
-/* ---------- 제목: 페이퍼로지 ---------- */
+/* ---------- 예전 제목 글꼴: 페이퍼로지 (지금은 쓰지 않음) ----------
+   San Francisco 로 바꾸기 전에 제목에 쓰던 글꼴입니다.
+   쓰이지 않으면 브라우저가 내려받지 않으므로 그냥 두어도 느려지지 않습니다.
+   되돌리려면 css/style.css 의 --font-display 를 다음처럼 바꾸세요.
+     --font-display: 'Paperlogy', var(--font-sf);            */
 @font-face {
   font-family: 'Paperlogy';
   font-weight: 400;
