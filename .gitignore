@@ -6,3 +6,10 @@ node_modules/
 # 테스트/스크린샷 산출물이 저장소로 새는 것 방지
 undefined/
 *.png.tmp
+
+# 개발 도구가 설치하는 스킬 (npx skills add).
+# 이 저장소는 학생회 홈페이지 자체만 담는다. 제3자 스킬은
+# 각자 작업 환경에 설치하는 것이지 사이트의 일부가 아니다.
+.agents/
+.claude/
+skills-lock.json
