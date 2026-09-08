@@ -123,6 +123,49 @@
     return `${head} ${time}`;
   }
 
+  /* ---------- 한국 시각 ----------
+     열람실은 '오늘' 과 '09~21시' 를 기준으로 도는데, 보는 사람의 시계나
+     시간대가 어긋나면 날짜가 하루 밀린다. 그래서 브라우저 지역 설정과
+     무관하게 언제나 서울 시각으로 계산한다. */
+  function seoulNow(when) {
+    const d = when || new Date();
+    try {
+      const parts = {};
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Seoul', hour12: false,
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      }).formatToParts(d).forEach((p) => { parts[p.type] = p.value; });
+      if (parts.year && parts.hour !== undefined) {
+        return {
+          date: parts.year + '-' + parts.month + '-' + parts.day,
+          hour: Number(parts.hour) % 24,      // 자정을 24 로 주는 엔진이 있다
+          minute: Number(parts.minute)
+        };
+      }
+    } catch (e) { /* Intl 이 시간대를 모르면 아래로 */ }
+    /* 대비책 — UTC 에 9시간을 더한다 (한국은 서머타임이 없어 항상 +9) */
+    const k = new Date(d.getTime() + 9 * 3600 * 1000);
+    const p2 = (n) => String(n).padStart(2, '0');
+    return {
+      date: k.getUTCFullYear() + '-' + p2(k.getUTCMonth() + 1) + '-' + p2(k.getUTCDate()),
+      hour: k.getUTCHours(), minute: k.getUTCMinutes()
+    };
+  }
+
+  /* 이름 가운데를 가린다. 홍길동 → 홍*동 / 남궁민수 → 남**수 / 김민 → 김* */
+  function maskName(v) {
+    const s = String(v || '').trim();
+    if (s.length <= 1) return s;
+    if (s.length === 2) return s[0] + '*';
+    return s[0] + '*'.repeat(s.length - 2) + s[s.length - 1];
+  }
+
+  /* 학번은 앞 5자리만 남긴다. 20241234 → 20241 */
+  function maskSid(v) {
+    return String(v || '').replace(/\D/g, '').slice(0, 5);
+  }
+
   const ts = (iso) => { const t = Date.parse(iso || ''); return isNaN(t) ? null : t; };
 
   /* 게시 상태 — 'scheduled' 게시 전 / 'live' 게시 중 / 'archived' 내려감
@@ -461,6 +504,7 @@
   window.CORE = {
     $, $$, el, escapeHtml, safeUrl, isExternal,
     formatDate, relativeDate, formatDateTime, toLocalInput, fromLocalInput,
+    seoulNow, maskName, maskSid,
     noticeStatus, formStatus, formVisibility, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
     loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, boot

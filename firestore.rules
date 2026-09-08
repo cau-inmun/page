@@ -105,6 +105,59 @@ service cloud.firestore {
         && formIsOpen(get(/databases/$(database)/documents/forms/$(request.resource.data.formId)).data);
     }
 
+    // ---- 열람실 좌석 ----
+    //  seats 는 좌석표에 그대로 실리므로 누구나 읽는다. 대신 담기는 것은
+    //  가린 이름(홍*동)과 학번 앞 5자리뿐이다. 실명 · 학과 · 전체 학번은
+    //  logs 에 따로 넣고 관리자만 읽는다. 좌석표를 공개하면서 개인정보를
+    //  지키려면 애초에 공개되는 문서에 그것을 담지 않는 수밖에 없다.
+    //
+    //  update 를 막아두는 것이 핵심이다. Firestore 는 문서가 이미 있으면
+    //  set() 을 update 로 보므로, 같은 순간에 두 사람이 같은 자리를 눌러도
+    //  뒤에 도착한 쪽은 서버가 거부한다. 화면 검사만으로는 못 막는다.
+    //
+    //  날짜는 문서 경로에 들어 있어, 날이 바뀌면 좌석표가 저절로 비워진다.
+    //  따로 초기화해줄 서버가 없어도 되도록 이렇게 짰다.
+
+    // 개방 시간 09~21시(한국)는 UTC 로 00~12시다. 한국은 서머타임이 없어
+    // 이 범위가 늘 한 UTC 날짜 안에 들어오므로, 아래 seoulToday() 의
+    // UTC 날짜가 곧 한국 날짜가 된다.
+    function inOpenHours() {
+      return request.time.hours() >= 0 && request.time.hours() < 12;
+    }
+    function seoulToday() {
+      return string(request.time.year()) + '-'
+           + (request.time.month() < 10 ? '0' : '') + string(request.time.month()) + '-'
+           + (request.time.day()   < 10 ? '0' : '') + string(request.time.day());
+    }
+    function seatOk(day, seatNo, d) {
+      return day == seoulToday()
+             && inOpenHours()
+             && d.seat is int && d.seat >= 1 && d.seat <= 60
+             && string(d.seat) == seatNo
+             && d.createdAt == request.time;
+    }
+
+    match /seatdays/{day}/seats/{seatNo} {
+      allow read: if true;
+      allow create: if seatOk(day, seatNo, request.resource.data)
+        && request.resource.data.keys().hasOnly(['seat', 'nameMasked', 'sidHead', 'createdAt'])
+        && request.resource.data.nameMasked is string
+        && request.resource.data.nameMasked.size() <= 20
+        && request.resource.data.sidHead is string
+        && request.resource.data.sidHead.size() <= 5;
+      allow update: if false;          // 잡힌 자리는 아무도 덮어쓸 수 없다
+      allow delete: if isAdmin();      // 자리 비우기는 학생회만
+    }
+
+    match /seatdays/{day}/logs/{seatNo} {
+      allow read, update, delete: if isAdmin();
+      allow create: if seatOk(day, seatNo, request.resource.data)
+        && request.resource.data.keys().hasOnly(['seat', 'name', 'dept', 'sid', 'createdAt'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 20
+        && request.resource.data.dept is string && request.resource.data.dept.size() <= 40
+        && request.resource.data.sid  is string && request.resource.data.sid.size()  <= 12;
+    }
+
     // 그 밖의 모든 경로는 차단
     match /{document=**} {
       allow read, write: if false;

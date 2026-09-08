@@ -25,7 +25,8 @@ const SITE = {
   quickLinks: [
     { label: '인스타그램', icon: 'instagram', url: 'https://www.instagram.com/cau_inmun/' },
     { label: '카카오톡 채널', icon: 'kakao', url: 'https://pf.kakao.com/_iITuX' },
-    { label: '건의함', icon: 'mail', url: 'apply.html?id=suggestion' }
+    { label: '건의함', icon: 'mail', url: 'apply.html?id=suggestion' },
+    { label: '열람실 예약', icon: 'clock', url: 'seats.html' }
   ],
 
   /* ---- 링크 모음 (링크트리 본문) ----
@@ -37,6 +38,7 @@ const SITE = {
       items: [
         { label: '학생회 건의함', desc: '익명으로 의견을 남겨주세요', url: 'apply.html?id=suggestion', badge: '상시' },
         { label: '사업 신청 폼', desc: '진행 중인 학생회 사업 신청', url: 'apply.html?id=apply' },
+        { label: '열람실 좌석 예약', desc: '09시–21시 · 매일 초기화', url: 'seats.html', badge: '상시' },
         { label: '학생회비 납부 안내', desc: '납부 방법과 혜택 안내', url: '' }
       ]
     },
@@ -161,6 +163,29 @@ const SITE = {
       ]
     }
   ],
+
+  /* ---- 열람실 좌석 예약 ----
+     좌석 수 = rowNames 개수 × perRow (지금은 5줄 × 12석 = 60석)
+     실제 열람실 배치가 정해지면 rowNames · perRow · aisleAfter 만 고치면
+     좌석표가 그대로 따라 바뀝니다. 좌석 번호는 A열 왼쪽부터 1번입니다. */
+  readingRoom: {
+    name: '인문대학 열람실',
+    place: '203관(서라벌홀) 7층',
+    openHour: 9,        // 09시부터 예약 가능
+    closeHour: 21,      // 21시가 되면 닫힘 (매일 이 시각 이후 새 예약 불가)
+    rowNames: ['A', 'B', 'C', 'D', 'E'],
+    perRow: 12,         // 한 줄에 놓인 좌석 수
+    aisleAfter: 6,      // 이 번째 자리 뒤에 통로를 둡니다
+    rowNotes: { A: '창가 쪽', E: '출입구 쪽' },
+    notes: [
+      '열람실 내 비치된 이용자 명부를 작성한 후 이용 부탁드립니다.',
+      '무소음 마우스와 키보드 키스킨 사용은 의무이며, 모든 전자기기는 무음모드로 설정 부탁드립니다.',
+      '액체류(물, 음료)를 제외한 음식물 반입을 금지합니다.',
+      '창가, 통로 등 자리 외의 공간에 짐을 보관해둘 수 없습니다.',
+      '쾌적한 열람실 환경을 위해 사용 후 본인 자리는 직접 정리해주세요.',
+      '사석화 금지를 위해 매 평일 아침에 좌석에 남겨진 개인 물품은 정리할 예정입니다.'
+    ]
+  },
 
   /* ---- 구글 스프레드시트로 응답 보내기 (선택) ----
      주소를 넣으면 폼 제출이 Firestore 와 함께 구글 시트에도 한 줄씩 쌓입니다.

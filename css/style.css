@@ -570,6 +570,95 @@ section + section { margin-top: 52px; }
 .banner--ok    { background: #EDF6EE; border-color: #CBE3CE; color: #2F6136; }
 .banner--ok strong { color: #245029; }
 
+/* ---------- 열람실 좌석표 ---------- */
+.seatmap__bar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 22px 0 14px;
+}
+.seatmap__count { font-weight: 700; font-size: 14.5px; color: var(--ink); margin: 0; }
+.seatmap__legend { display: flex; gap: 12px; margin-left: auto; }
+.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-3); }
+.legend__box { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--sand-deep); }
+.legend__box--free  { background: #fff; }
+.legend__box--taken { background: var(--brand); border-color: var(--brand-deep); }
+
+.seatrow { margin-bottom: 14px; }
+.seatrow__head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+.seatrow__name { font-weight: 700; font-size: 13px; color: var(--brand-deep); }
+.seatrow__note { font-size: 12px; color: var(--ink-3); }
+/* 그리드 대신 flex 를 쓴다. 좌석 수나 통로 위치를 config 에서 바꿔도
+   열 개수를 다시 계산할 필요가 없고, 좁은 화면에서는 알아서 줄바꿈된다. */
+.seatrow__seats { display: flex; flex-wrap: wrap; gap: 6px; }
+.seatrow__aisle { display: none; }
+
+.seat {
+  flex: 1 1 58px; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px; min-height: 58px; padding: 6px 4px;
+  border-radius: var(--radius-sm); border: 1px solid var(--sand-deep);
+  background: #fff; font-family: inherit; text-align: center;
+  transition: background-color .15s var(--ease), border-color .15s var(--ease), transform .1s var(--ease);
+}
+.seat__no   { font-size: 12.5px; font-weight: 700; color: var(--ink); letter-spacing: .2px; }
+.seat__free { font-size: 10.5px; color: var(--ink-3); }
+.seat__who  { font-size: 11px; font-weight: 600; color: var(--brand-deep); }
+.seat__sid  { font-size: 10px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
+button.seat--free { cursor: pointer; }
+button.seat--free:hover { background: var(--sand-soft); border-color: var(--brand); }
+button.seat--free:active { transform: scale(.97); }
+button.seat--free:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+button.seat--free[disabled] { cursor: not-allowed; opacity: .5; }
+
+.seat--taken { background: var(--sand); border-color: var(--sand-deep); }
+.seat--taken .seat__no { color: var(--brand-deep); }
+.seat--mine { border-color: var(--brand-deep); box-shadow: 0 0 0 2px var(--brand) inset; }
+
+.seatmap__front {
+  margin: 10px 0 0; text-align: center;
+  font-size: 12px; color: var(--ink-3);
+  padding-top: 10px; border-top: 1px dashed var(--sand-deep);
+}
+
+/* 한 줄이 통째로 들어가는 넓은 화면에서만 가운데 통로를 보여준다.
+   좁은 화면에서는 줄바꿈 때문에 통로가 엉뚱한 곳에 놓이므로 감춘다. */
+@media (min-width: 861px) {
+  .seatrow__seats { flex-wrap: nowrap; }
+  .seatrow__aisle { display: block; flex: 0 0 16px; }
+}
+
+/* ---------- 예약 확인증 ---------- */
+.ticket {
+  border: 1px solid var(--sand-deep); border-radius: var(--radius);
+  background: var(--sand-soft); padding: 22px; margin-bottom: 24px;
+}
+.ticket__label {
+  margin: 0 0 4px; font-size: 12px; font-weight: 700;
+  letter-spacing: .08em; color: var(--brand-deep);
+}
+.ticket__head { font-size: 19px; margin: 0 0 4px; }
+.ticket__seat {
+  margin: 0 0 16px; font-size: 30px; font-weight: 700;
+  color: var(--ink); letter-spacing: -.01em;
+}
+.ticket__rows { margin: 0 0 14px; display: grid; gap: 7px; }
+.ticket__rows > div { display: flex; gap: 12px; font-size: 14px; }
+.ticket__rows dt { flex: none; width: 68px; color: var(--ink-3); }
+.ticket__rows dd { margin: 0; color: var(--ink); font-weight: 600; word-break: break-all; }
+.ticket__masked {
+  margin: 0; padding: 10px 12px; border-radius: var(--radius-sm);
+  background: #fff; border: 1px solid var(--sand-deep);
+  font-size: 12.5px; color: var(--ink-2);
+}
+.ticket__notes { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--sand-deep); }
+.ticket__foot { margin: 14px 0 0; font-size: 12.5px; color: var(--ink-3); }
+
+/* ---------- 이용 안내 ---------- */
+.roomnotes { margin-top: 34px; }
+.roomnotes__title { font-size: 16px; margin: 0 0 12px; }
+.roomnotes__list { margin: 0; padding-left: 18px; display: grid; gap: 7px; }
+.roomnotes__list li { font-size: 13.5px; line-height: 1.7; color: var(--ink-2); }
+
 /* ---------- Skeleton ---------- */
 .skeleton {
   background: linear-gradient(100deg, var(--sand-soft) 30%, var(--sand-tint) 50%, var(--sand-soft) 70%);

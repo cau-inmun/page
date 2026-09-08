@@ -18,7 +18,8 @@
     site: 'cau-inmun:site',
     forms: 'cau-inmun:forms',
     submissions: 'cau-inmun:submissions',
-    notices: 'cau-inmun:notices'
+    notices: 'cau-inmun:notices',
+    seats: 'cau-inmun:seats'
   };
 
   let mode = 'local';          // 'local' | 'firebase'
@@ -423,6 +424,102 @@
     return lsSet(KEY.submissions, lsGet(KEY.submissions, []).filter((s) => s.id !== id));
   }
 
+  /* ---------- 열람실 좌석 ----------
+     좌석표는 누구나 볼 수 있어야 하지만, 거기 실명과 학번이 그대로 실리면
+     안 된다. 그래서 공개용(seats)에는 가린 이름과 학번 앞 5자리만 넣고,
+     실명 · 학과 · 전체 학번은 관리자만 읽는 logs 에 따로 둔다.
+     하루가 지나면 날짜 칸이 달라지므로 좌석표는 저절로 비워진다. */
+
+  function seatPath(day) { return db.collection('seatdays').doc(day); }
+
+  /* { '7': { seat, nameMasked, sidHead, createdAt }, ... } 꼴로 돌려준다 */
+  async function getSeats(day) {
+    if (mode === 'firebase') {
+      const snap = await seatPath(day).collection('seats').get();
+      const out = {};
+      snap.docs.forEach((d) => {
+        const v = decodeDoc(d.data());
+        out[d.id] = { seat: v.seat, nameMasked: v.nameMasked || '',
+                      sidHead: v.sidHead || '', createdAt: tsToIso(d.data().createdAt) };
+      });
+      return out;
+    }
+    return (lsGet(KEY.seats, {}) || {})[day] || {};
+  }
+
+  /* 예약. 이미 잡힌 자리면 'taken' 을 던진다.
+     보안 규칙이 덮어쓰기(update)를 막아두어, 같은 순간에 두 사람이 같은
+     자리를 눌러도 뒤에 도착한 쪽만 거부된다 (화면 검사만으로는 못 막는다). */
+  async function reserveSeat(day, seat, person) {
+    const key = String(seat);
+    const pub = {
+      seat: Number(seat),
+      nameMasked: window.CORE.maskName(person.name),
+      sidHead: window.CORE.maskSid(person.sid)
+    };
+    const full = {
+      seat: Number(seat),
+      name: String(person.name || '').trim(),
+      dept: String(person.dept || '').trim(),
+      sid: String(person.sid || '').replace(/\D/g, '')
+    };
+
+    if (mode === 'firebase') {
+      try {
+        await seatPath(day).collection('seats').doc(key).set(
+          Object.assign({}, pub, { createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
+      } catch (err) {
+        if (err && err.code === 'permission-denied') { const e = new Error('taken'); e.code = 'taken'; throw e; }
+        throw err;
+      }
+      /* 좌석을 먼저 잡고 기록을 남긴다. 순서가 반대면 자리를 못 잡았는데
+         기록만 남는다. 기록 쪽이 실패해도 예약 자체는 유효하다. */
+      try {
+        await seatPath(day).collection('logs').doc(key).set(
+          Object.assign({}, full, { createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
+      } catch (e) {
+        console.warn('[열람실] 좌석은 잡혔지만 명단 기록에 실패했습니다.', e);
+      }
+      return true;
+    }
+
+    const all = lsGet(KEY.seats, {}) || {};
+    const dayMap = all[day] || {};
+    if (dayMap[key]) { const e = new Error('taken'); e.code = 'taken'; throw e; }
+    dayMap[key] = Object.assign({}, pub, full, { createdAt: new Date().toISOString() });
+    all[day] = dayMap;
+    lsSet(KEY.seats, all);
+    return true;
+  }
+
+  /* 관리자용 — 실명 · 학과 · 전체 학번이 담긴 명단 */
+  async function listSeatLogs(day) {
+    let list;
+    if (mode === 'firebase') {
+      const snap = await seatPath(day).collection('logs').get();
+      list = snap.docs.map((d) => Object.assign({ id: d.id }, d.data(),
+                                { createdAt: tsToIso(d.data().createdAt) }));
+    } else {
+      const dayMap = (lsGet(KEY.seats, {}) || {})[day] || {};
+      list = Object.keys(dayMap).map((k) => Object.assign({ id: k }, dayMap[k]));
+    }
+    return list.sort((a, b) => (a.seat || 0) - (b.seat || 0));
+  }
+
+  /* 관리자용 — 자리 비우기 */
+  async function cancelSeat(day, seat) {
+    const key = String(seat);
+    if (mode === 'firebase') {
+      await seatPath(day).collection('seats').doc(key).delete();
+      try { await seatPath(day).collection('logs').doc(key).delete(); }
+      catch (e) { console.warn('[열람실] 명단 기록을 지우지 못했습니다.', e); }
+      return true;
+    }
+    const all = lsGet(KEY.seats, {}) || {};
+    if (all[day]) { delete all[day][key]; lsSet(KEY.seats, all); }
+    return true;
+  }
+
   /* ---------- 공지 ---------- */
   /* 공지는 전부 가져오고, 예약·보관 판정은 화면에서 한다.
      (예전에는 where('publishAt','<=',now) 로 서버에서 걸렀는데,
@@ -506,6 +603,7 @@
     getLinks, saveLinks,
     getForms, getForm, saveForm, deleteForm,
     submit, listSubmissions, deleteSubmission, testSheet,
-    getNotices, saveNotice, deleteNotice, replaceNotices
+    getNotices, saveNotice, deleteNotice, replaceNotices,
+    getSeats, reserveSeat, listSeatLogs, cancelSeat
   };
 })();

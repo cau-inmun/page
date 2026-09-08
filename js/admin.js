@@ -9,7 +9,7 @@
 
   const { $, $$, el, toast, tagEl, renderMarkdown, formatDate, formatDateTime,
           toLocalInput, fromLocalInput, noticeStatus, formStatus, formVisibility,
-          plainText } = window.CORE;
+          plainText, seoulNow } = window.CORE;
   const S = window.SITE;
 
   let notices = [], forms = [], linkGroups = [], subs = [];
@@ -1218,6 +1218,92 @@
     ]);
   }
 
+  /* ==========================================================
+     탭 · 열람실 좌석
+     좌석표에 실리는 것은 가린 이름과 학번 앞 5자리뿐이라,
+     누가 어느 자리에 앉았는지는 이 표에서만 확인할 수 있다.
+     ========================================================== */
+  let seatLogs = [];
+
+  function seatDay() {
+    const v = $('#seat-date').value;
+    return v || seoulNow().date;
+  }
+
+  async function loadSeats() {
+    const box = $('#seat-table');
+    box.innerHTML = '<div class="skeleton" style="height:120px"></div>';
+    try {
+      seatLogs = await STORE.listSeatLogs(seatDay());
+    } catch (err) {
+      console.error(err);
+      box.innerHTML = '';
+      box.appendChild(el('div', { class: 'banner banner--error' }, [
+        el('strong', { text: '좌석 명단을 불러오지 못했습니다. ' }),
+        '관리자 권한이 없거나 보안 규칙이 배포되지 않았을 수 있습니다.'
+      ]));
+      return;
+    }
+    renderSeats();
+  }
+
+  function renderSeats() {
+    const box = $('#seat-table');
+    box.innerHTML = '';
+    $('#seat-count').textContent = seatLogs.length + '석 사용 중';
+
+    if (!seatLogs.length) {
+      box.appendChild(el('div', { class: 'empty' }, [
+        el('strong', { text: '예약된 자리가 없습니다.' }),
+        '학우들이 좌석을 예약하면 이곳에 쌓입니다.'
+      ]));
+      return;
+    }
+
+    const head = ['좌석', '이름', '학과', '학번', '예약 시각', ''];
+    const table = el('table', { class: 'table' });
+    table.appendChild(el('thead', null, [
+      el('tr', null, head.map((h) => el('th', { text: h })))
+    ]));
+
+    const tbody = el('tbody');
+    seatLogs.forEach((r) => {
+      tbody.appendChild(el('tr', null, [
+        el('td', { text: String(r.seat || r.id) + '번' }),
+        el('td', { text: r.name || '' }),
+        el('td', { text: r.dept || '' }),
+        el('td', { text: r.sid || '' }),
+        el('td', { text: r.createdAt ? formatDateTime(r.createdAt) : '' }),
+        el('td', null, [
+          el('button', {
+            type: 'button', class: 'rowbtn', text: '자리 비우기',
+            onclick: async () => {
+              if (!confirm(`${r.seat || r.id}번 자리를 비울까요?\n` +
+                           `${r.name || ''} 학우의 예약이 지워지고, 그 자리는 다시 예약할 수 있게 됩니다.`)) return;
+              try { await STORE.cancelSeat(seatDay(), r.seat || r.id); }
+              catch (e) { console.error(e); toast('비우지 못했습니다'); return; }
+              await loadSeats();
+              toast('자리를 비웠습니다');
+            }
+          })
+        ])
+      ]));
+    });
+    table.appendChild(tbody);
+    box.appendChild(el('div', { class: 'table-wrap' }, [table]));
+  }
+
+  function exportSeatCsv() {
+    if (!seatLogs.length) { toast('내보낼 예약이 없습니다'); return; }
+    const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const head = ['좌석', '이름', '학과', '학번', '예약 시각'];
+    const rows = seatLogs.map((r) => [r.seat || r.id, r.name, r.dept, r.sid,
+      r.createdAt ? formatWhen(r.createdAt) : ''].map(esc).join(','));
+    const csv = '\ufeff' + [head.map(esc).join(',')].concat(rows).join('\r\n') + '\r\n';
+    download(`열람실-${seatDay()}.csv`, csv, 'text/csv;charset=utf-8');
+    toast('CSV 로 내려받았습니다');
+  }
+
   function bindTabs() {
     const tabs = $$('.tab');
     tabs.forEach((t) => t.addEventListener('click', () => {
@@ -1225,6 +1311,7 @@
       $$('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== t.dataset.tab; });
       if (t.dataset.tab === 'subs') loadSubs();
       if (t.dataset.tab === 'archive') renderArchive();
+      if (t.dataset.tab === 'seats') loadSeats();
     }));
   }
 
@@ -1236,6 +1323,13 @@
     $('#sub-csv').addEventListener('click', exportCsv);
     $('#sub-refresh').addEventListener('click', () => { loadSubs(); toast('새로고침했습니다'); });
     $('#sheet-test').addEventListener('click', checkSheet);
+    $('#seat-date').value = seoulNow().date;
+    $('#seat-date').addEventListener('change', loadSeats);
+    $('#seat-today').addEventListener('click', () => {
+      $('#seat-date').value = seoulNow().date; loadSeats();
+    });
+    $('#seat-refresh').addEventListener('click', () => { loadSeats(); toast('새로고침했습니다'); });
+    $('#seat-csv').addEventListener('click', exportSeatCsv);
 
     await STORE.init();
 
