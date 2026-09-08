@@ -302,7 +302,31 @@
   }
 
   /* ---------- 폼 제출 ---------- */
-  async function submit(formId, data) {
+  /* 구글 시트로도 같은 내용을 보낸다.
+     실패해도 제출 자체는 성공으로 둔다. 시트는 편의 기능이고,
+     정본은 Firestore 이기 때문이다. 학우가 시트 문제로 두 번 쓰게 할 이유가 없다.
+     no-cors 로 보내므로 응답은 확인할 수 없다 (Apps Script 의 표준 방식). */
+  async function mirrorToSheet(formId, data, formTitle) {
+    const url = (window.SITE && window.SITE.sheetWebhookUrl || '').trim();
+    if (!url) return;
+    try {
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          formId: formId,
+          formTitle: formTitle || formId,
+          submittedAt: new Date().toISOString(),
+          data: data
+        })
+      });
+    } catch (e) {
+      console.warn('[시트] 구글 시트로 보내지 못했습니다. 제출 자체는 정상 접수됐습니다.', e);
+    }
+  }
+
+  async function submit(formId, data, formTitle) {
     const record = {
       formId: String(formId),
       data: data,
@@ -314,6 +338,7 @@
         data: record.data,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      mirrorToSheet(formId, data, formTitle);
       return ref.id;
     }
     const list = lsGet(KEY.submissions, []);

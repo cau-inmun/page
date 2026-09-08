@@ -111,7 +111,14 @@
 
     /* 푸터 */
     const place = $('[data-contact-place]');
-    if (place) place.textContent = S.contact.place;
+    if (place) {
+      /* 설정의 줄바꿈을 그대로 살린다. textContent 로 넣어 이스케이프는 유지 */
+      place.innerHTML = '';
+      String(S.contact.place || '').split('\n').forEach((line, i) => {
+        if (i) place.appendChild(document.createElement('br'));
+        place.appendChild(document.createTextNode(line));
+      });
+    }
     const fLinks = $('[data-footer-links]');
     if (fLinks && S.contact.instagram) {
       fLinks.appendChild(el('a', {

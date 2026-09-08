@@ -144,7 +144,7 @@
     btn.textContent = '보내는 중…';
 
     try {
-      await STORE.submit(form.id, values);
+      await STORE.submit(form.id, values, form.title);
       showDone();
     } catch (err) {
       console.error(err);

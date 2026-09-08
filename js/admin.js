@@ -896,7 +896,9 @@
     /* --- 연락처 --- */
     box.appendChild(el('div', { class: 'editor-group' }, [
       el('p', { class: 'schedule__title', style: 'margin-bottom:10px', text: '연락처 (푸터)' }),
-      textField('주소', d.contact.place, '', (v) => { d.contact.place = v; }),
+      textField('주소', d.contact.place,
+        '줄을 나누고 싶은 곳에서 엔터를 치세요. 화면에도 그대로 나뉩니다.',
+        (v) => { d.contact.place = v; }, { multiline: true }),
       el('div', { class: 'field-row' }, [
         textField('인스타그램 주소', d.contact.instagram, '', (v) => { d.contact.instagram = v; }),
         textField('카카오톡 채널 주소', d.contact.kakao, '', (v) => { d.contact.kakao = v; })
