@@ -306,7 +306,7 @@
      실패해도 제출 자체는 성공으로 둔다. 시트는 편의 기능이고,
      정본은 Firestore 이기 때문이다. 학우가 시트 문제로 두 번 쓰게 할 이유가 없다.
      no-cors 로 보내므로 응답은 확인할 수 없다 (Apps Script 의 표준 방식). */
-  async function mirrorToSheet(formId, data, formTitle) {
+  async function mirrorToSheet(formId, data, formTitle, labels) {
     const url = (window.SITE && window.SITE.sheetWebhookUrl || '').trim();
     if (!url) return;
     try {
@@ -318,7 +318,8 @@
           formId: formId,
           formTitle: formTitle || formId,
           submittedAt: new Date().toISOString(),
-          data: data
+          data: data,
+          labels: labels || {}
         })
       });
     } catch (e) {
@@ -326,7 +327,54 @@
     }
   }
 
-  async function submit(formId, data, formTitle) {
+  /* 시트 연결을 실제로 확인한다.
+     제출은 no-cors 로 보내서 성공 여부를 알 수 없다. 그래서 확인만큼은
+     Apps Script 의 doGet 을 <script> 로 불러오는 방식(JSONP)을 쓴다.
+     <script> 는 CORS 를 타지 않아 응답을 그대로 읽을 수 있다.
+     결과 reason:
+       no-url      주소가 비어 있음
+       ok          시트에 확인용 줄까지 남김
+       script-error 스크립트는 돌았지만 시트를 못 씀 (error 에 이유)
+       unreachable  주소에 닿지 못함
+       timeout      답이 없거나 우리가 기대한 형식이 아님 */
+  function testSheet() {
+    return new Promise((resolve) => {
+      const url = (window.SITE && window.SITE.sheetWebhookUrl || '').trim();
+      if (!url) { resolve({ ok: false, reason: 'no-url' }); return; }
+
+      const cb = '__sheetCheck' + Date.now().toString(36);
+      const tag = document.createElement('script');
+      let settled = false;
+
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+        if (tag.parentNode) tag.parentNode.removeChild(tag);
+        resolve(result);
+      };
+
+      window[cb] = (res) => {
+        const ok = !!(res && res.ok);
+        finish({
+          ok: ok,
+          reason: ok ? 'ok' : 'script-error',
+          name: res && res.spreadsheet,
+          wrote: res && res.wrote,
+          error: res && res.error
+        });
+      };
+
+      const timer = setTimeout(() => finish({ ok: false, reason: 'timeout' }), 12000);
+      tag.onerror = () => finish({ ok: false, reason: 'unreachable' });
+      tag.src = url + (url.indexOf('?') > -1 ? '&' : '?') +
+                'callback=' + cb + '&test=1&t=' + Date.now();
+      document.head.appendChild(tag);
+    });
+  }
+
+  async function submit(formId, data, formTitle, labels) {
     const record = {
       formId: String(formId),
       data: data,
@@ -338,7 +386,7 @@
         data: record.data,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
-      mirrorToSheet(formId, data, formTitle);
+      mirrorToSheet(formId, data, formTitle, labels);
       return ref.id;
     }
     const list = lsGet(KEY.submissions, []);
@@ -457,7 +505,7 @@
     getSite, saveSite, loadSite,
     getLinks, saveLinks,
     getForms, getForm, saveForm, deleteForm,
-    submit, listSubmissions, deleteSubmission,
+    submit, listSubmissions, deleteSubmission, testSheet,
     getNotices, saveNotice, deleteNotice, replaceNotices
   };
 })();

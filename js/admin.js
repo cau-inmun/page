@@ -1106,6 +1106,64 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  /* ---------- 구글 시트 연결 확인 ---------- */
+  /* 제출은 응답을 읽을 수 없는 방식(no-cors)으로 보내기 때문에,
+     시트에 안 쌓일 때 원인을 짐작만 하게 된다. 이 버튼은 STORE.testSheet 로
+     실제 결과를 받아와 무엇을 고쳐야 하는지까지 화면에 적어준다. */
+  async function checkSheet() {
+    const box = $('#sheet-result');
+    const btn = $('#sheet-test');
+    box.hidden = false;
+    box.className = 'banner';
+    box.style.marginBottom = '14px';
+    box.textContent = '확인하는 중…';
+    btn.disabled = true;
+
+    const r = await STORE.testSheet();
+    btn.disabled = false;
+    box.innerHTML = '';
+
+    const say = (ok, title, lines) => {
+      box.className = 'banner ' + (ok ? 'banner--ok' : 'banner--error');
+      box.style.marginBottom = '14px';
+      box.append(el('strong', { text: title }));
+      lines.forEach((t) => box.append(el('br'), document.createTextNode(t)));
+    };
+
+    if (r.reason === 'ok') {
+      say(true, '연결됐습니다. ', [
+        r.name ? '스프레드시트: ' + r.name : '',
+        r.wrote ? '확인용으로 ‘' + r.wrote + '’ 에 한 줄 남겼습니다. 시트에서 보이면 정상입니다.' : ''
+      ].filter(Boolean));
+      return;
+    }
+    if (r.reason === 'no-url') {
+      say(false, '시트 주소가 비어 있습니다. ', [
+        'js/config.js 의 sheetWebhookUrl 에 Apps Script 웹 앱 주소를 넣어주세요.'
+      ]);
+      return;
+    }
+    if (r.reason === 'script-error') {
+      say(false, '스크립트는 열렸지만 시트에 쓰지 못했습니다. ', [
+        r.error ? '이유: ' + r.error : '',
+        '시트에서 「확장 프로그램 → Apps Script」 로 만든 스크립트인지 확인해 주세요.'
+      ].filter(Boolean));
+      return;
+    }
+    if (r.reason === 'unreachable') {
+      say(false, '시트 주소에 닿지 못했습니다. ', [
+        '주소가 …/exec 로 끝나는지, 인터넷 연결이 되는지 확인해 주세요.'
+      ]);
+      return;
+    }
+    say(false, '답이 오지 않았습니다. ', [
+      '아래 두 가지 중 하나일 가능성이 큽니다.',
+      '① 배포의 ‘액세스 권한’ 이 ‘모든 사용자’ 가 아님',
+      '② docs/google-sheet-webhook.gs 최신 내용을 붙여넣고 다시 배포하지 않음',
+      '(배포 → 배포 관리 → 연필 → 버전 ‘새 버전’ → 배포. 주소는 그대로입니다)'
+    ]);
+  }
+
   function bindTabs() {
     const tabs = $$('.tab');
     tabs.forEach((t) => t.addEventListener('click', () => {
@@ -1123,6 +1181,7 @@
     bindNoticeForm();
     $('#sub-csv').addEventListener('click', exportCsv);
     $('#sub-refresh').addEventListener('click', () => { loadSubs(); toast('새로고침했습니다'); });
+    $('#sheet-test').addEventListener('click', checkSheet);
 
     await STORE.init();
 

@@ -167,7 +167,7 @@ const SITE = {
      구글폼처럼 시트에서 바로 확인·정렬·필터할 수 있습니다.
      만드는 방법은 README 의 '구글 시트로 응답 받기' 를 보세요.
      비워두면 이 기능은 꺼진 채로 아무 영향도 주지 않습니다. */
-  sheetWebhookUrl: 'https://script.google.com/macros/s/AKfycbxxoxjC5Ym186LasVXrmw0Ggdt3urqsS_BDUJIr6LIebV8I-KezYdvOVTgGqAwflIsY/exec',
+  sheetWebhookUrl: 'https://script.google.com/macros/s/AKfycbxMs-_CHLg7-IiH0Pm9KUB8O_BQzGOFnB0vl9RKkMCEXJCMKrrhEL6ffrROO8VMKf_j/exec',
 
   /* ---- 개인정보 수집·이용 동의 문구 ---- */
   consentText: '입력하신 이름 · 학번 · 연락처는 신청 확인과 결과 안내에만 사용하며, ' +

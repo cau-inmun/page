@@ -144,7 +144,11 @@
     btn.textContent = '보내는 중…';
 
     try {
-      await STORE.submit(form.id, values, form.title);
+      /* 구글 시트 열 이름을 학우가 본 항목 이름으로 쓰기 위해 함께 넘긴다.
+         Firestore 에는 지금처럼 항목 키로 저장된다 (이름을 바꿔도 기록이 어긋나지 않도록) */
+      const labels = {};
+      form.fields.forEach((f) => { labels[f.key] = f.label || f.key; });
+      await STORE.submit(form.id, values, form.title, labels);
       showDone();
     } catch (err) {
       console.error(err);

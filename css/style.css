@@ -561,6 +561,8 @@ section + section { margin-top: 52px; }
 }
 .banner strong { color: var(--brand-deep); }
 .banner--error { background: #FBEDE9; border-color: #F0D3C9; color: #8A3D28; }
+.banner--ok    { background: #EDF6EE; border-color: #CBE3CE; color: #2F6136; }
+.banner--ok strong { color: #245029; }
 
 /* ---------- Skeleton ---------- */
 .skeleton {
