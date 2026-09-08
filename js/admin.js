@@ -802,6 +802,7 @@
 
     /* 저장 버튼이 실제로 쓸 작업본 — 저장 전까지 원본을 건드리지 않는다 */
     const d = {
+      brand: Object.assign({ long: '', short: '' }, S.brand || {}),
       college: S.college, councilTerm: S.councilTerm, councilName: S.councilName,
       tagline: S.tagline, description: S.description,
       quickLinks: JSON.parse(JSON.stringify(S.quickLinks || [])),
@@ -815,6 +816,11 @@
     /* --- 이름 · 제목 --- */
     box.appendChild(el('div', { class: 'editor-group' }, [
       el('p', { class: 'schedule__title', style: 'margin-bottom:10px', text: '이름과 제목' }),
+      textField('상단바 이름 (긴 버전)', d.brand.long,
+        '넓은 화면에서 보입니다.', (v) => { d.brand.long = v; }),
+      textField('상단바 이름 (짧은 버전)', d.brand.short,
+        '휴대폰 등 좁은 화면에서 보입니다. 메뉴와 자리를 다투므로 짧게 유지하세요.',
+        (v) => { d.brand.short = v; }),
       textField('대학 이름', d.college, '홈 상단과 푸터에 나옵니다.', (v) => { d.college = v; }),
       el('div', { class: 'field-row' }, [
         textField('기수', d.councilTerm, '예) 제15대 학생회', (v) => { d.councilTerm = v; }),

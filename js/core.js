@@ -415,8 +415,19 @@
     }, 400));
   }
 
+  /* 상단바 이름을 설정값으로 채운다.
+     HTML 에 기본 문구가 들어 있어 JS 가 없어도 보이고,
+     관리자에서 이름을 바꾸면 이 함수가 덮어쓴다. */
+  function applyBrand() {
+    const b = (window.SITE && window.SITE.brand) || null;
+    if (!b) return;
+    $$('.topbar__name--long').forEach((n) => { if (b.long) n.textContent = b.long; });
+    $$('.topbar__name--short').forEach((n) => { if (b.short) n.textContent = b.short; });
+  }
+
   /* ---------- 공통 초기화 ---------- */
   function boot() {
+    applyBrand();
     stickyHeader();
     initLogos();
     revealOnScroll();
@@ -428,6 +439,6 @@
     formatDate, relativeDate, formatDateTime, toLocalInput, fromLocalInput,
     noticeStatus, formStatus, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
-    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, boot
+    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, boot
   };
 })();

@@ -186,7 +186,7 @@
      각 화면 스크립트가 const S = window.SITE 로 참조를 붙잡고 있어서,
      객체를 교체하면 그 참조들이 옛 값을 계속 보게 된다. */
   const SITE_KEYS = [
-    'college', 'councilTerm', 'councilName', 'tagline', 'description',
+    'brand', 'college', 'councilTerm', 'councilName', 'tagline', 'description',
     'quickLinks', 'about', 'contact', 'categories', 'departments', 'consentText'
   ];
 

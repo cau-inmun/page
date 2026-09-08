@@ -167,14 +167,14 @@ section + section { margin-top: 44px; }
 .nav a:hover { background: var(--sand-soft); color: var(--ink); text-decoration: none; }
 .nav a[aria-current='page'] { background: var(--sand); color: var(--brand-deep); }
 
-/* 좁은 화면에서는 로고 마크만 남기고 워드마크는 숨긴다.
-   (display:none 대신 시각적으로만 숨겨 스크린리더에는 남긴다) */
+/* 상단바 이름 — 넓은 화면은 긴 버전, 좁은 화면은 짧은 버전.
+   문구는 js/config.js 의 brand.long / brand.short 에서 관리한다.
+   좁은 화면에서는 메뉴 5개와 자리를 다투므로 짧은 쪽만 남긴다. */
+.topbar__name--short { display: none; }
+
 @media (max-width: 440px) {
-  .topbar__name {
-    position: absolute; width: 1px; height: 1px;
-    padding: 0; margin: -1px; overflow: hidden;
-    clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-  }
+  .topbar__name--long  { display: none; }
+  .topbar__name--short { display: inline; }
   .nav { margin-left: 0; }
   .nav a { padding: 7px 10px; font-size: 13px; }
 }
