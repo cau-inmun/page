@@ -1223,7 +1223,7 @@
      좌석표에 실리는 것은 가린 이름과 학번 앞 5자리뿐이라,
      누가 어느 자리에 앉았는지는 이 표에서만 확인할 수 있다.
      ========================================================== */
-  let seatLogs = [];
+  let seatLogs = [], seatReleases = [];
 
   function seatDay() {
     const v = $('#seat-date').value;
@@ -1234,7 +1234,11 @@
     const box = $('#seat-table');
     box.innerHTML = '<div class="skeleton" style="height:120px"></div>';
     try {
-      seatLogs = await STORE.listSeatLogs(seatDay());
+      const day = seatDay();
+      const [logs, rels] = await Promise.all([
+        STORE.listSeatLogs(day), STORE.listSeatReleases(day)
+      ]);
+      seatLogs = logs; seatReleases = rels;
     } catch (err) {
       console.error(err);
       box.innerHTML = '';
@@ -1245,6 +1249,7 @@
       return;
     }
     renderSeats();
+    renderSeatReleases();
   }
 
   function renderSeats() {
@@ -1254,7 +1259,7 @@
 
     if (!seatLogs.length) {
       box.appendChild(el('div', { class: 'empty' }, [
-        el('strong', { text: '예약된 자리가 없습니다.' }),
+        el('strong', { text: '지금 쓰는 자리가 없습니다.' }),
         '학우들이 좌석을 예약하면 이곳에 쌓입니다.'
       ]));
       return;
@@ -1287,6 +1292,42 @@
             }
           })
         ])
+      ]));
+    });
+    table.appendChild(tbody);
+    box.appendChild(el('div', { class: 'table-wrap' }, [table]));
+  }
+
+  const RELEASE_WORD = { return: '반납', cancel: '취소' };
+
+  function renderSeatReleases() {
+    const box = $('#seat-releases');
+    box.innerHTML = '';
+    $('#seat-rel-count').textContent = seatReleases.length + '건';
+
+    if (!seatReleases.length) {
+      box.appendChild(el('div', { class: 'empty' }, [
+        el('strong', { text: '아직 비워진 자리가 없습니다.' }),
+        '학우가 반납하거나 취소하면 이곳에 남습니다.'
+      ]));
+      return;
+    }
+
+    const table = el('table', { class: 'table' });
+    table.appendChild(el('thead', null, [
+      el('tr', null, ['좌석', '이름', '학과', '학번', '방식', '비운 시각']
+        .map((h) => el('th', { text: h })))
+    ]));
+    const tbody = el('tbody');
+    seatReleases.forEach((r) => {
+      tbody.appendChild(el('tr', null, [
+        el('td', { text: String(r.seat || r.id) + '번' }),
+        el('td', { text: r.name || '' }),
+        el('td', { text: r.dept || '' }),
+        el('td', { text: r.sid || '' }),
+        el('td', null, [tagEl(RELEASE_WORD[r.kind] || r.kind || '', 
+                              r.kind === 'cancel' ? 'archived' : null)]),
+        el('td', { text: r.createdAt ? formatDateTime(r.createdAt) : '' })
       ]));
     });
     table.appendChild(tbody);

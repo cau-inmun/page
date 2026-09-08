@@ -58,6 +58,9 @@
   function rememberBooking(v) {
     try { localStorage.setItem(MINE_KEY, JSON.stringify(v)); } catch (e) { /* 무시 */ }
   }
+  function forgetBooking() {
+    try { localStorage.removeItem(MINE_KEY); } catch (e) { /* 무시 */ }
+  }
 
   /* ==========================================================
      머리말 · 상태 안내
@@ -139,12 +142,17 @@
     const label = seatRow(n) + two(((n - 1) % PER_ROW) + 1);
 
     if (info) {
-      /* 예약된 자리 — 색만으로 구분하지 않도록 글자로도 알린다 */
-      return el('div', {
+      /* 예약된 자리 — 색만으로 구분하지 않도록 글자로도 알린다.
+         누르면 반납 · 취소 창이 열린다 (예약할 때 적은 정보를 다시 넣어야 한다).
+         다른 기기에서도 자기 자리를 비울 수 있도록 좌석표에서 바로 연다. */
+      return el('button', {
+        type: 'button',
         class: 'seat seat--taken' + (isMine ? ' seat--mine' : ''),
-        role: 'img',
+        disabled: roomOpen ? null : '',
         'aria-label': seatLabel(n) + ' 예약됨 · ' +
-          (info.nameMasked || '') + ' ' + (info.sidHead || '')
+          (info.nameMasked || '') + ' ' + (info.sidHead || '') +
+          (roomOpen ? ' · 반납하거나 취소하려면 누르세요' : ''),
+        onclick: () => openRelease(n)
       }, [
         el('span', { class: 'seat__no', text: label }),
         el('span', { class: 'seat__who', text: info.nameMasked || '예약됨' }),
@@ -170,7 +178,8 @@
   function openForm(n) {
     const mine = myBooking();
     if (mine) {
-      toast('이미 ' + seatLabel(mine.seat) + ' 을 예약하셨습니다');
+      toast('이미 ' + seatLabel(mine.seat) + ' 을 예약하셨습니다. 옮기시려면 먼저 그 자리를 비워주세요');
+      openRelease(mine.seat);
       return;
     }
     picking = n;
@@ -255,6 +264,95 @@
   }
 
   /* ==========================================================
+     자리 비우기 — 반납 · 취소
+     로그인이 없으므로 예약할 때 적은 이름 · 학과 · 학번으로 본인을 가린다.
+     대조는 서버(보안 규칙)가 한다. 여기서 맞춰보는 것만으로는
+     아무나 남의 자리를 비울 수 있기 때문이다.
+     ========================================================== */
+  function openRelease(n) {
+    picking = null;
+    const mine = myBooking();
+    const isMine = mine && mine.seat === n;
+
+    const box = $('[data-seat-form]');
+    box.hidden = false;
+    box.innerHTML = '';
+
+    const nameIn = el('input', { type: 'text', id: 'x-name', maxlength: '20',
+      value: isMine ? mine.name : '', placeholder: '예약할 때 적은 이름' });
+    const deptIn = el('select', { id: 'x-dept' }, [
+      el('option', { value: '', text: '선택해 주세요' })
+    ].concat((S.departments || []).map((d) =>
+      el('option', { value: d, text: d, selected: isMine && mine.dept === d ? '' : null }))));
+    const sidIn = el('input', { type: 'text', id: 'x-sid', inputmode: 'numeric', maxlength: '12',
+      value: isMine ? mine.sid : '', placeholder: '예약할 때 적은 학번' });
+    const err = el('p', { class: 'field__error', hidden: true });
+
+    box.append(el('div', { class: 'admin__panel' }, [
+      el('h2', { class: 'ticket__head', text: seatLabel(n) + ' 자리 비우기' }),
+      el('p', { class: 'field__help', style: 'margin:-6px 0 16px',
+        text: isMine
+          ? '예약하실 때 적으신 내용입니다. 그대로 두고 아래에서 골라주세요.'
+          : '예약할 때 적은 이름 · 학과 · 학번을 그대로 넣어야 비울 수 있습니다.' }),
+      el('div', { class: 'field' }, [ el('label', { for: 'x-name', text: '이름' }), nameIn ]),
+      el('div', { class: 'field' }, [ el('label', { for: 'x-dept', text: '학과' }), deptIn ]),
+      el('div', { class: 'field' }, [ el('label', { for: 'x-sid', text: '학번' }), sidIn ]),
+      err,
+      el('p', { class: 'field__help', style: 'margin:4px 0 0' }, [
+        el('strong', { text: '반납' }), ' — 다 쓰고 자리를 비웁니다. ',
+        el('strong', { text: '취소' }), ' — 오늘 이용하지 않기로 했습니다.',
+        el('br'), '어느 쪽이든 그 자리는 곧바로 다른 학우가 예약할 수 있게 됩니다.'
+      ]),
+      el('div', { class: 'fcard__actions' }, [
+        el('button', { type: 'button', class: 'btn btn--primary', id: 'x-return',
+          text: '반납하기', onclick: () => release(n, 'return', err) }),
+        el('button', { type: 'button', class: 'btn', id: 'x-cancel',
+          text: '예약 취소하기', onclick: () => release(n, 'cancel', err) }),
+        el('button', { type: 'button', class: 'rowbtn', style: 'margin-left:auto', text: '닫기',
+          onclick: () => { box.hidden = true; box.innerHTML = ''; } })
+      ])
+    ]));
+
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => (isMine ? $('#x-return') : nameIn).focus(), 300);
+  }
+
+  async function release(n, kind, err) {
+    const name = $('#x-name').value.trim();
+    const dept = $('#x-dept').value;
+    const sid = $('#x-sid').value.replace(/\D/g, '');
+    const word = kind === 'cancel' ? '취소' : '반납';
+
+    if (!name || !dept || !sid) return fail(err, '이름 · 학과 · 학번을 모두 넣어주세요.');
+    err.hidden = true;
+
+    const btns = [$('#x-return'), $('#x-cancel')];
+    btns.forEach((b) => { b.disabled = true; });
+    $(kind === 'cancel' ? '#x-cancel' : '#x-return').textContent = word + '하는 중…';
+
+    try {
+      await STORE.releaseSeat(today, n, { name: name, dept: dept, sid: sid }, kind);
+    } catch (e) {
+      btns.forEach((b) => { b.disabled = false; });
+      $('#x-return').textContent = '반납하기';
+      $('#x-cancel').textContent = '예약 취소하기';
+      if (e && e.code === 'mismatch') {
+        return fail(err, '예약할 때 적으신 내용과 다릅니다. 이름 · 학과 · 학번을 다시 확인해 주세요.');
+      }
+      console.error(e);
+      return fail(err, word + '하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+
+    const mine = myBooking();
+    if (mine && mine.seat === n) forgetBooking();
+    $('[data-seat-form]').hidden = true;
+    $('[data-seat-form]').innerHTML = '';
+    $('[data-ticket]').hidden = true;
+    await refresh();
+    toast(seatLabel(n) + ' 을 ' + word + '했습니다');
+  }
+
+  /* ==========================================================
      예약 확인증
      ========================================================== */
   function showTicket(b) {
@@ -284,8 +382,13 @@
            (ROOM.notes || []).map((t) => el('li', { text: t })))
       ]),
 
+      el('div', { class: 'fcard__actions', style: 'margin-top:16px' }, [
+        el('button', { type: 'button', class: 'btn', text: '자리 반납 · 예약 취소',
+          onclick: () => openRelease(b.seat) })
+      ]),
       el('p', { class: 'ticket__foot',
-        text: '예약을 바꾸거나 취소하려면 학생회로 알려주세요. 이 화면은 캡처해 두시면 좋습니다.' })
+        text: '이 화면은 캡처해 두시면 좋습니다. 자리를 비울 때는 위 단추를 누르고 ' +
+              '예약할 때 적으신 이름 · 학과 · 학번을 그대로 넣어주세요.' })
     ]));
     box.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }

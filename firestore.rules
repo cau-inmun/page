@@ -129,6 +129,28 @@ service cloud.firestore {
            + (request.time.month() < 10 ? '0' : '') + string(request.time.month()) + '-'
            + (request.time.day()   < 10 ? '0' : '') + string(request.time.day());
     }
+    // 학우가 스스로 자리를 비우는 길 (반납 · 취소)
+    //  로그인이 없으니 '본인' 임을 예약할 때 적은 이름 · 학과 · 학번으로
+    //  확인한다. 그 값을 대조하려면 어딘가에 담아 보내야 하는데, 담긴 것은
+    //  곧 저장되는 것이라 공개되는 문서에 넣을 수 없다. 그래서 관리자만
+    //  읽는 releases 에 넣고, 좌석 삭제는 '그 자리에 대한 releases 가
+    //  예약보다 나중에 만들어졌는지' 로 판정한다.
+    //
+    //  시각을 견주는 이유: releases 문서는 지워지지 않고 남는다. 같은 자리를
+    //  나중에 다른 사람이 예약했을 때 옛 releases 로 남의 자리를 비워버리는
+    //  일이 없도록, 예약보다 나중에 만들어진 것만 인정한다.
+    function releasePath(day, seatNo) {
+      return /databases/$(database)/documents/seatdays/$(day)/releases/$(seatNo);
+    }
+    function releasedAfterBooking(day, seatNo) {
+      return exists(releasePath(day, seatNo))
+             && get(releasePath(day, seatNo)).data.createdAt > resource.data.createdAt;
+    }
+    function matchesBooking(day, seatNo, d) {
+      let log = get(/databases/$(database)/documents/seatdays/$(day)/logs/$(seatNo)).data;
+      return log.name == d.name && log.dept == d.dept && log.sid == d.sid;
+    }
+
     function seatOk(day, seatNo, d) {
       return day == seoulToday()
              && inOpenHours()
@@ -146,16 +168,34 @@ service cloud.firestore {
         && request.resource.data.sidHead is string
         && request.resource.data.sidHead.size() <= 5;
       allow update: if false;          // 잡힌 자리는 아무도 덮어쓸 수 없다
-      allow delete: if isAdmin();      // 자리 비우기는 학생회만
+      allow delete: if isAdmin() || releasedAfterBooking(day, seatNo);
     }
 
     match /seatdays/{day}/logs/{seatNo} {
-      allow read, update, delete: if isAdmin();
+      allow read, update: if isAdmin();
+      // 자리를 비우면 명단에서도 지워야 그 자리를 다시 예약할 수 있다
+      allow delete: if isAdmin() || releasedAfterBooking(day, seatNo);
       allow create: if seatOk(day, seatNo, request.resource.data)
         && request.resource.data.keys().hasOnly(['seat', 'name', 'dept', 'sid', 'createdAt'])
         && request.resource.data.name is string && request.resource.data.name.size() <= 20
         && request.resource.data.dept is string && request.resource.data.dept.size() <= 40
         && request.resource.data.sid  is string && request.resource.data.sid.size()  <= 12;
+    }
+
+    // ---- 자리 비우기 기록 (반납 · 취소) ----
+    //  누가 언제 어떻게 비웠는지가 담기므로 관리자만 읽는다.
+    //  쓰기는 누구나 할 수 있지만, 그 자리에 실제로 예약이 있고 이름 · 학과 ·
+    //  학번이 예약 때와 똑같아야만 통과한다.
+    match /seatdays/{day}/releases/{seatNo} {
+      allow read, delete: if isAdmin();
+      allow create, update: if day == seoulToday() && inOpenHours()
+        && request.resource.data.keys().hasOnly(['seat', 'name', 'dept', 'sid', 'kind', 'createdAt'])
+        && request.resource.data.seat is int
+        && string(request.resource.data.seat) == seatNo
+        && (request.resource.data.kind == 'return' || request.resource.data.kind == 'cancel')
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/seatdays/$(day)/seats/$(seatNo))
+        && matchesBooking(day, seatNo, request.resource.data);
     }
 
     // 그 밖의 모든 경로는 차단

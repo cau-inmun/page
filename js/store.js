@@ -492,6 +492,69 @@
     return true;
   }
 
+  /* 학우가 스스로 자리를 비운다 (kind: 'return' 반납 / 'cancel' 취소).
+     로그인이 없으므로 예약할 때 적은 이름 · 학과 · 학번이 그대로여야 통과한다.
+     대조는 화면이 아니라 보안 규칙이 서버에서 한다 — 화면 검사만으로는
+     아무나 남의 자리를 비울 수 있기 때문이다.
+     맞지 않으면 code 가 'mismatch' 인 오류를 던진다. */
+  async function releaseSeat(day, seat, person, kind) {
+    const key = String(seat);
+    const proof = {
+      seat: Number(seat),
+      name: String(person.name || '').trim(),
+      dept: String(person.dept || '').trim(),
+      sid: String(person.sid || '').replace(/\D/g, ''),
+      kind: kind === 'cancel' ? 'cancel' : 'return'
+    };
+
+    if (mode === 'firebase') {
+      try {
+        await seatPath(day).collection('releases').doc(key).set(
+          Object.assign({}, proof, { createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
+      } catch (err) {
+        if (err && err.code === 'permission-denied') {
+          const e = new Error('mismatch'); e.code = 'mismatch'; throw e;
+        }
+        throw err;
+      }
+      /* 기록이 남았으니 이제 좌석과 명단을 지운다.
+         명단까지 지워야 그 자리를 다른 사람이 다시 예약할 수 있다. */
+      await seatPath(day).collection('seats').doc(key).delete();
+      try { await seatPath(day).collection('logs').doc(key).delete(); }
+      catch (e) { console.warn('[열람실] 명단에서 지우지 못했습니다.', e); }
+      return true;
+    }
+
+    const all = lsGet(KEY.seats, {}) || {};
+    const dayMap = all[day] || {};
+    const cur = dayMap[key];
+    if (!cur) { const e = new Error('mismatch'); e.code = 'mismatch'; throw e; }
+    if (cur.name !== proof.name || cur.dept !== proof.dept || cur.sid !== proof.sid) {
+      const e = new Error('mismatch'); e.code = 'mismatch'; throw e;
+    }
+    const rel = all['releases:' + day] || {};
+    rel[key] = Object.assign({}, proof, { createdAt: new Date().toISOString() });
+    all['releases:' + day] = rel;
+    delete dayMap[key];
+    all[day] = dayMap;
+    lsSet(KEY.seats, all);
+    return true;
+  }
+
+  /* 관리자용 — 오늘 비워진 자리 (누가 언제 반납 · 취소했는지) */
+  async function listSeatReleases(day) {
+    let list;
+    if (mode === 'firebase') {
+      const snap = await seatPath(day).collection('releases').get();
+      list = snap.docs.map((d) => Object.assign({ id: d.id }, d.data(),
+                                { createdAt: tsToIso(d.data().createdAt) }));
+    } else {
+      const rel = (lsGet(KEY.seats, {}) || {})['releases:' + day] || {};
+      list = Object.keys(rel).map((k) => Object.assign({ id: k }, rel[k]));
+    }
+    return list.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  }
+
   /* 관리자용 — 실명 · 학과 · 전체 학번이 담긴 명단 */
   async function listSeatLogs(day) {
     let list;
@@ -604,6 +667,6 @@
     getForms, getForm, saveForm, deleteForm,
     submit, listSubmissions, deleteSubmission, testSheet,
     getNotices, saveNotice, deleteNotice, replaceNotices,
-    getSeats, reserveSeat, listSeatLogs, cancelSeat
+    getSeats, reserveSeat, releaseSeat, listSeatLogs, listSeatReleases, cancelSeat
   };
 })();
