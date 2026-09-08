@@ -123,6 +123,54 @@
     return `${head} ${time}`;
   }
 
+  /* ---------- 오류를 사람 말로 ----------
+     화면에 '규칙이 배포되지 않았을 수 있습니다' 만 띄우면, 원인이 전혀
+     다를 때 엉뚱한 곳을 고치게 된다. 실제로 그런 일이 있었다 —
+     브라우저가 예전 js 파일을 들고 있어 함수가 없었는데, 화면에는
+     권한 문제라고 떴다. 그래서 종류를 갈라 보여준다. */
+  function describeError(err) {
+    const code = (err && err.code) || '';
+    const msg = String((err && err.message) || err || '');
+
+    if (/is not a function|undefined is not|없는 함수/i.test(msg)) {
+      return {
+        kind: 'stale',
+        title: '브라우저가 예전 파일을 들고 있습니다. ',
+        text: '새로고침하면 해결됩니다. 윈도우는 Ctrl+Shift+R, 맥은 Cmd+Shift+R, ' +
+              '휴대폰은 브라우저를 완전히 닫았다 열어보세요.',
+        detail: msg
+      };
+    }
+    if (code === 'permission-denied') {
+      return {
+        kind: 'denied',
+        title: '권한이 없습니다. ',
+        text: '관리자로 등록되지 않았거나 보안 규칙이 배포되지 않았습니다. ' +
+              '연결 진단(setup.html)에서 어디가 막혔는지 확인하세요.',
+        detail: code
+      };
+    }
+    if (code === 'unavailable' || /network|offline/i.test(msg)) {
+      return { kind: 'network', title: '서버에 닿지 못했습니다. ',
+               text: '잠시 후 다시 시도해 주세요.', detail: code || msg };
+    }
+    return { kind: 'other', title: '문제가 생겼습니다. ',
+             text: '아래 내용을 학생회 담당자에게 알려주세요.',
+             detail: (code ? code + ' — ' : '') + msg };
+  }
+
+  /* 오류 상자를 그린다 (원인과 실제 메시지를 함께) */
+  function errorBoxFor(err, what) {
+    const d = describeError(err);
+    return el('div', { class: 'banner banner--error' }, [
+      el('strong', { text: (what ? what + ' ' : '') + d.title }),
+      d.text,
+      el('div', { style: 'margin-top:8px' }, [
+        el('code', { style: 'font-size:11.5px; word-break:break-all', text: d.detail })
+      ])
+    ]);
+  }
+
   /* ---------- 한국 시각 ----------
      열람실은 '오늘' 과 '09~21시' 를 기준으로 도는데, 보는 사람의 시계나
      시간대가 어긋나면 날짜가 하루 밀린다. 그래서 브라우저 지역 설정과
@@ -504,7 +552,7 @@
   window.CORE = {
     $, $$, el, escapeHtml, safeUrl, isExternal,
     formatDate, relativeDate, formatDateTime, toLocalInput, fromLocalInput,
-    seoulNow, maskName, maskSid,
+    seoulNow, maskName, maskSid, describeError, errorBoxFor,
     noticeStatus, formStatus, formVisibility, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
     loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, boot

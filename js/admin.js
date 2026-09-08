@@ -9,7 +9,7 @@
 
   const { $, $$, el, toast, tagEl, renderMarkdown, formatDate, formatDateTime,
           toLocalInput, fromLocalInput, noticeStatus, formStatus, formVisibility,
-          plainText, seoulNow } = window.CORE;
+          plainText, seoulNow, errorBoxFor } = window.CORE;
   const S = window.SITE;
 
   let notices = [], forms = [], linkGroups = [], subs = [];
@@ -1242,10 +1242,10 @@
     } catch (err) {
       console.error(err);
       box.innerHTML = '';
-      box.appendChild(el('div', { class: 'banner banner--error' }, [
-        el('strong', { text: '좌석 명단을 불러오지 못했습니다. ' }),
-        '관리자 권한이 없거나 보안 규칙이 배포되지 않았을 수 있습니다.'
-      ]));
+      box.appendChild(errorBoxFor(err, '좌석 명단을 불러오지 못했습니다.'));
+      $('#seat-releases').innerHTML = '';
+      $('#seat-count').textContent = '';
+      $('#seat-rel-count').textContent = '';
       return;
     }
     renderSeats();

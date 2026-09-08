@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const { $, el, toast, seoulNow, maskName, maskSid } = window.CORE;
+  const { $, el, toast, seoulNow, maskName, maskSid, describeError, errorBoxFor } = window.CORE;
   const S = window.SITE;
   const ROOM = S.readingRoom || {};
 
@@ -250,7 +250,8 @@
         return fail(err, '조금 전에 다른 분이 예약한 자리입니다. 다른 자리를 골라주세요.');
       }
       console.error(e);
-      return fail(err, '예약하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      const d = describeError(e);
+      return fail(err, '예약하지 못했습니다. ' + d.title + d.text);
     }
 
     const booked = { date: today, seat: picking, name: name, dept: dept, sid: sid,
@@ -340,7 +341,8 @@
         return fail(err, '예약할 때 적으신 내용과 다릅니다. 이름 · 학과 · 학번을 다시 확인해 주세요.');
       }
       console.error(e);
-      return fail(err, word + '하지 못했습니다. 잠시 후 다시 시도해 주세요.');
+      const d = describeError(e);
+      return fail(err, word + '하지 못했습니다. ' + d.title + d.text);
     }
 
     const mine = myBooking();
@@ -408,9 +410,7 @@
       console.error(e);
       const box = $('[data-seatmap]');
       box.innerHTML = '';
-      box.appendChild(el('div', { class: 'banner banner--error' }, [
-        el('strong', { text: '좌석표를 불러오지 못했습니다. ' }), '잠시 후 새로고침해 주세요.'
-      ]));
+      box.appendChild(errorBoxFor(e, '좌석표를 불러오지 못했습니다.'));
       return;
     }
     renderHead();

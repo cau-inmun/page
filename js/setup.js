@@ -34,6 +34,24 @@
   async function run() {
     box().innerHTML = '';
 
+    /* ---- 먼저 : 사이트 파일이 최신인지 ----
+       브라우저가 예전 js 를 들고 있으면 함수가 없어서 실패하는데,
+       화면에는 권한 문제처럼 보인다. 실제로 그렇게 헤맨 적이 있어
+       Firebase 를 보기도 전에 이것부터 짚는다. */
+    const NEED = ['getSeats', 'reserveSeat', 'releaseSeat', 'listSeatLogs',
+                  'listSeatReleases', 'cancelSeat'];
+    const lacking = NEED.filter((k) => typeof (window.STORE || {})[k] !== 'function');
+    if (lacking.length) {
+      row('fail', '먼저 · 사이트 파일 최신 여부',
+        '예전 파일을 쓰고 있습니다. 없는 기능: ' + lacking.join(', '),
+        '브라우저가 옛 js 를 캐시에 들고 있습니다. 윈도우는 Ctrl+Shift+R, ' +
+        '맥은 Cmd+Shift+R 로 강제 새로고침하세요. 휴대폰은 브라우저를 완전히 닫았다 여세요. ' +
+        '그래도 그대로면 GitHub Pages 배포가 아직 안 끝났을 수 있으니 1~2분 뒤 다시 보세요. ' +
+        '아래 항목들이 실패해도 먼저 이것부터 해결해야 합니다.');
+    } else {
+      row('ok', '먼저 · 사이트 파일 최신 여부', '열람실 기능까지 모두 들어 있습니다.', '');
+    }
+
     /* ---- 1. 설정값 ---- */
     const missing = [];
     if (!has(C.apiKey)) missing.push('apiKey');
@@ -45,7 +63,7 @@
         '아직 비어 있는 값: ' + missing.join(', '),
         'js/firebase-config.js 를 열어 Firebase 콘솔의 firebaseConfig 값을 채우고 커밋하세요. ' +
         '(콘솔 → ⚙️ 프로젝트 설정 → 내 앱 → 웹 앱)');
-      row('skip', '2~7. 나머지 점검', '설정값이 있어야 진행할 수 있습니다.', '');
+      row('skip', '2~11. 나머지 점검', '설정값이 있어야 진행할 수 있습니다.', '');
       finish();
       return;
     }
@@ -137,8 +155,36 @@
       $('#uid-value').textContent = user.uid;
     }
 
-    /* ---- 8. 도메인 ---- */
-    row('warn', '8. 승인된 도메인', `지금 이 페이지의 주소: ${location.hostname}`,
+    /* ---- 9. 좌석표 읽기 (누구나) ---- */
+    const today = window.CORE.seoulNow().date;
+    try {
+      const snap = await firebase.firestore()
+        .collection('seatdays').doc(today).collection('seats').get();
+      row('ok', '9. 좌석표 읽기', `오늘(${today}) 예약된 자리 ${snap.size}석`, '');
+    } catch (e) {
+      row('fail', '9. 좌석표 읽기', String(e.code || e.message || e),
+        '저장소의 firestore.rules 를 콘솔 → Firestore Database → 규칙 에 다시 붙여넣고 게시하세요. ' +
+        'seatdays 규칙이 통째로 빠져 있으면 열람실이 하나도 동작하지 않습니다. ' +
+        '붙여넣은 뒤 게시 버튼이 실제로 성공했는지(빨간 오류가 없었는지) 확인하세요.');
+    }
+
+    /* ---- 10. 좌석 명단 읽기 (관리자) ---- */
+    if (!user) {
+      row('skip', '10. 좌석 명단 읽기', '로그인해야 점검할 수 있습니다.', '');
+    } else {
+      try {
+        const snap = await firebase.firestore()
+          .collection('seatdays').doc(today).collection('logs').get();
+        row('ok', '10. 좌석 명단 읽기', `${snap.size}건 (관리자 → 열람실 탭에서 보입니다)`, '');
+      } catch (e) {
+        row('fail', '10. 좌석 명단 읽기', String(e.code || e.message || e),
+          '규칙의 seatdays/{day}/logs 부분이 배포되지 않았습니다. ' +
+          'firestore.rules 를 다시 붙여넣고 게시하세요.');
+      }
+    }
+
+    /* ---- 11. 도메인 ---- */
+    row('warn', '11. 승인된 도메인', `지금 이 페이지의 주소: ${location.hostname}`,
       `Firebase 콘솔 → Authentication → Settings → 승인된 도메인 에 ` +
       `'${location.hostname}' 가 있어야 로그인이 됩니다. localhost 는 기본 포함입니다.`);
 
