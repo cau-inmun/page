@@ -72,6 +72,7 @@
         <button type="button" class="tab" role="tab" data-tab="subs" aria-selected="false">폼 응답</button>
         <button type="button" class="tab" role="tab" data-tab="forms" aria-selected="false">폼 설정</button>
         <button type="button" class="tab" role="tab" data-tab="links" aria-selected="false">링크</button>
+        <button type="button" class="tab" role="tab" data-tab="archive" aria-selected="false">아카이브</button>
         <button type="button" class="tab" role="tab" data-tab="site" aria-selected="false">사이트 정보</button>
       </div>
 
@@ -196,6 +197,27 @@
             접수를 닫으면 학우에게는 ‘지금은 접수를 받지 않습니다’ 로 보입니다.
           </p>
           <div id="form-editor"></div>
+        </div>
+      </div>
+
+      <!-- ---- 아카이브 ---- -->
+      <div data-panel="archive" hidden>
+        <div class="admin__panel">
+          <h2>지난 공지 <span class="count" id="arc-notice-count"></span></h2>
+          <p class="field__help" style="margin-bottom:14px">
+            게시 기간이 끝났거나 직접 보관한 공지입니다. 삭제된 것이 아니라
+            공지사항 페이지의 ‘지난 공지’ 에서 학우들도 계속 볼 수 있습니다.
+            제목을 누르면 실제 화면이 새 창에서 열립니다.
+          </p>
+          <ul class="draft-list" id="arc-notices"></ul>
+        </div>
+
+        <div class="admin__panel">
+          <h2>마감된 폼 <span class="count" id="arc-form-count"></span></h2>
+          <p class="field__help" style="margin-bottom:14px">
+            접수가 끝난 폼입니다. 접수된 응답은 그대로 남아 있어 언제든 확인할 수 있습니다.
+          </p>
+          <ul class="draft-list" id="arc-forms"></ul>
         </div>
       </div>
 

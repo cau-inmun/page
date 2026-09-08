@@ -427,7 +427,14 @@
 
   /* ---------- 공통 초기화 ---------- */
   function boot() {
+    /* 먼저 config.js 기본값으로 그려두고 (JS 지연에도 빈 자리가 없게),
+       저장된 설정을 불러온 뒤 한 번 더 덮어쓴다.
+       STORE.init() 안에서 관리자가 저장한 이름을 가져오기 때문에,
+       이 두 번째 호출이 없으면 상단바가 계속 기본값으로 남는다. */
     applyBrand();
+    if (window.STORE) {
+      STORE.init().then(applyBrand).catch(() => {});
+    }
     stickyHeader();
     initLogos();
     revealOnScroll();

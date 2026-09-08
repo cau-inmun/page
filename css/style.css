@@ -992,3 +992,7 @@ table.subs td.when { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 }
 .fpreview .choice { cursor: default; }
 .fpreview .btn:disabled { opacity: .75; cursor: default; }
+
+/* 아카이브 목록의 제목은 눌러서 실제 화면을 열 수 있다 */
+a.draft__title { color: var(--ink); text-decoration: none; }
+a.draft__title:hover { color: var(--brand-deep); text-decoration: underline; text-underline-offset: 3px; }

@@ -73,6 +73,7 @@
     renderNoticeList();
     renderFormTabs();
     renderFormSettings();
+    renderArchive();
     renderSite();
     renderLinks();
     await loadSubs();
@@ -304,7 +305,7 @@
             if (i > -1) notices[i] = next;
             try { await STORE.saveNotice(next); }
             catch (e) { console.error(e); toast('저장하지 못했습니다'); return; }
-            renderNoticeList();
+            renderNoticeList(); renderArchive();
             toast(next.archived ? '보관했습니다' : '다시 게시했습니다');
           }
         }),
@@ -780,7 +781,105 @@
   }
 
   /* ==========================================================
-     탭 4 · 사이트 정보
+     탭 4 · 아카이브 (지난 공지 · 마감된 폼)
+     ========================================================== */
+  function renderArchive() {
+    /* --- 지난 공지 --- */
+    const nb = $('#arc-notices');
+    nb.innerHTML = '';
+    const archived = notices.filter((n) => noticeStatus(n) === 'archived');
+    $('#arc-notice-count').textContent = archived.length + '건';
+
+    if (!archived.length) {
+      nb.appendChild(el('li', { class: 'empty' }, [
+        el('strong', { text: '지난 공지가 없습니다.' }),
+        '게시 기간이 끝나거나 보관한 공지가 이곳에 모입니다.'
+      ]));
+    } else {
+      archived.forEach((n) => {
+        nb.appendChild(el('li', { class: 'draft' }, [
+          tagEl(n.category, null, n.category),
+          el('a', {
+            class: 'draft__title', href: 'notice.html?id=' + encodeURIComponent(n.id),
+            target: '_blank', rel: 'noopener', title: '새 창에서 열기', text: n.title
+          }),
+          el('span', { class: 'draft__when',
+            text: n.expireAt ? formatDateTime(n.expireAt) + ' 보관' : n.date }),
+          el('button', {
+            type: 'button', class: 'draft__btn', text: '다시 게시',
+            onclick: async () => {
+              const next = Object.assign({}, n, { archived: false, expireAt: '' });
+              const i = notices.findIndex((x) => x.id === n.id);
+              if (i > -1) notices[i] = next;
+              try { await STORE.saveNotice(next); }
+              catch (e) { console.error(e); toast('저장하지 못했습니다'); return; }
+              renderNoticeList(); renderArchive();
+              toast('다시 게시했습니다');
+            }
+          }),
+          el('button', {
+            type: 'button', class: 'draft__btn', text: '삭제',
+            onclick: async () => {
+              if (!confirm(`‘${n.title}’ 공지를 완전히 지울까요?\n되돌릴 수 없습니다.`)) return;
+              notices = notices.filter((x) => x.id !== n.id);
+              try { await STORE.deleteNotice(n.id); } catch (e) { console.error(e); }
+              renderNoticeList(); renderArchive();
+              toast('삭제했습니다');
+            }
+          })
+        ]));
+      });
+    }
+
+    /* --- 마감된 폼 --- */
+    const fb = $('#arc-forms');
+    fb.innerHTML = '';
+    const closed = forms.filter((f) => formStatus(f) === 'closed');
+    $('#arc-form-count').textContent = closed.length + '건';
+
+    if (!closed.length) {
+      fb.appendChild(el('li', { class: 'empty' }, [
+        el('strong', { text: '마감된 폼이 없습니다.' }),
+        '접수가 끝난 폼이 이곳에 모입니다.'
+      ]));
+      return;
+    }
+    closed.forEach((f) => {
+      fb.appendChild(el('li', { class: 'draft' }, [
+        tagEl('마감', 'archived'),
+        el('a', {
+          class: 'draft__title', href: 'apply.html?id=' + encodeURIComponent(f.id),
+          target: '_blank', rel: 'noopener', title: '새 창에서 열기', text: f.title
+        }),
+        el('span', { class: 'draft__when',
+          text: f.closeAt ? formatDateTime(f.closeAt) + ' 마감' : '접수 중지' }),
+        el('button', {
+          type: 'button', class: 'draft__btn', text: '응답 보기',
+          onclick: () => {
+            activeFormId = f.id;
+            $('.tab[data-tab="subs"]').click();
+            renderFormTabs();
+            loadSubs();
+          }
+        }),
+        el('button', {
+          type: 'button', class: 'draft__btn', text: '다시 열기',
+          onclick: async () => {
+            const next = Object.assign({}, f, { open: true, closeAt: '' });
+            const i = forms.findIndex((x) => x.id === f.id);
+            if (i > -1) forms[i] = next;
+            try { await STORE.saveForm(next); }
+            catch (e) { console.error(e); toast('저장하지 못했습니다'); return; }
+            renderFormSettings(); renderFormTabs(); renderArchive();
+            toast('접수를 다시 열었습니다');
+          }
+        })
+      ]));
+    });
+  }
+
+  /* ==========================================================
+     탭 5 · 사이트 정보
      ========================================================== */
   function textField(label, value, help, onInput, opts) {
     const input = el((opts && opts.multiline) ? 'textarea' : 'input', {
@@ -1013,6 +1112,7 @@
       tabs.forEach((x) => x.setAttribute('aria-selected', String(x === t)));
       $$('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== t.dataset.tab; });
       if (t.dataset.tab === 'subs') loadSubs();
+      if (t.dataset.tab === 'archive') renderArchive();
     }));
   }
 
