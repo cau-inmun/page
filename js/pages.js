@@ -329,6 +329,7 @@
       list = await loadNotices();
     } catch (err) {
       root.innerHTML = '';
+      root.appendChild(el('h1', { class: 'article__title', text: '공지를 불러오지 못했습니다' }));
       root.appendChild(errorBox(err.message));
       return;
     }
@@ -342,7 +343,8 @@
     if (!n) {
       document.title = '공지를 찾을 수 없습니다 · ' + S.college;
       root.innerHTML = '';
-      root.appendChild(emptyBox('공지를 찾을 수 없습니다.', '삭제되었거나 주소가 잘못되었을 수 있습니다.'));
+      root.appendChild(el('h1', { class: 'article__title', text: '공지를 찾을 수 없습니다' }));
+      root.appendChild(emptyBox('찾으시는 공지가 없습니다.', '삭제되었거나 주소가 잘못되었을 수 있습니다.'));
       const more = $('[data-adjacent]');
       if (more) more.appendChild(el('a', { class: 'btn', href: 'notices.html' }, ['전체 공지 보기']));
       return;

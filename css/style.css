@@ -368,6 +368,13 @@ html.brand-ready .topbar__name { visibility: visible; }
   display: flex; align-items: baseline; gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
+/* 화면 제목 — 구획 제목(h2)보다 한 단계 크게 */
+.sec-head--page { margin-top: var(--space-6); }
+.sec-head--page h1 { font-family: var(--font-display);
+  font-size: var(--text-2xl); letter-spacing: -.02em; margin: 0; }
+.panel-title { font-family: var(--font-display); font-size: var(--text-xl);
+  letter-spacing: -.01em; margin: 0 0 6px; }
+
 .sec-head h2 {
   font-family: var(--font-display);
   /* 20px 은 링크 페이지에는 맞았지만 원페이지의 구획을 나누기에는 작다.
