@@ -1279,6 +1279,16 @@ main:has(> .section--band:last-child) { padding-bottom: 0; }
      있어서, 둘이 겹치면 히어로가 끝나는 자리에 띠처럼 경계가 드러났다. */
 }
 .hero__body { position: relative; z-index: 1; width: 100%; }
+
+/* 3D 씬. 글자 뒤에 깔리고 누를 수는 없다.
+   불러오기 전에는 아무것도 그리지 않으므로 자리만 차지하지 않는다. */
+.hero__canvas {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%;
+  display: block; pointer-events: none;
+  opacity: 0; transition: opacity .9s var(--ease-out-expo);
+}
+.hero__canvas.is-on { opacity: 1; }
 @media (max-width: 760px) { .hero { min-height: 0; padding: var(--space-7) 0 var(--space-6); } }
 
 .hero__cta {
@@ -1286,28 +1296,6 @@ main:has(> .section--band:last-child) { padding-bottom: 0; }
   gap: var(--space-2); margin-top: var(--space-5);
 }
 .btn--lg { padding: 12px 22px; font-size: var(--text-base); border-radius: 999px; }
-
-/* 아래에 더 있다는 신호. 첫 화면이 꽉 차 보이면 사람들은 내려가지 않는다.
-   장식이 아니라 안내이므로 글자로도 적고, 누르면 실제로 내려간다. */
-.hero__more {
-  display: inline-flex; flex-direction: column; align-items: center; gap: var(--space-2);
-  margin-top: var(--space-7);
-  font-size: var(--text-2xs); font-weight: 600; letter-spacing: .12em;
-  color: var(--ink-3);
-}
-.hero__more:hover { text-decoration: none; color: var(--brand-deep); }
-.hero__more-line {
-  width: 1px; height: 34px;
-  background: linear-gradient(180deg, var(--sand-edge), transparent);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .hero__more-line { animation: hero-drop 2.4s var(--ease-out-expo) infinite; transform-origin: top; }
-}
-@keyframes hero-drop {
-  0%   { transform: scaleY(.35); opacity: .4; }
-  55%  { transform: scaleY(1);   opacity: 1; }
-  100% { transform: scaleY(1);   opacity: 0; }
-}
 
 /* 인문대학 학과 */
 .majors {

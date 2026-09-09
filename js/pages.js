@@ -185,6 +185,21 @@
       fLinks.appendChild(el('a', { href: 'mailto:' + S.contact.email, text: '이메일 문의' }));
     }
 
+    /* 히어로 3D — 조건이 맞을 때만, 그리고 늦게 불러온다.
+
+       내려받지 않는 경우
+         · 좁은 화면(768px 미만) — 모바일 성능이 최우선 제약이다
+         · 코어가 4개 이하인 기기
+         · 움직임을 줄이는 설정
+         · WebGL 이 없는 브라우저
+       이 경우 지금 보이는 화면이 그대로 최종 화면이다. 폴백이 초라하지
+       않도록 만들어 둔 이유가 이것이다.
+
+       내려받는 경우에도 히어로가 화면에 들어와야 시작하고, 벗어나거나
+       탭이 가려지면 멈춘다. 첫 화면이 그려지는 시점에는 영향을 주지
+       않는다 — 글과 로고가 먼저 뜨고 그 뒤에 얹힌다. */
+    initHeroScene();
+
     /* 최근 공지 */
     const box = $('[data-recent]');
     if (box) {
@@ -203,6 +218,60 @@
     }
 
     revealOnScroll();
+  }
+
+  function heroSceneAllowed() {
+    if (window.innerWidth < 768) return false;
+    if ((navigator.hardwareConcurrency || 8) <= 4) return false;
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    } catch (e) { /* 판단할 수 없으면 그냥 진행한다 */ }
+    try {
+      const c = document.createElement('canvas');
+      if (!(c.getContext('webgl2') || c.getContext('webgl'))) return false;
+    } catch (e) { return false; }
+    return true;
+  }
+
+  function initHeroScene() {
+    const canvas = $('[data-hero-canvas]');
+    const hero = canvas && canvas.closest('.hero');
+    if (!canvas || !hero || !heroSceneAllowed()) return;
+
+    let scene = null, loading = false;
+
+    const ensure = async () => {
+      if (scene || loading) return;
+      loading = true;
+      try {
+        const mod = await import('./hero3d.js?v=' + (window.SITE && window.SITE.APP_VERSION || ''));
+        scene = mod.createHeroScene(canvas);
+        /* 삼각형 수를 남겨 둔다. 나중에 오브제를 늘릴 때 얼마나 무거워졌는지
+           화면에서 바로 확인할 수 있고, 검사도 이 값을 본다. */
+        canvas.dataset.tris = String(scene.triangles);
+        canvas.classList.add('is-on');
+        scene.start();
+      } catch (err) {
+        /* 못 불러와도 화면은 그대로다. 조용히 넘어가되 흔적은 남긴다. */
+        console.warn('[히어로] 3D 를 불러오지 못했습니다. 지금 화면 그대로 씁니다.', err);
+        loading = false;
+      }
+    };
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { ensure().then(() => { if (scene) scene.start(); }); }
+        else if (scene) scene.stop();
+      });
+    }, { threshold: 0.05 });
+    io.observe(hero);
+
+    /* 탭이 가려져 있는 동안 그릴 이유가 없다 */
+    document.addEventListener('visibilitychange', () => {
+      if (!scene) return;
+      if (document.hidden) scene.stop();
+      else if (hero.getBoundingClientRect().bottom > 0) scene.start();
+    });
   }
 
   /* ==========================================================
