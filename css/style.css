@@ -54,8 +54,11 @@
   --shadow:    0 2px 10px rgba(78, 58, 32, .06), 0 1px 2px rgba(78, 58, 32, .04);
   --shadow-lg: 0 12px 32px rgba(78, 58, 32, .10), 0 2px 6px rgba(78, 58, 32, .05);
 
+  /* 글줄은 좁게, 격자는 넓게. 문단까지 넓히면 한 줄이 길어져 오히려
+     읽기 어렵고, 격자를 글줄 폭에 가두면 카드가 한 줄에 하나씩만 선다. */
   --wrap: 560px;
   --wrap-wide: 760px;
+  --wrap-lg: 860px;
 
   /* 프리텐다드 하나로 통일한다.
      제목 · 본문은 물론 한글 · 영문 · 숫자가 전부 같은 글꼴이고,
@@ -163,8 +166,11 @@ h1, h2, h3, h4 { margin: 0; font-weight: 700; line-height: 1.35; letter-spacing:
 p { margin: 0; }
 ul, ol { margin: 0; padding: 0; }
 
+/* 포커스 링은 네이비다. 갈색(--brand)은 크림 배경에서 2.89~3.40:1 밖에
+   안 나와, UI 요소 기준(3:1)을 겨우 넘거나 못 넘었다. 키보드로만 쓰는
+   사람에게 지금 어디에 있는지 알려주는 유일한 표시라 또렷해야 한다. */
 :focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
   border-radius: 6px;
 }
@@ -350,11 +356,14 @@ html.brand-ready .topbar__name { visibility: visible; }
 
 /* ---------- Section heading ---------- */
 .sec-head {
-  display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px;
+  display: flex; align-items: baseline; gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 .sec-head h2 {
   font-family: var(--font-display);
-  font-size: var(--text-xl); letter-spacing: -.01em;
+  /* 20px 은 링크 페이지에는 맞았지만 원페이지의 구획을 나누기에는 작다.
+     화면 폭에 따라 21~25px 로 늘어난다. */
+  font-size: var(--text-fluid-h2); letter-spacing: -.02em;
 }
 .sec-head__more {
   margin-left: auto; font-size: var(--text-xs); font-weight: 600; color: var(--ink-3);
@@ -470,19 +479,8 @@ html.brand-ready .topbar__name { visibility: visible; }
 .badge--soon { background: transparent; color: var(--ink-3); border-color: var(--line); }
 
 /* ---------- About ---------- */
-.about-card {
-  background: var(--paper-raise); border: 1px solid var(--line);
-  border-radius: var(--radius-lg); padding: 22px 20px; box-shadow: var(--shadow-sm);
-}
-.about-card__intro {
-  font-family: var(--font-display); font-size: var(--text-base); line-height: 1.85;
-  color: var(--ink-2);
-}
-.depts {
-  list-style: none; margin-top: 20px; padding-top: 18px;
-  border-top: 1px dashed var(--line);
-  display: grid; grid-template-columns: 1fr 1fr; gap: 16px 14px;
-}
+/* .about-card 는 없어졌다 — 소개 문단은 상자 없이 .lead 로 놓는다.
+   .depts 격자 정의는 아래 '섹션 리듬' 쪽에 새로 있다. */
 .dept__name {
   font-size: var(--text-sm); font-weight: 700; color: var(--ink);
   display: flex; align-items: center; gap: 6px;
@@ -542,8 +540,8 @@ html.brand-ready .topbar__name { visibility: visible; }
   transition: border-color .18s var(--ease);
 }
 .search input::placeholder { color: var(--ink-3); }
-.search input:focus { outline: none; border-color: var(--brand); }
-.search input:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.search input:focus { outline: none; border-color: var(--focus); }
+.search input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .search svg {
   position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
   width: 16px; height: 16px; color: var(--ink-3); pointer-events: none;
@@ -620,8 +618,11 @@ html.brand-ready .topbar__name { visibility: visible; }
 }
 .btn:hover { background: var(--sand-soft); border-color: var(--sand-edge); text-decoration: none; }
 .btn:active { transform: scale(.98); }
-.btn--primary { background: var(--ink); border-color: var(--ink); color: var(--sand); }
-.btn--primary:hover { background: #1F1913; border-color: #1F1913; color: var(--sand); }
+/* 주요 액션은 네이비. 크림 · 갈색이 기조인 화면에서 '여기를 누르라'는
+   신호만 다른 계열로 두면, 색을 늘리지 않고도 눈이 먼저 간다.
+   흰 글자 대비 8.44:1 로 기준을 넉넉히 넘는다. */
+.btn--primary { background: var(--navy-500); border-color: var(--navy-500); color: #FFF9F0; }
+.btn--primary:hover { background: var(--navy-700); border-color: var(--navy-700); color: #FFF9F0; }
 .btn svg { width: 15px; height: 15px; }
 
 .adjacent { margin-top: 16px; display: grid; gap: 9px; }
@@ -705,7 +706,7 @@ html.brand-ready .topbar__name { visibility: visible; }
 
 button.seat { cursor: pointer; }
 button.seat:active { transform: scale(.96); }
-button.seat:focus-visible { outline: 2px solid var(--brand-deep); outline-offset: 2px; }
+button.seat:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 button.seat[disabled] { cursor: not-allowed; opacity: .5; transform: none; }
 button.seat--free:hover:not([disabled]) { background: var(--sand-soft); border-color: var(--brand); }
 button.seat--taken:hover:not([disabled]) { border-color: var(--brand-deep); }
@@ -789,10 +790,10 @@ html.js .reveal.is-in {
 }
 .field textarea { min-height: 190px; resize: vertical; }
 .field input:focus, .field textarea:focus, .field select:focus {
-  outline: none; border-color: var(--brand);
+  outline: none; border-color: var(--focus);
 }
 .field input:focus-visible, .field textarea:focus-visible, .field select:focus-visible {
-  outline: 2px solid var(--brand); outline-offset: 2px;
+  outline: 2px solid var(--focus); outline-offset: 2px;
 }
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
@@ -1161,9 +1162,9 @@ table.subs td.when { color: var(--ink-3); font-variant-numeric: tabular-nums; }
   border: 1px solid var(--line); border-radius: var(--radius-sm);
   background: var(--paper-raise); color: var(--ink);
 }
-.frow input:focus, .frow select:focus { outline: none; border-color: var(--brand); }
+.frow input:focus, .frow select:focus { outline: none; border-color: var(--focus); }
 .frow input:focus-visible, .frow select:focus-visible {
-  outline: 2px solid var(--brand); outline-offset: 2px;
+  outline: 2px solid var(--focus); outline-offset: 2px;
 }
 .frow__tools { flex: none; display: flex; gap: 4px; padding-top: 4px; }
 @media (max-width: 560px) {
@@ -1192,3 +1193,176 @@ table.subs td.when { color: var(--ink-3); font-variant-numeric: tabular-nums; }
 /* 아카이브 목록의 제목은 눌러서 실제 화면을 열 수 있다 */
 a.draft__title { color: var(--ink); text-decoration: none; }
 a.draft__title:hover { color: var(--brand-deep); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ==========================================================================
+   섹션 리듬 (디자인 개선 2단계)
+   ========================================================================== */
+.section { padding-block: var(--space-6); }
+.wrap--lg { max-width: var(--wrap-lg); }
+
+/* 글줄 길이 상한. 컨테이너는 넓혀도 문단은 좁게 둔다 —
+   한 줄이 길면 다음 줄 첫 글자를 찾기가 어려워진다. */
+.measure { max-width: 52ch; }
+
+/* 밝은 크림이 이어지다 한 번만 짙어지는 구간.
+   페이지에 리듬을 주고 '이제 행동할 차례' 라는 신호가 된다.
+   네이비를 넓게 쓰는 곳은 여기 하나뿐이다 — 여러 곳에 두면 크림 기조가 흐려진다. */
+.section--dark {
+  margin-top: var(--space-7);
+  padding-block: var(--space-8);
+  background: var(--navy-900);
+  color: #EAF0F8;
+  text-align: center;
+}
+.section--dark h2, .section--dark h3 { color: #FFFFFF; }
+
+/* 다크 섹션이 본문 맨 끝이면 그 아래 크림 여백을 없앤다.
+   띠가 끊겼다가 푸터 앞에서 다시 크림이 나오면 마감이 어정쩡해 보인다. */
+main:has(> .section--dark:last-child) { padding-bottom: 0; }
+.section--dark .lead { color: #CFDCEC; }
+.section--dark .chip {
+  background: rgba(255, 255, 255, .07);
+  border-color: rgba(255, 255, 255, .22);
+  color: #EAF0F8; box-shadow: none;
+}
+.section--dark .chip:hover {
+  background: rgba(255, 255, 255, .14);
+  border-color: rgba(255, 255, 255, .4);
+}
+.section--dark .chip svg { color: var(--blue-200); }
+.section--dark .chip.is-disabled {
+  background: rgba(255, 255, 255, .04); color: #9DB0C6;
+}
+.section--dark .chip.is-disabled svg { color: #6D8299; }
+.section--dark .chip__soon {
+  background: rgba(255, 255, 255, .08);
+  border-color: rgba(255, 255, 255, .2); color: #CFDCEC;
+}
+
+.sec-head--center { justify-content: center; }
+.sub-head {
+  font-size: var(--text-sm); font-weight: 700; color: var(--ink-2);
+  letter-spacing: .01em; margin-bottom: var(--space-3);
+}
+
+/* 리드 문단 — 예전 .about-card 를 대신한다.
+   상자를 씌우지 않는 쪽이 문단을 문단으로 읽히게 한다. */
+.lead {
+  font-size: var(--text-lg); line-height: 1.85; color: var(--ink-2);
+  margin: 0; max-width: 52ch;
+}
+.lead--center { margin-inline: auto; max-width: 46ch; }
+
+/* 히어로 — 도형 배경 위에 글이 놓인다 */
+.hero {
+  position: relative; isolation: isolate;
+  display: flex; align-items: center;
+  min-height: min(66vh, 560px);
+  padding: var(--space-8) 0;
+  text-align: center;
+  /* 배경을 여기서 또 칠하지 않는다. body 에 이미 위쪽 크림 그라디언트가
+     있어서, 둘이 겹치면 히어로가 끝나는 자리에 띠처럼 경계가 드러났다. */
+}
+.hero__body { position: relative; z-index: 1; width: 100%; }
+@media (max-width: 760px) { .hero { min-height: 0; padding: var(--space-7) 0 var(--space-6); } }
+
+/* 3D 씬이 올라올 자리. 지금은 이 폴백만 보인다.
+   금지 목록에 따라 노이즈 · 안개 · 블러를 쓰지 않는다 —
+   경계가 또렷한 도형과 얕은 2색 그라디언트뿐이다. */
+.hero__scene {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden;
+  pointer-events: none;
+}
+/* 도형을 퍼센트로 놓는다. SVG 뷰박스로 두었더니 화면 비율에 따라
+   가장자리에서 반쯤 잘려, 의도가 아니라 실수처럼 보였다.
+   퍼센트 배치는 어떤 비율에서도 같은 자리에 온다.
+   금지 목록대로 노이즈 · 안개 · 블러는 쓰지 않는다 — 경계가 또렷한
+   도형과 얕은 2색 그라디언트뿐이다. */
+.orb {
+  position: absolute; display: block;
+  border-radius: 50%;
+  will-change: transform;
+}
+.orb--1 { left:  6%; top: 16%; width: clamp(64px, 9vw, 116px); aspect-ratio: 1;
+          background: linear-gradient(140deg, #F8E9D4, #E4D0AE); opacity: .5; }
+.orb--2 { left: 15%; top: 62%; width: clamp(28px, 4vw, 52px);  aspect-ratio: 1;
+          background: linear-gradient(140deg, #CFE0F0, #A9C4E0); opacity: .5; }
+.orb--3 { left:  4%; top: 72%; width: clamp(48px, 6.5vw, 84px); aspect-ratio: 1;
+          border-radius: 30%;
+          background: linear-gradient(160deg, #FFFFFF, #F1DFC0); opacity: .85; }
+.orb--4 { right: 6%; top: 12%; width: clamp(72px, 10vw, 136px); aspect-ratio: 1;
+          background: linear-gradient(160deg, #FFFFFF, #F1DFC0); opacity: .85; }
+.orb--5 { right:17%; top: 56%; width: clamp(32px, 4.5vw, 62px); aspect-ratio: 1;
+          background: linear-gradient(140deg, #F8E9D4, #E4D0AE); opacity: .55; }
+.orb--6 { right: 5%; top: 78%; width: clamp(56px, 8vw, 118px); aspect-ratio: 3 / 1;
+          border-radius: 999px;
+          background: linear-gradient(120deg, #CFE0F0, #A9C4E0); opacity: .32; }
+
+/* 좁은 화면에서는 도형이 글자 바로 뒤로 몰린다. 읽기를 방해하지 않게 옅게 둔다. */
+@media (max-width: 760px) { .hero__scene { opacity: .45; } }
+
+/* 아주 느리게 위아래로만 움직인다. 회전이나 튕김은 쓰지 않는다 —
+   기준은 화려함이 아니라 차분함이다. */
+@media (prefers-reduced-motion: no-preference) {
+  .orb { animation: hero-bob 9s ease-in-out infinite alternate; }
+  .orb--2 { animation-duration: 11s; animation-delay: -3s; }
+  .orb--3 { animation-duration: 13s; animation-delay: -6s; }
+  .orb--4 { animation-duration: 10s; animation-delay: -2s; }
+  .orb--5 { animation-duration: 12s; animation-delay: -8s; }
+  .orb--6 { animation-duration: 14s; animation-delay: -5s; }
+}
+@keyframes hero-bob {
+  from { transform: translateY(-6px); }
+  to   { transform: translateY(6px); }
+}
+
+.hero__cta {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: var(--space-2); margin-top: var(--space-5);
+}
+.btn--lg { padding: 12px 22px; font-size: var(--text-base); border-radius: 999px; }
+
+/* 인문대학 학과 */
+.majors {
+  list-style: none; margin: 0 0 var(--space-6); padding: 0;
+  display: grid; gap: var(--space-2);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+.major {
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  background: var(--paper-raise); border: 1px solid var(--line);
+  font-size: var(--text-sm); font-weight: 600; color: var(--ink-2);
+  word-break: keep-all;
+}
+
+/* 집행부 · 국 — 상자 안의 목록이 아니라 카드 격자로 */
+.depts {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.dept {
+  padding: var(--space-4); border-radius: var(--radius);
+  background: var(--paper-raise); border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s var(--ease-out-expo), box-shadow .2s var(--ease-out-expo);
+}
+.dept:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+
+/* 사업 · 행사 카드 (자료가 들어오면 쓰인다) */
+.cards {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.card {
+  padding: var(--space-4); border-radius: var(--radius);
+  background: var(--paper-raise); border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
+}
+.card__when {
+  font-size: var(--text-2xs); font-weight: 700; letter-spacing: .04em;
+  color: var(--brand-deep); margin-bottom: 4px;
+}
+.card__title { font-size: var(--text-base); font-weight: 700; color: var(--ink); }
+.card__desc { margin-top: 4px; font-size: var(--text-xs); color: var(--ink-3); line-height: 1.6; }

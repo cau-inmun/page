@@ -99,13 +99,57 @@
     /* 학생회 소개 */
     const aboutIntro = $('[data-about-intro]');
     if (aboutIntro) aboutIntro.textContent = S.about.intro;
+
+    /* 집행부 · 국 — 관리자에서 저장한 구성이 있으면 그것이 쓰인다
+       (store 의 SITE_KEYS 에 about 이 들어 있어 서버 값이 config.js 를 덮는다) */
     const depts = $('[data-depts]');
     if (depts) {
-      S.about.departments.forEach((d) => {
-        depts.appendChild(el('li', { class: 'dept' }, [
-          el('div', { class: 'dept__name', text: d.name }),
-          el('div', { class: 'dept__desc', text: d.desc })
-        ]));
+      const list = (S.about && S.about.departments) || [];
+      depts.innerHTML = '';
+      if (!list.length) {
+        depts.replaceWith(emptyBox('집행부 구성을 준비하고 있습니다.',
+          '정해지는 대로 이곳에 올라갑니다.'));
+      } else {
+        list.forEach((d) => {
+          depts.appendChild(el('li', { class: 'dept reveal' }, [
+            el('div', { class: 'dept__name', text: d.name }),
+            el('div', { class: 'dept__desc', text: d.desc })
+          ]));
+        });
+      }
+    }
+
+    /* 사업 · 행사 — 아직 자료가 없다.
+       TODO: js/config.js 에 programs: [{ title, when, desc, url }] 를 넣으면
+             이 자리에 카드로 뜹니다. 없는 행사를 지어내지 않으려고 비워 둡니다. */
+    const programs = $('[data-programs]');
+    if (programs) {
+      const list = (S.programs || []);
+      programs.innerHTML = '';
+      if (!list.length) {
+        programs.appendChild(emptyBox('올해 사업 · 행사를 준비하고 있습니다.',
+          '일정이 정해지면 이곳과 공지사항에 함께 올리겠습니다.'));
+      } else {
+        programs.appendChild(el('ul', { class: 'cards' }, list.map((p) =>
+          el('li', { class: 'card reveal' }, [
+            p.when ? el('div', { class: 'card__when', text: p.when }) : null,
+            el('div', { class: 'card__title', text: p.title }),
+            p.desc ? el('div', { class: 'card__desc', text: p.desc }) : null
+          ]))));
+      }
+    }
+
+    /* 인문대학 학과 —
+       S.departments 는 원래 신청 폼의 학과 드롭다운용 목록이다. 거기에는
+       '기타 (타 단대 · 복수전공 등)' 처럼 실제 학과가 아닌 선택지가 섞여
+       있어서, 학과 소개로 보여줄 때는 걸러낸다. 목록을 둘로 나누면
+       한쪽만 고치고 다른 쪽을 잊게 되므로 하나를 걸러 쓴다. */
+    const majors = $('[data-majors]');
+    if (majors) {
+      const list = (S.departments || []).filter((d) => !/^기타/.test(d));
+      majors.innerHTML = '';
+      list.forEach((name) => {
+        majors.appendChild(el('li', { class: 'major reveal', text: name }));
       });
     }
 

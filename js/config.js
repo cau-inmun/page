@@ -10,7 +10,7 @@ const SITE = {
      html 의 ?v= 값과 반드시 같아야 합니다. js·css·이미지를 고칠 때
      두 곳을 함께 올려주세요. 이 값이 다르면 사이트가 스스로 알아채고
      새 파일을 받아옵니다 (js/core.js 의 checkForUpdate).      */
-  APP_VERSION: '20260910d',
+  APP_VERSION: '20260910e',
 
   /* ---- 학생회 기본 정보 ---- */
   /* ---- 상단바에 보이는 이름 ----
@@ -44,7 +44,7 @@ const SITE = {
       items: [
         { label: '학생회 건의함', desc: '익명으로 의견을 남겨주세요', url: 'apply.html?id=suggestion', badge: '상시' },
         { label: '사업 신청 폼', desc: '진행 중인 학생회 사업 신청', url: 'apply.html?id=apply' },
-        { label: '열람실 좌석 예약', desc: '09시–21시 · 매일 초기화', url: 'seats.html', badge: '상시' },
+        { label: '열람실 좌석 예약', desc: '08시–18시 · 매일 초기화', url: 'seats.html', badge: '상시' },
         { label: '학생회비 납부 안내', desc: '납부 방법과 혜택 안내', url: '' }
       ]
     },
