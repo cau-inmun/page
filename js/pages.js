@@ -139,17 +139,24 @@
       }
     }
 
-    /* 인문대학 학과 —
-       S.departments 는 원래 신청 폼의 학과 드롭다운용 목록이다. 거기에는
-       '기타 (타 단대 · 복수전공 등)' 처럼 실제 학과가 아닌 선택지가 섞여
-       있어서, 학과 소개로 보여줄 때는 걸러낸다. 목록을 둘로 나누면
-       한쪽만 고치고 다른 쪽을 잊게 되므로 하나를 걸러 쓴다. */
+    /* 인문대학 학과 — 누르면 각 학과 홈페이지로 간다.
+       주소가 비어 있으면 링크 대신 그냥 이름만 보여준다 (죽은 링크를
+       누르게 하지 않는다). */
     const majors = $('[data-majors]');
     if (majors) {
-      const list = (S.departments || []).filter((d) => !/^기타/.test(d));
       majors.innerHTML = '';
-      list.forEach((name) => {
-        majors.appendChild(el('li', { class: 'major reveal', text: name }));
+      (S.majors || []).forEach((m) => {
+        const url = safeUrl(m.url);
+        majors.appendChild(el('li', { class: 'reveal' }, [
+          url
+            ? el('a', { class: 'major', href: url,
+                        target: isExternal(url) ? '_blank' : null,
+                        rel: isExternal(url) ? 'noopener noreferrer' : null }, [
+                el('span', { class: 'major__name', text: m.name }),
+                el('span', { class: 'major__arrow', 'aria-hidden': 'true', text: '↗' })
+              ])
+            : el('span', { class: 'major is-plain', text: m.name })
+        ]));
       });
     }
 

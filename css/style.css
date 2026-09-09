@@ -666,6 +666,9 @@ html.brand-ready .topbar__name { visibility: visible; }
 .seatgrid { display: grid; gap: var(--seat-gap); margin: 8px 0; }
 .seat-gap { display: block; }
 
+/* 세어 올라가는 동안 폭이 출렁이지 않게 자리를 잡아둔다 */
+.seatcount__num { display: inline-block; min-width: 2ch; text-align: right;
+                  font-variant-numeric: tabular-nums; }
 .seatmap__hint { margin: 6px 0 0; font-size: var(--text-2xs); color: var(--ink-3); }
 
 /* 창문 · 벽 · 출입문 */
@@ -763,13 +766,30 @@ button.seat--taken:hover:not([disabled]) { border-color: var(--brand-deep); }
 /* ---------- Reveal on scroll ----------
    JS 가 켜져 있을 때만 숨깁니다. (js 클래스는 <head> 인라인 스크립트가 붙임)
    JS 가 실패하거나 옵저버가 동작하지 않아도 본문은 항상 보입니다. */
-html.js .reveal { opacity: 0; transform: translateY(12px); }
+/* 스크롤 진입 — 흐림에서 또렷하게, 16px 아래에서 제자리로.
+   회전 · 튕김 · 스프링 되돌림은 쓰지 않는다. 기준은 차분함이다.
+   같은 구획 안의 항목들은 --i 만큼 차례로 들어온다 (계단식).
+   --i 는 js 가 초기화할 때 한 번 매긴다 — 화면에 들어오는 순간에 세면
+   하나씩 들어올 때는 늘 0 이 되어 계단이 생기지 않는다. */
+html.js .reveal { opacity: 0; }
 html.js .reveal.is-in {
-  opacity: 1; transform: none;
-  transition: opacity .5s var(--ease), transform .5s var(--ease);
+  opacity: 1;
+  animation: reveal-in var(--dur-2) var(--ease-out-expo) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+/* transition 이 아니라 animation 으로, 그리고 fill-mode 는 backwards 다.
+   transition 으로 두었더니 다 들어온 뒤에도 .reveal.is-in { transform: none }
+   이 계속 걸려 있어서, 특정도가 낮은 .dept:hover 의 '살짝 들림' 을 덮어썼다.
+   카드에 손을 얹어도 아무 일이 없던 것이 그 때문이다.
+   backwards 는 계단으로 기다리는 동안에만 시작 상태를 붙들고, 끝난 뒤에는
+   손을 뗀다 — 그래서 hover 가 제 몫을 되찾는다. */
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  html.js .reveal { opacity: 1; transform: none; }
+  html.js .reveal { opacity: 1; }
+  html.js .reveal.is-in { animation: none; }
 }
 
 /* ---------- Admin (공지 작성 도구) ---------- */
@@ -1328,12 +1348,30 @@ main:has(> .section--dark:last-child) { padding-bottom: 0; }
   display: grid; gap: var(--space-2);
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
 }
+.majors > li { display: flex; }
 .major {
+  flex: 1; display: flex; align-items: center; gap: var(--space-2);
   padding: 12px 14px; border-radius: var(--radius-sm);
   background: var(--paper-raise); border: 1px solid var(--line);
   font-size: var(--text-sm); font-weight: 600; color: var(--ink-2);
   word-break: keep-all;
+  transition: transform .18s var(--ease-out-expo), border-color .18s var(--ease-out-expo),
+              box-shadow .18s var(--ease-out-expo), background-color .18s var(--ease-out-expo);
 }
+a.major:hover {
+  text-decoration: none; transform: translateY(-2px);
+  border-color: var(--sand-edge); background: var(--sand-soft);
+  box-shadow: var(--shadow-sm);
+}
+.major__name { flex: 1; }
+/* 새 창으로 열린다는 표시. 색만으로 알리지 않도록 글자로도 둔다. */
+.major__arrow {
+  flex: none; font-size: var(--text-2xs); color: var(--ink-3);
+  transition: color .18s var(--ease-out-expo);
+}
+a.major:hover .major__arrow { color: var(--brand-deep); }
+/* 주소가 없는 학과 — 누를 수 없다는 것이 보이게 */
+.major.is-plain { background: var(--sand-soft); color: var(--ink-3); }
 
 /* 집행부 · 국 — 상자 안의 목록이 아니라 카드 격자로 */
 .depts {

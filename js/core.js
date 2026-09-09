@@ -422,7 +422,7 @@
       el('span', { class: 'notice__date', text: formatDate(n.date) + (relativeDate(n.date) ? ' · ' + relativeDate(n.date) : '') })
     ]);
 
-    return el('a', { class: 'notice', href: 'notice.html?id=' + encodeURIComponent(n.id) }, [
+    return el('a', { class: 'notice reveal', href: 'notice.html?id=' + encodeURIComponent(n.id) }, [
       meta,
       el('div', { class: 'notice__title', text: n.title }),
       n.summary ? el('div', { class: 'notice__summary', text: n.summary }) : null
@@ -447,20 +447,70 @@
       targets.forEach((t) => t.classList.add('is-in'));
       return;
     }
+
+    /* 계단 순서를 미리 매긴다.
+       예전에는 화면에 들어오는 순간의 배열 위치로 셌는데, 항목이 하나씩
+       들어올 때는 그 값이 늘 0 이라 계단이 생기지 않았다. 같은 구획
+       안에서 몇 번째인지는 처음부터 정해져 있으니 그때 세어 둔다.
+       너무 뒤에 있는 항목까지 밀리면 '느리다' 로 느껴져 다섯째에서 끊는다. */
+    const seen = new Map();
+    targets.forEach((t) => {
+      const group = t.closest('section') || document.body;
+      const n = seen.get(group) || 0;
+      t.style.setProperty('--i', String(Math.min(n, 5)));
+      seen.set(group, n + 1);
+    });
+
     const io = new IntersectionObserver((entries) => {
-      entries.forEach((e, idx) => {
+      entries.forEach((e) => {
         if (!e.isIntersecting) return;
-        e.target.style.transitionDelay = Math.min(idx * 60, 240) + 'ms';
         e.target.classList.add('is-in');
         io.unobserve(e.target);
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: .06 });
     targets.forEach((t) => io.observe(t));
 
-    /* 안전장치 — 어떤 이유로든 옵저버가 동작하지 않아도 본문은 반드시 보이게 한다 */
+    /* 안전장치 — 옵저버가 어떤 이유로든 동작하지 않아도 본문은 보이게 한다.
+       다만 '지금 화면 안에 있는 것' 만 연다. 예전에는 1.2초 뒤에 아래쪽
+       내용까지 전부 열어버려서, 정작 스크롤 진입 효과가 거의 동작하지
+       않았다 (게다가 계단 순서까지 0 으로 지웠다). */
     setTimeout(() => targets.forEach((t) => {
-      if (!t.classList.contains('is-in')) { t.style.transitionDelay = '0ms'; t.classList.add('is-in'); }
+      if (t.classList.contains('is-in')) return;
+      const r = t.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0) t.classList.add('is-in');
     }), 1200);
+  }
+
+  /* ---------- 숫자 세어 올리기 ----------
+     값이 바뀐 숫자를 0.6초 동안 굴려 보여준다. 장식이 아니라 '이 숫자가
+     방금 바뀌었다' 는 신호다 — 자리를 잡거나 비웠을 때 어디가 달라졌는지
+     눈이 먼저 찾아간다.
+     움직임을 원치 않는 설정이면 바로 최종값을 넣는다. */
+  function countUp(node, to, opts) {
+    const o = opts || {};
+    const dur = o.duration || 600;
+    const from = Number(o.from != null ? o.from : (node.dataset.countValue || 0));
+    const target = Number(to);
+    node.dataset.countValue = String(target);
+    const fmt = o.format || ((v) => String(v));
+
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !Number.isFinite(from) || !Number.isFinite(target) || from === target) {
+      node.textContent = fmt(target);
+      return;
+    }
+
+    /* 이징은 진입 애니메이션과 같은 out-expo 계열로 맞춘다 */
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+    const t0 = performance.now();
+    if (node._countRaf) cancelAnimationFrame(node._countRaf);
+    const tick = (now) => {
+      const t = Math.min((now - t0) / dur, 1);
+      node.textContent = fmt(Math.round(from + (target - from) * ease(t)));
+      if (t < 1) node._countRaf = requestAnimationFrame(tick);
+      else node._countRaf = 0;
+    };
+    node._countRaf = requestAnimationFrame(tick);
   }
 
   /* ---------- 상단바 그림자 ---------- */
@@ -685,7 +735,7 @@
   window.CORE = {
     $, $$, el, escapeHtml, safeUrl, isExternal,
     formatDate, relativeDate, formatDateTime, toLocalInput, fromLocalInput,
-    seoulNow, maskName, maskSid, describeError, errorBoxFor,
+    seoulNow, maskName, maskSid, describeError, errorBoxFor, countUp,
     noticeStatus, formStatus, formVisibility, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
     loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, fitBrandName, checkForUpdate, boot

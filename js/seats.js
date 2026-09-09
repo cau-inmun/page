@@ -8,7 +8,7 @@
 (function () {
   'use strict';
 
-  const { $, $$, el, toast, seoulNow, describeError, errorBoxFor } = window.CORE;
+  const { $, $$, el, toast, seoulNow, describeError, errorBoxFor, countUp } = window.CORE;
   const S = window.SITE;
   const ROOM = S.readingRoom || {};
 
@@ -55,6 +55,11 @@
   }
 
   /* 지금 예약을 받을 수 있는 시간인가 */
+  /* 예약할 때 고를 수 있는 학과 */
+  function deptOptions() {
+    return (S.departments || []).filter((d) => !/^기타/.test(d));
+  }
+
   function roomState() {
     const now = seoulNow();
     if (now.hour < OPEN) return { open: false, why: 'before', now: now };
@@ -186,10 +191,21 @@
     box.appendChild(el('p', { class: 'seatmap__hint',
       text: '좌석표가 화면보다 넓으면 옆으로 밀어서 보세요.' }));
 
-    $('[data-seat-count]').textContent = reset
-      ? '오늘 이용이 끝났습니다 · 좌석 ' + TOTAL + '석'
-      : '남은 자리 ' + (TOTAL - taken) + '석 / 전체 ' + TOTAL + '석' +
-        (mine ? ' · 내 자리 ' + seatLabel(mine.seat) : '');
+    /* 남은 자리 수만 따로 세어 올린다. 자리를 잡거나 비웠을 때 어느
+       숫자가 달라졌는지 눈이 먼저 찾아가도록 하는 것이 목적이라,
+       숫자가 안 바뀌면 아무 일도 일어나지 않는다. */
+    const countBox = $('[data-seat-count]');
+    countBox.innerHTML = '';
+    if (reset) {
+      countBox.textContent = '오늘 이용이 끝났습니다 · 좌석 ' + TOTAL + '석';
+    } else {
+      const num = el('span', { class: 'seatcount__num' });
+      num.dataset.countValue = countBox.dataset.left || '0';
+      countBox.append('남은 자리 ', num, '석 / 전체 ' + TOTAL + '석' +
+        (mine ? ' · 내 자리 ' + seatLabel(mine.seat) : ''));
+      countUp(num, TOTAL - taken);
+      countBox.dataset.left = String(TOTAL - taken);
+    }
   }
 
   function seatButton(n, info, roomOpen, isMine) {
@@ -254,9 +270,12 @@
     const pre = moving || {};   // 자리 변경 중이면 적었던 내용을 그대로 채운다
     const nameIn = el('input', { type: 'text', id: 'r-name', maxlength: '20',
       value: pre.name || '', autocomplete: 'name', placeholder: '실명을 적어주세요' });
+    /* 인문대학 열람실이므로 '기타 (타 단대 · 복수전공 등)' 는 뺀다.
+       비우기 쪽 목록은 그대로 둔다 — 이 항목이 있던 때 예약한 자리를
+       본인이 못 비우게 되면 안 되기 때문이다. */
     const deptIn = el('select', { id: 'r-dept' }, [
       el('option', { value: '', text: '선택해 주세요' })
-    ].concat((S.departments || []).map((d) =>
+    ].concat(deptOptions().map((d) =>
       el('option', { value: d, text: d, selected: pre.dept === d ? '' : null }))));
     const sidIn = el('input', { type: 'text', id: 'r-sid', inputmode: 'numeric',
       value: pre.sid || '', maxlength: '12', autocomplete: 'off', placeholder: '예) 20241234' });
