@@ -31,6 +31,7 @@
   let seats = {};        // { '7': { nameMasked, sidHead } }
   let today = '';
   let picking = null;    // 지금 예약하려는 좌석 번호
+  let moving = null;     // 자리 변경 중일 때 이어 쓸 내용
   let timer = null;
 
   const two = (n) => String(n).padStart(2, '0');
@@ -249,20 +250,27 @@
     box.hidden = false;
     box.innerHTML = '';
 
+    const pre = moving || {};   // 자리 변경 중이면 적었던 내용을 그대로 채운다
     const nameIn = el('input', { type: 'text', id: 'r-name', maxlength: '20',
-      autocomplete: 'name', placeholder: '실명을 적어주세요' });
+      value: pre.name || '', autocomplete: 'name', placeholder: '실명을 적어주세요' });
     const deptIn = el('select', { id: 'r-dept' }, [
       el('option', { value: '', text: '선택해 주세요' })
-    ].concat((S.departments || []).map((d) => el('option', { value: d, text: d }))));
+    ].concat((S.departments || []).map((d) =>
+      el('option', { value: d, text: d, selected: pre.dept === d ? '' : null }))));
     const sidIn = el('input', { type: 'text', id: 'r-sid', inputmode: 'numeric',
-      maxlength: '12', autocomplete: 'off', placeholder: '예) 20241234' });
+      value: pre.sid || '', maxlength: '12', autocomplete: 'off', placeholder: '예) 20241234' });
     const telIn = el('input', { type: 'tel', id: 'r-tel', inputmode: 'tel',
-      maxlength: '16', autocomplete: 'tel', placeholder: '예) 010-1234-5678' });
+      value: pre.tel || '', maxlength: '16', autocomplete: 'tel', placeholder: '예) 010-1234-5678' });
 
     const err = el('p', { class: 'field__error', hidden: true });
 
     box.append(el('div', { class: 'admin__panel' }, [
-      el('h2', { class: 'ticket__head', text: seatLabel(picking) + ' 예약' }),
+      el('h2', { class: 'ticket__head',
+        text: seatLabel(picking) + (moving ? ' 로 옮기기' : ' 예약') }),
+      moving ? el('p', { class: 'field__help', style: 'margin:-6px 0 10px' }, [
+        el('strong', { text: '앞 자리는 비워졌습니다. ' }),
+        '적으셨던 내용을 그대로 채워뒀으니 확인만 하고 눌러주세요.'
+      ]) : null,
       el('p', { class: 'field__help', style: 'margin:-6px 0 16px',
         text: '좌석표에는 가린 이름과 학번 앞 5자리만 보입니다. 학과 · 전화번호를 포함한 나머지는 학생회만 확인합니다.' }),
       el('div', { class: 'field' }, [ el('label', { for: 'r-name', text: '이름' }), nameIn ]),
@@ -278,8 +286,8 @@
       err,
       el('div', { class: 'fcard__actions' }, [
         el('button', { type: 'button', class: 'btn btn--primary', id: 'r-submit',
-          text: '이 자리로 예약하기', onclick: () => submit(err) }),
-        el('button', { type: 'button', class: 'btn', text: '취소',
+          text: moving ? '이 자리로 옮기기' : '이 자리로 예약하기', onclick: () => submit(err) }),
+        el('button', { type: 'button', class: 'btn', text: '그만두기',
           onclick: () => { picking = null; box.hidden = true; box.innerHTML = ''; } })
       ])
     ]));
@@ -327,6 +335,7 @@
     const booked = { date: today, seat: picking, name: name, dept: dept, sid: sid, tel: tel,
                      at: new Date().toISOString(), noLog: outcome === 'no-log' };
     rememberBooking(booked);
+    moving = null;
     $('[data-seat-form]').hidden = true;
     $('[data-seat-form]').innerHTML = '';
     picking = null;
@@ -370,15 +379,15 @@
       el('div', { class: 'field' }, [ el('label', { for: 'x-sid', text: '학번' }), sidIn ]),
       err,
       el('p', { class: 'field__help', style: 'margin:4px 0 0' }, [
-        el('strong', { text: '반납' }), ' — 다 쓰고 자리를 비웁니다. ',
-        el('strong', { text: '취소' }), ' — 오늘 이용하지 않기로 했습니다.',
-        el('br'), '어느 쪽이든 그 자리는 곧바로 다른 학우가 예약할 수 있게 됩니다.'
+        el('strong', { text: '반납' }), ' — 이 자리를 비웁니다. 곧바로 다른 학우가 예약할 수 있게 됩니다.',
+        el('br'),
+        el('strong', { text: '자리 변경' }), ' — 이 자리를 비우고 이어서 새 자리를 고릅니다.'
       ]),
       el('div', { class: 'fcard__actions' }, [
         el('button', { type: 'button', class: 'btn btn--primary', id: 'x-return',
           text: '반납하기', onclick: () => release(n, 'return', err) }),
-        el('button', { type: 'button', class: 'btn', id: 'x-cancel',
-          text: '예약 취소하기', onclick: () => release(n, 'cancel', err) }),
+        el('button', { type: 'button', class: 'btn', id: 'x-move',
+          text: '자리 변경하기', onclick: () => release(n, 'move', err) }),
         el('button', { type: 'button', class: 'rowbtn', style: 'margin-left:auto', text: '닫기',
           onclick: () => { box.hidden = true; box.innerHTML = ''; } })
       ])
@@ -392,7 +401,8 @@
     const name = $('#x-name').value.trim();
     const dept = $('#x-dept').value;
     const sid = $('#x-sid').value.replace(/\D/g, '');
-    const word = kind === 'cancel' ? '취소' : '반납';
+    const moveTo = kind === 'move';
+    const word = moveTo ? '변경' : '반납';
 
     if (!name || !dept || !sid) return fail(err, '이름 · 학과 · 학번을 모두 넣어주세요.');
     err.hidden = true;
@@ -405,19 +415,26 @@
     }
     if (!seats[String(n)]) {
       await refresh();
-      return fail(err, '이미 비워진 자리입니다.');
+      $('[data-seat-form]').hidden = true;
+      $('[data-seat-form]').innerHTML = '';
+      toast('이미 비워진 자리입니다. 새로 예약하실 수 있습니다');
+      return;
     }
 
-    const btns = [$('#x-return'), $('#x-cancel')];
+    const btns = [$('#x-return'), $('#x-move')];
     btns.forEach((b) => { b.disabled = true; });
-    $(kind === 'cancel' ? '#x-cancel' : '#x-return').textContent = word + '하는 중…';
+    $(moveTo ? '#x-move' : '#x-return').textContent = word + '하는 중…';
 
+    /* 서버에는 'return' / 'cancel' 두 가지만 저장한다. 규칙이 그 둘만 받는데,
+       규칙을 다시 배포하게 하지 않으려고 '변경' 을 'cancel' 로 적는다.
+       관리자 화면은 이 값을 '변경' 으로 읽어준다. */
     try {
-      await STORE.releaseSeat(today, n, { name: name, dept: dept, sid: sid }, kind);
+      await STORE.releaseSeat(today, n, { name: name, dept: dept, sid: sid },
+                              moveTo ? 'cancel' : 'return');
     } catch (e) {
       btns.forEach((b) => { b.disabled = false; });
       $('#x-return').textContent = '반납하기';
-      $('#x-cancel').textContent = '예약 취소하기';
+      $('#x-move').textContent = '자리 변경하기';
       if (e && e.code === 'mismatch') {
         err.hidden = false;
         err.innerHTML = '';
@@ -437,12 +454,20 @@
     }
 
     const mine = myBooking();
+    /* 변경이면 다음 자리에 그대로 쓸 수 있도록 적은 내용을 들고 있는다 */
+    moving = moveTo ? { name: name, dept: dept, sid: sid, tel: (mine && mine.tel) || '' } : null;
     if (mine && mine.seat === n) forgetBooking();
     $('[data-seat-form]').hidden = true;
     $('[data-seat-form]').innerHTML = '';
     $('[data-ticket]').hidden = true;
     await refresh();
-    toast(seatLabel(n) + ' 을 ' + word + '했습니다');
+
+    if (moveTo) {
+      toast(seatLabel(n) + ' 을 비웠습니다. 이어서 새 자리를 골라주세요');
+      $('[data-map-section]').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    toast(seatLabel(n) + ' 을 반납했습니다');
   }
 
   /* ==========================================================
@@ -477,7 +502,7 @@
       ]),
 
       el('div', { class: 'fcard__actions', style: 'margin-top:16px' }, [
-        el('button', { type: 'button', class: 'btn', text: '자리 반납 · 예약 취소',
+        el('button', { type: 'button', class: 'btn', text: '자리 반납 · 변경',
           onclick: () => openRelease(b.seat) })
       ]),
       b.noLog ? el('p', { class: 'field__error', style: 'margin-top:12px' }, [
@@ -500,8 +525,9 @@
       today = now.date;
       try { if (myBooking() === null) $('[data-ticket]').hidden = true; } catch (e) { /* 무시 */ }
     }
+    let loaded;
     try {
-      seats = await STORE.getSeats(today);
+      loaded = await STORE.getSeats(today);
     } catch (e) {
       console.error(e);
       const box = $('[data-seatmap]');
@@ -509,6 +535,19 @@
       box.appendChild(errorBoxFor(e, '좌석표를 불러오지 못했습니다.'));
       return;
     }
+    seats = loaded;
+
+    /* 내 예약이 서버에서 사라졌으면(학생회가 자리를 비웠거나 하면) 이 기기의
+       기억도 지운다. 그러지 않으면 확인증은 그대로 떠 있는데 반납을 누르면
+       '이미 비워진 자리' 라고만 나와 아무것도 할 수 없게 된다. */
+    const mine = myBooking();
+    if (mine && !seats[String(mine.seat)]) {
+      forgetBooking();
+      $('[data-ticket]').hidden = true;
+      $('[data-ticket]').innerHTML = '';
+      if (roomState().open) toast(seatLabel(mine.seat) + ' 예약이 해제되었습니다');
+    }
+
     renderHead();
     renderMap();
   }

@@ -1364,7 +1364,10 @@
     ]));
   }
 
-  const RELEASE_WORD = { return: '반납', cancel: '취소' };
+  /* 화면에는 '반납' 과 '자리 변경' 두 가지만 있다.
+     서버에는 규칙이 받아주는 'return' / 'cancel' 로 저장되고,
+     'cancel' 이 자리 변경을 뜻한다 (규칙을 다시 배포하지 않으려는 선택). */
+  const RELEASE_WORD = { return: '반납', cancel: '자리 변경' };
 
   /* 010-1234-5678 처럼 보기 좋게 */
   function telText(v) {
