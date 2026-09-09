@@ -131,6 +131,32 @@ service cloud.firestore {
       return kstMillisOfDay() >= 28800000 && kstMillisOfDay() < 64800000;
     }
 
+    // 학우가 스스로 자리를 비우는 길 (반납 · 자리 변경)
+    //  로그인이 없으니 '본인' 임을 예약할 때 적은 이름 · 학과 · 학번으로
+    //  확인한다. 그 값을 대조하려면 어딘가에 담아 보내야 하는데, 담긴 것은
+    //  곧 저장되는 것이라 공개되는 문서에 넣을 수 없다. 그래서 관리자만
+    //  읽는 releases 에 넣고, 좌석 삭제는 '그 자리에 대한 releases 가
+    //  예약보다 나중에 만들어졌는지' 로 판정한다.
+    //
+    //  시각을 견주는 이유: releases 문서는 지워지지 않고 남는다. 같은 자리를
+    //  나중에 다른 사람이 예약했을 때 옛 releases 로 남의 자리를 비워버리는
+    //  일이 없도록, 예약보다 나중에 만들어진 것만 인정한다.
+    //
+    //  ⚠ 이 두 함수는 아래 seats · logs · releases 규칙이 부른다.
+    //    한 번 실수로 지웠더니 규칙 전체가 게시되지 않아, 옛 규칙이 살아 있는
+    //    채로 '배포했는데도 반납이 안 되는' 일이 오래갔다. 지우지 말 것.
+    function releasedAfterBooking(day, seatNo) {
+      return exists(/databases/$(database)/documents/seatdays/$(day)/releases/$(seatNo))
+             && get(/databases/$(database)/documents/seatdays/$(day)/releases/$(seatNo)).data.createdAt
+                > resource.data.createdAt;
+    }
+    function matchesBooking(day, seatNo, d) {
+      return exists(/databases/$(database)/documents/seatdays/$(day)/logs/$(seatNo))
+          && get(/databases/$(database)/documents/seatdays/$(day)/logs/$(seatNo)).data.name == d.name
+          && get(/databases/$(database)/documents/seatdays/$(day)/logs/$(seatNo)).data.dept == d.dept
+          && get(/databases/$(database)/documents/seatdays/$(day)/logs/$(seatNo)).data.sid  == d.sid;
+    }
+
     //  {day} 가 오늘인지까지는 서버에서 따지지 않는다. 개방 시간이 UTC 날짜를
     //  넘나들게 되면서(한국 08시 = 전날 UTC 23시) 규칙 안에서 서울 날짜를
     //  안전하게 만들 방법이 마땅치 않아졌다. 그 검사는 위생 문제일 뿐이고
@@ -147,10 +173,12 @@ service cloud.firestore {
       allow read: if true;
       allow create: if seatOk(seatNo, request.resource.data)
         && request.resource.data.keys().hasOnly(['seat', 'nameMasked', 'sidHead', 'createdAt'])
-        && request.resource.data.nameMasked is string
-        && request.resource.data.nameMasked.size() <= 20
-        && request.resource.data.sidHead is string
-        && request.resource.data.sidHead.size() <= 5;
+        && (!('nameMasked' in request.resource.data)
+            || (request.resource.data.nameMasked is string
+                && request.resource.data.nameMasked.size() <= 20))
+        && (!('sidHead' in request.resource.data)
+            || (request.resource.data.sidHead is string
+                && request.resource.data.sidHead.size() <= 5));
       allow update: if false;          // 잡힌 자리는 아무도 덮어쓸 수 없다
       allow delete: if isAdmin() || releasedAfterBooking(day, seatNo);
     }
@@ -164,7 +192,8 @@ service cloud.firestore {
         && request.resource.data.name is string && request.resource.data.name.size() <= 20
         && request.resource.data.dept is string && request.resource.data.dept.size() <= 40
         && request.resource.data.sid  is string && request.resource.data.sid.size()  <= 12
-        && request.resource.data.tel  is string && request.resource.data.tel.size()  <= 16;
+        && (!('tel' in request.resource.data)
+            || (request.resource.data.tel is string && request.resource.data.tel.size() <= 16));
     }
 
     // ---- 자리 비우기 기록 (반납 · 취소) ----

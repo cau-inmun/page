@@ -1,14 +1,14 @@
 /* ============================================================
    seats.js — 열람실 좌석 예약
      · 좌석표는 누구나 보고, 빈 자리를 눌러 예약합니다.
-     · 예약된 자리에는 가린 이름과 학번 앞 5자리만 보입니다.
-       실명 · 학과 · 전체 학번은 관리자만 볼 수 있는 곳에 따로 저장됩니다.
+     · 예약된 자리에는 '예약됨' 만 보입니다. 누가 앉았는지는 싣지 않습니다.
+       이름 · 학과 · 학번 · 전화번호는 관리자만 볼 수 있는 곳에 따로 저장됩니다.
      · 날짜가 바뀌면 좌석표는 저절로 비워집니다 (날짜별로 나눠 저장).
    ============================================================ */
 (function () {
   'use strict';
 
-  const { $, $$, el, toast, seoulNow, maskName, maskSid, describeError, errorBoxFor } = window.CORE;
+  const { $, $$, el, toast, seoulNow, describeError, errorBoxFor } = window.CORE;
   const S = window.SITE;
   const ROOM = S.readingRoom || {};
 
@@ -28,7 +28,7 @@
 
   const MINE_KEY = 'cau-inmun:my-seat';
 
-  let seats = {};        // { '7': { nameMasked, sidHead } }
+  let seats = {};        // { '7': { seat, createdAt } } — 누가 앉았는지는 담기지 않는다
   let today = '';
   let picking = null;    // 지금 예약하려는 좌석 번호
   let moving = null;     // 자리 변경 중일 때 이어 쓸 내용
@@ -200,23 +200,24 @@
       ? el('span', { class: 'seat__dot', 'aria-hidden': 'true' }) : null;
 
     if (info) {
-      /* 예약된 자리 — 색만으로 구분하지 않도록 글자로도 알린다.
-         누르면 반납 · 취소 창이 열린다 (예약할 때 적은 정보를 다시 넣어야 한다).
+      /* 예약된 자리 — 누가 앉았는지는 싣지 않는다. '찼다' 는 사실만 알린다.
+         색만으로 구분하면 색을 못 가리는 분에게 아무 정보가 아니므로
+         글자로도 적는다.
+         누르면 반납 창이 열린다 (예약할 때 적은 정보를 다시 넣어야 한다).
          다른 기기에서도 자기 자리를 비울 수 있도록 좌석표에서 바로 연다. */
       return el('button', {
         type: 'button',
         class: 'seat seat--taken' + (isMine ? ' seat--mine' : ''),
         disabled: roomOpen ? null : '',
-        'aria-label': seatLabel(n) + ' 예약됨 · ' +
-          (info.nameMasked || '') + ' ' + (info.sidHead || '') +
+        'aria-label': seatLabel(n) + (isMine ? ' 내 자리' : ' 예약됨') +
           (noteText ? ' · ' + noteText : '') +
-          (roomOpen ? ' · 반납하거나 취소하려면 누르세요' : ''),
+          (roomOpen ? (isMine ? ' · 반납하거나 자리를 바꾸려면 누르세요'
+                              : ' · 본인 자리라면 눌러서 반납할 수 있습니다') : ''),
         onclick: () => openRelease(n)
       }, [
         dot,
         el('span', { class: 'seat__no', text: String(n) }),
-        el('span', { class: 'seat__who', text: info.nameMasked || '예약됨' }),
-        el('span', { class: 'seat__sid', text: info.sidHead || '' })
+        el('span', { class: 'seat__state', text: isMine ? '내 자리' : '예약됨' })
       ]);
     }
 
@@ -272,16 +273,17 @@
         '적으셨던 내용을 그대로 채워뒀으니 확인만 하고 눌러주세요.'
       ]) : null,
       el('p', { class: 'field__help', style: 'margin:-6px 0 16px',
-        text: '좌석표에는 가린 이름과 학번 앞 5자리만 보입니다. 학과 · 전화번호를 포함한 나머지는 학생회만 확인합니다.' }),
+        text: '좌석표에는 좌석 번호만 뜹니다. 적어주신 내용은 학생회만 볼 수 있고, ' +
+              '다른 이용자에게는 보이지 않습니다.' }),
       el('div', { class: 'field' }, [ el('label', { for: 'r-name', text: '이름' }), nameIn ]),
       el('div', { class: 'field' }, [ el('label', { for: 'r-dept', text: '학과' }), deptIn ]),
       el('div', { class: 'field' }, [
         el('label', { for: 'r-sid', text: '학번' }), sidIn,
-        el('p', { class: 'field__help', text: '숫자만 적어주세요. 좌석표에는 앞 5자리만 보입니다.' })
+        el('p', { class: 'field__help', text: '숫자만 적어주세요. 자리를 비울 때 그대로 다시 넣으셔야 합니다.' })
       ]),
       el('div', { class: 'field' }, [
         el('label', { for: 'r-tel', text: '전화번호' }), telIn,
-        el('p', { class: 'field__help', text: '자리 관련 연락이 필요할 때만 씁니다. 좌석표에는 보이지 않습니다.' })
+        el('p', { class: 'field__help', text: '자리 관련 연락이 필요할 때만 씁니다. 자리를 비울 때는 묻지 않습니다.' })
       ]),
       err,
       el('div', { class: 'fcard__actions' }, [
@@ -462,38 +464,40 @@
   }
 
   /* 서버는 '거부' 라고만 알려주고 무엇이 어긋났는지는 말해주지 않는다.
-     그런데 좌석표에 실린 가린 이름과 학번 앞자리는 우리도 읽을 수 있으니,
-     적어도 이름과 학번이 맞는지는 여기서 가려낼 수 있다.
-     그러면 '뭘 넣어도 안 된다' 대신 어디를 고쳐야 하는지 말할 수 있다. */
+     예전에는 좌석표에 실린 가린 이름과 학번 앞자리로 어디가 틀렸는지
+     짚어주려 했는데, 두 가지가 잘못됐다.
+       · 가린 값끼리 맞았다고 원래 값이 맞는 것은 아니다
+         (홍길동 과 홍민동 은 둘 다 홍*동 이다). 그런데 '이름은 맞습니다'
+         라고 단정해 학우가 엉뚱한 곳을 고치게 만들었다.
+       · 그러자고 공개되는 문서에 가린 이름과 학번을 담아야 했다.
+         지금은 담지 않으므로 대조할 것도 없다.
+     그래서 확인한 것만 말한다 — 셋 중 하나가 다르다는 사실까지다. */
   function showWhyBlocked(n, name, sid, err) {
-    const info = seats[String(n)] || {};
-    /* 좌석표에 실린 것은 '가려진' 이름과 학번 앞 5자리뿐이다.
-       그래서 여기서 맞다고 나와도 가려진 부분까지 맞다는 뜻은 아니다.
-       (홍길동 과 홍민동 은 둘 다 홍*동 이 된다)
-       이 점을 흐리면 학우가 엉뚱한 곳을 고치게 되므로 그대로 적는다. */
-    const nameOk = !info.nameMasked || maskName(name) === info.nameMasked;
-    const sidOk = !info.sidHead || maskSid(sid) === info.sidHead;
-    const tailLen = Math.max(sid.length - 5, 0);
+    const mine = myBooking();
 
     err.hidden = false;
     err.innerHTML = '';
 
-    if (!nameOk || !sidOk) {
-      err.append(el('strong', { text: '예약할 때와 다릅니다. ' }));
-      if (!nameOk) err.append(el('br'), '이름 — 이 자리는 ‘' + info.nameMasked + '’ 로 예약돼 있습니다.');
-      if (!sidOk) err.append(el('br'), '학번 — 이 자리는 앞 5자리가 ‘' + info.sidHead + '’ 입니다.');
+    /* 예약은 됐는데 명단 기록이 남지 않은 자리라면, 무엇을 적어도 통과할 수
+       없다. 서버가 대조할 기록 자체가 없기 때문이다. 이 브라우저에서 예약한
+       자리라면 그 사실을 알고 있으니 헛수고를 시키지 않는다. */
+    if (mine && mine.seat === n && mine.noLog) {
+      err.append(
+        el('strong', { text: '이 자리는 예약 기록이 서버에 저장되지 않았습니다. ' }),
+        '자리는 잡혔지만, 대조할 기록이 없어 스스로는 비울 수 없습니다. ' +
+        '학생회에 ' + seatLabel(n) + ' 이라고 알려주시면 비워드립니다.'
+      );
       return;
     }
 
-    /* 가려지지 않은 부분은 맞다. 남은 것은 가려진 부분이거나 학과다. */
     err.append(
-      el('strong', { text: '보이는 부분(' + (info.nameMasked || '이름') + ' · ' +
-                           (info.sidHead || '학번 앞자리') + ')은 맞습니다. ' }),
-      '가려진 부분까지는 여기서 확인할 수 없어, 아래 중 하나가 다릅니다.',
+      el('strong', { text: '예약할 때 적으신 것과 하나 이상 다릅니다. ' }),
+      '어느 것이 다른지는 여기서 알 수 없습니다. 셋 다 다시 확인해 주세요.',
       el('ul', { class: 'roomnotes__list', style: 'margin:8px 0 0; padding-left:18px' }, [
-        el('li', { text: '이름 가운데 글자' }),
-        el('li', { text: tailLen ? '학번 뒤 ' + tailLen + '자리' : '학번' }),
-        el('li', { text: '학과 (전화번호는 확인하지 않습니다)' })
+        el('li', { text: '이름 — 띄어쓰기까지 그대로' }),
+        el('li', { text: '학과 — 예약할 때 고른 것과 같은 항목인지' }),
+        el('li', { text: '학번 — ' + (sid.length ? sid.length + '자리를 넣으셨습니다' : '숫자만') }),
+        el('li', { class: 'field__help', text: '전화번호는 대조하지 않습니다.' })
       ]),
       el('span', { class: 'field__help', style: 'display:block; margin-top:8px',
         text: '학생회에 ' + seatLabel(n) + ' 이라고 알려주시면 예약할 때 적은 내용을 ' +
@@ -524,7 +528,8 @@
                          el('dd', { text: seoulClock(b.at) + ' (한국 시각)' })])
       ]),
       el('p', { class: 'ticket__masked',
-        text: '좌석표에는 ' + maskName(b.name) + ' · ' + maskSid(b.sid) + ' 로만 보입니다.' }),
+        text: '좌석표에는 좌석 번호만 뜹니다. 이름 · 학과 · 학번 · 전화번호는 ' +
+              '학생회만 볼 수 있고 다른 이용자에게는 보이지 않습니다.' }),
 
       el('div', { class: 'ticket__notes' }, [
         el('h2', { class: 'roomnotes__title', text: '이용 안내' }),

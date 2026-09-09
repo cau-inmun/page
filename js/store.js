@@ -503,6 +503,9 @@
       const out = {};
       snap.docs.forEach((d) => {
         const v = decodeDoc(d.data());
+        /* nameMasked · sidHead 는 이제 쓰지 않는다. 그날 이전에 만들어진
+           문서에는 남아 있을 수 있어 읽어만 두고 (관리자 화면의 '기록 없는
+           자리' 단추가 이름을 보여주는 데 쓴다), 좌석표에는 싣지 않는다. */
         out[d.id] = { seat: v.seat, nameMasked: v.nameMasked || '',
                       sidHead: v.sidHead || '', createdAt: tsToIso(d.data().createdAt) };
       });
@@ -516,12 +519,14 @@
      자리를 눌러도 뒤에 도착한 쪽만 거부된다 (화면 검사만으로는 못 막는다). */
   async function reserveSeat(day, seat, person) {
     const key = String(seat);
-    const pub = {
-      seat: Number(seat),
-      nameMasked: window.CORE.maskName(person.name),
-      sidHead: window.CORE.maskSid(person.sid)
-    };
-    /* 전화번호는 좌석표에 실리는 pub 이 아니라 관리자만 읽는 logs 에만 담는다 */
+    /* 좌석표에 실리는 문서에는 '자리가 찼다' 는 사실만 담는다.
+       seats 는 보안 규칙상 누구나 읽는다. 예전에는 가린 이름(홍*동)과
+       학번 앞 5자리를 여기 담아 좌석표에 띄웠는데, 60석 남짓한 열람실에서
+       그 둘이면 같은 과 사람은 누가 앉았는지 대개 짚어낸다. 화면에서만
+       감추는 것으로는 부족하다 — 문서를 직접 읽으면 그대로 보이기 때문이다.
+       그래서 아예 담지 않는다. 이름 · 학과 · 학번 · 전화번호는 관리자만
+       읽는 logs 에만 있다. */
+    const pub = { seat: Number(seat) };
     const full = {
       seat: Number(seat),
       name: String(person.name || '').trim(),
