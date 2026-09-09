@@ -15,18 +15,18 @@
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary">
 
-<link rel="icon" href="assets/favicon.png?v=20260911e" type="image/png">
-<link rel="apple-touch-icon" href="assets/logo.png?v=20260911e">
+<link rel="icon" href="assets/favicon.png?v=20260911f" type="image/png">
+<link rel="apple-touch-icon" href="assets/logo.png?v=20260911f">
 <link rel="canonical" href="./">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="css/fonts.css?v=20260911e">
+<link rel="stylesheet" href="css/fonts.css?v=20260911f">
 <script>document.documentElement.classList.add('js');
 /* 상단바 이름은 저장된 값이 정해질 때까지 자리만 잡아둔다.
    먼저 html 에 적힌 기본 이름이 한 프레임 보였다가 바뀌는 게 눈에 띄었다.
    js 가 어떤 이유로든 못 돌면 1.5초 뒤에는 그냥 보여준다. */
 setTimeout(function(){document.documentElement.classList.add('brand-ready');},1500);</script>
-<link rel="stylesheet" href="css/style.css?v=20260911e">
+<link rel="stylesheet" href="css/style.css?v=20260911f">
 </head>
 
 <body data-page="home">
@@ -37,7 +37,7 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
   <header class="topbar">
     <div class="wrap wrap--wide topbar__inner">
       <a class="topbar__brand" href="./">
-        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260911e" alt="" width="900" height="673"></span>
+        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260911f" alt="" width="900" height="673"></span>
         <span class="topbar__name"><span class="topbar__name--long">중앙대학교 제15대 인문대학 학생회 ‘연(聯)’</span><span class="topbar__name--short">제15대 학생회 ‘연(聯)’</span></span>
       </a>
       <nav class="nav" aria-label="주요 메뉴">
@@ -54,14 +54,6 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
 
     <!-- ================= 1. 히어로 ================= -->
     <section class="hero" aria-labelledby="hero-title">
-      <!--
-        3D 씬이 그려질 자리입니다. 비어 있어도 화면은 완성돼 있습니다 —
-        모바일과 저사양 기기, 움직임을 줄이는 설정에서는 아무것도 내려받지
-        않고 지금 이 화면 그대로 봅니다. 의미 있는 내용은 전부 아래 글에
-        있으므로 스크린리더에서는 숨깁니다.
-      -->
-      <canvas class="hero__canvas" data-hero-canvas aria-hidden="true"></canvas>
-
       <div class="wrap wrap--wide hero__body">
         <!--
           로고에는 .reveal 을 달지 않습니다. 첫 화면에서 가장 큰 요소라
@@ -69,7 +61,7 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
           js 가 열어줄 때까지 그 시점이 밀립니다.
         -->
         <div class="hero__logo" data-logo>
-          <img src="assets/logo.png?v=20260911e" alt="중앙대학교 인문대학 제15대 학생회 ‘연’ 로고" width="1080" height="1080" fetchpriority="high">
+          <img src="assets/logo.png?v=20260911f" alt="중앙대학교 인문대학 제15대 학생회 ‘연’ 로고" width="1080" height="1080" fetchpriority="high">
         </div>
 
         <p class="hero__eyebrow reveal" data-site="college">중앙대학교 인문대학</p>
@@ -79,10 +71,9 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
         </h1>
         <p class="hero__tagline reveal" data-site="tagline">인문대학의 모든 소식을 한곳에서</p>
 
-        <div class="hero__cta reveal">
-          <a class="btn btn--primary btn--lg" href="notices.html">공지사항 보기</a>
-          <a class="btn btn--lg" href="seats.html">열람실 좌석 예약</a>
-        </div>
+        <!-- 인스타그램 · 카카오톡 채널 · 열람실 좌석 예약 · 건의함.
+             목록은 js/config.js 의 quickLinks 이고 관리자에서 고칠 수 있습니다. -->
+        <div class="quick reveal" data-quick></div>
 
       </div>
     </section>
@@ -126,24 +117,6 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
       <div data-links></div>
     </section>
 
-    <!-- ================= 6. 문의 · 바로가기 ================= -->
-    <!-- 밝은 크림이 이어지다 여기 한 번만 짙어집니다. 페이지에 리듬을 주고,
-         '이제 행동할 차례' 라는 신호가 됩니다. 네이비를 넓게 쓰는 유일한 곳입니다. -->
-    <section class="section section--band" id="contact" aria-labelledby="contact-head">
-      <div class="wrap wrap--wide">
-        <div class="sec-head sec-head--center">
-          <h2 id="contact-head">문의 · 바로가기</h2>
-        </div>
-        <!-- 좁은 화면에서 '있으면' 다음에 줄이 끊기도록 두 덩이로 나눠 둡니다.
-             넓은 화면에서는 한 줄로 이어집니다. -->
-        <p class="lead lead--center lead--split">
-          <span>궁금한 점이나 전하고 싶은 말이 있으면</span>
-          <span>언제든 연락해 주세요.</span>
-        </p>
-        <div class="quick quick--wide" data-quick></div>
-      </div>
-    </section>
-
   </main>
 
   <footer class="footer">
@@ -163,10 +136,10 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
 </div>
 
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script src="js/config.js?v=20260911e"></script>
-<script src="js/firebase-config.js?v=20260911e"></script>
-<script src="js/core.js?v=20260911e"></script>
-<script src="js/store.js?v=20260911e"></script>
-<script src="js/pages.js?v=20260911e"></script>
+<script src="js/config.js?v=20260911f"></script>
+<script src="js/firebase-config.js?v=20260911f"></script>
+<script src="js/core.js?v=20260911f"></script>
+<script src="js/store.js?v=20260911f"></script>
+<script src="js/pages.js?v=20260911f"></script>
 </body>
 </html>

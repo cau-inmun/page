@@ -200,11 +200,18 @@
       countBox.textContent = '오늘 이용이 끝났습니다 · 좌석 ' + TOTAL + '석';
     } else {
       const num = el('span', { class: 'seatcount__num' });
-      num.dataset.countValue = countBox.dataset.left || '0';
+      const left = TOTAL - taken;
+      const had = countBox.dataset.left;          /* 이전에 그린 적이 있는가 */
+      num.dataset.countValue = had || String(left);
       countBox.append('남은 자리 ', num, '석 / 전체 ' + TOTAL + '석' +
         (mine ? ' · 내 자리 ' + seatLabel(mine.seat) : ''));
-      countUp(num, TOTAL - taken);
-      countBox.dataset.left = String(TOTAL - taken);
+      /* 첫 화면에서는 그냥 그 숫자를 보여준다. 0 부터 굴려 올리면
+         아무 일도 없었는데 뭔가 일어난 것처럼 보이고, 읽으려는 순간
+         숫자가 아직 굴러가고 있다. 세어 올리는 것은 '방금 달라졌다'를
+         알리려는 것이므로, 달라진 적이 있을 때만 한다. */
+      if (had === undefined) num.textContent = String(left);
+      else countUp(num, left);
+      countBox.dataset.left = String(left);
     }
   }
 
