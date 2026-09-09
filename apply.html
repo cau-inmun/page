@@ -13,18 +13,19 @@
 <meta property="og:description" content="학생회에 의견을 남기거나 사업을 신청할 수 있습니다.">
 <meta property="og:image" content="assets/logo.png">
 
-<link rel="icon" href="assets/favicon.png?v=20260911g" type="image/png">
+<link rel="icon" href="assets/favicon.png?v=20260911h" type="image/png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="css/fonts.css?v=20260911g">
+<link rel="stylesheet" href="css/fonts.css?v=20260911h">
 <script>document.documentElement.classList.add('js');
 /* 상단바 이름은 저장된 값이 정해질 때까지 자리만 잡아둔다.
    먼저 html 에 적힌 기본 이름이 한 프레임 보였다가 바뀌는 게 눈에 띄었다.
    js 가 어떤 이유로든 못 돌면 1.5초 뒤에는 그냥 보여준다. */
 setTimeout(function(){document.documentElement.classList.add('brand-ready');},1500);</script>
-<link rel="stylesheet" href="css/style.css?v=20260911g">
+<link rel="stylesheet" href="css/style.css?v=20260911h">
+<link rel="stylesheet" href="css/redesign.css?v=20260911h">
 </head>
 
-<body data-page="apply">
+<body class="public-site" data-page="apply">
 <div class="page">
 
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -32,15 +33,15 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
   <header class="topbar">
     <div class="wrap wrap--wide topbar__inner">
       <a class="topbar__brand" href="./">
-        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260911g" alt="" width="900" height="673"></span>
-        <span class="topbar__name"><span class="topbar__name--long">중앙대학교 제15대 인문대학 학생회 ‘연(聯)’</span><span class="topbar__name--short">제15대 학생회 ‘연(聯)’</span></span>
+        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260911h" alt="" width="900" height="673"></span>
+        <span class="topbar__identity"><span class="topbar__college">중앙대학교 인문대학</span><span class="topbar__name"><span class="topbar__name--long">중앙대학교 제15대 인문대학 학생회 ‘연(聯)’</span><span class="topbar__name--short">제15대 학생회 ‘연(聯)’</span></span></span>
       </a>
       <nav class="nav" aria-label="주요 메뉴">
-        <a href="./">홈</a>
-        <a href="notices.html">공지</a>
-        <a href="seats.html">열람실</a>
-        <a href="apply.html" aria-current="page">신청</a>
-        <a href="./#links">링크</a>
+        <a href="./"><svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></svg><span>홈</span></a>
+        <a href="notices.html"><svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>공지</span></a>
+        <a href="seats.html"><svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h6a4 4 0 0 1 3 1.5A4 4 0 0 1 15 4h6v15h-6a4 4 0 0 0-3 1.5A4 4 0 0 0 9 19H3Z"/><path d="M12 5.5v15"/></svg><span>열람실</span></a>
+        <a href="apply.html" aria-current="page"><svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-8"/><path d="m16 3 5 5M10 14l-1 4 4-1 9-9a3 3 0 0 0-5-5Z"/></svg><span>신청</span></a>
+        <a href="./#links"><svg class="nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 13.5 4-3M8.5 15l-2 2a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0M13.5 16a3.5 3.5 0 0 0 5 0l4-4a3.5 3.5 0 0 0-5-5l-2 2"/></svg><span>링크</span></a>
       </nav>
     </div>
   </header>
@@ -75,10 +76,10 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
 </div>
 
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script src="js/config.js?v=20260911g"></script>
-<script src="js/firebase-config.js?v=20260911g"></script>
-<script src="js/core.js?v=20260911g"></script>
-<script src="js/store.js?v=20260911g"></script>
-<script src="js/apply.js?v=20260911g"></script>
+<script src="js/config.js?v=20260911h"></script>
+<script src="js/firebase-config.js?v=20260911h"></script>
+<script src="js/core.js?v=20260911h"></script>
+<script src="js/store.js?v=20260911h"></script>
+<script src="js/apply.js?v=20260911h"></script>
 </body>
 </html>

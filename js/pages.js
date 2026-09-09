@@ -44,16 +44,37 @@
       el('strong', { text: '공지를 불러오지 못했습니다. ' }), msg
     ]);
 
+  // Cached/default shortcuts are usable while the saved configuration loads.
+  function renderQuickLinks() {
+    const quick = $('[data-quick]');
+    if (!quick) return;
+    quick.innerHTML = '';
+    (S.quickLinks || []).forEach((q) => {
+      const url = safeUrl(q.url);
+      const children = [
+        el('span', { class: 'chip__icon', html: icon(q.icon), 'aria-hidden': 'true' }),
+        el('span', { class: 'chip__label', text: q.label })
+      ];
+      if (!url) children.push(el('span', { class: 'chip__soon', text: '준비 중' }));
+      quick.appendChild(url
+        ? el('a', { class: 'chip', href: url,
+            target: isExternal(url) ? '_blank' : null,
+            rel: isExternal(url) ? 'noopener noreferrer' : null }, children)
+        : el('span', { class: 'chip is-disabled' }, children));
+    });
+  }
+
   /* ==========================================================
      1) 홈
      ========================================================== */
   async function initHome() {
+    renderQuickLinks();
     /* 저장된 사이트 정보를 먼저 반영한다 (없으면 config.js 기본값) */
     if (window.STORE) { try { await STORE.init(); } catch (e) {} }
 
     /* 기본 텍스트 */
     const setText = (sel, value) => { const n = $(sel); if (n && value) n.textContent = value; };
-    setText('[data-site="college"]', S.college);
+    $$('[data-site="college"]').forEach((n) => { n.textContent = S.college; });
     setText('[data-site="tagline"]', S.tagline);
     $$('[data-site="council"]').forEach((n) => { n.textContent = S.councilTerm; });
     $$('[data-site="name"]').forEach((n) => { n.textContent = S.councilName; });
@@ -61,23 +82,7 @@
     const metaDesc = $('meta[name="description"]');
     if (metaDesc && S.description) metaDesc.setAttribute('content', S.description);
 
-    /* 빠른 실행 칩 */
-    const quick = $('[data-quick]');
-    if (quick) {
-      S.quickLinks.forEach((q) => {
-        const url = safeUrl(q.url);
-        const node = url
-          ? el('a', { class: 'chip', href: url, target: isExternal(url) ? '_blank' : null,
-                      rel: isExternal(url) ? 'noopener noreferrer' : null },
-              [el('span', { html: icon(q.icon), 'aria-hidden': 'true' }), q.label])
-          : el('span', { class: 'chip is-disabled' }, [
-              el('span', { html: icon(q.icon), 'aria-hidden': 'true' }),
-              q.label,
-              el('span', { class: 'chip__soon', text: '준비 중' })
-            ]);
-        quick.appendChild(node);
-      });
-    }
+    renderQuickLinks();
 
     /* 링크 모음 — 서버에 등록된 게 있으면 그걸, 없으면 config.js 기본값 */
     const linkWrap = $('[data-links]');
