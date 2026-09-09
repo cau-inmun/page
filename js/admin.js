@@ -1078,7 +1078,12 @@
     drawDepts();
     box.appendChild(el('div', { class: 'editor-group' }, [
       el('p', { class: 'schedule__title', style: 'margin-bottom:10px', text: '학생회 소개' }),
-      textField('소개 글', d.about.intro, '', (v) => { d.about.intro = v; }, { multiline: true }),
+      /* 홈의 '학생회 소개' 구획은 히어로 문구와 겹쳐 걷어냈다.
+         값은 그대로 보관하되, 지금 어디에도 안 뜬다는 것을 적어 둔다 —
+         고쳐도 화면이 안 바뀌면 사람이 한참 헤매게 된다. */
+      textField('소개 글', d.about.intro,
+        '지금은 사이트 어디에도 표시되지 않습니다. 홈의 소개 구획이 히어로 문구와 겹쳐 걷어냈습니다.',
+        (v) => { d.about.intro = v; }, { multiline: true }),
       deptBox
     ]));
 
