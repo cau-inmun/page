@@ -113,14 +113,23 @@
 }
 .welcome__signature { display: flex; align-items: center; gap: 10px; margin-top: 24px; }
 .welcome__signature p { font-size: .875rem; font-weight: 600; color: var(--ink-2); }
-.welcome__seal { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; background: var(--ink); border-radius: 50%; flex: none; }
-.welcome__art { position: relative; min-width: 0; align-self: stretch; }
-.welcome__edition {
-  position: absolute; top: 26px; right: 26px;
-  font-size: .75rem; font-weight: 650; line-height: 1.35;
-  letter-spacing: .07em; text-align: right; color: #696352;
+.welcome__seal { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 5px; background: var(--ink); border-radius: 50%; flex: none; overflow: hidden; }
+.welcome__seal img { width: 100%; height: 100%; object-fit: contain; }
+.welcome__art {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
 }
-.welcome__puang { position: absolute; width: 340px; max-width: none; height: 340px; bottom: -19px; right: 4px; object-fit: contain; }
+.welcome__puang {
+  display: block;
+  flex: none;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  object-fit: contain;
+}
 
 /* Fast access remains editable through the existing site settings. */
 .public-site .quick {
@@ -234,6 +243,8 @@
 .public-site .roomnotes__list { font-size: .875rem; line-height: 1.8; }
 .public-site .form-desc { font-size: 1rem; line-height: 1.75; }
 .public-site .seatmap__bar { row-gap: 14px; }
+.public-site .seatmap__room { width: max-content; margin-inline: auto; }
+.public-site .roomband--window { width: var(--room-width); max-width: 100%; margin-inline: auto; }
 .public-site .count { font-size: .875rem; }
 .public-site .skeleton { border-radius: 4px; }
 
@@ -255,7 +266,6 @@
   .public-site .nav a { padding: 10px; }
   .welcome { grid-template-columns: minmax(0, 1fr) 245px; }
   .welcome__copy { padding-left: 30px; }
-  .welcome__puang { width: 300px; height: 300px; right: -15px; }
   .news-layout { gap: 28px; }
   .home-links [data-links] { gap: 24px; }
   .public-site .depts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -283,15 +293,15 @@
   .public-site .nav__icon { display: block; }
   .public-site .nav a[aria-current] { background: var(--sand); }
   .home-shell { padding-top: 18px; }
-  .welcome { min-height: 262px; grid-template-columns: minmax(0, 1fr) 124px; border-radius: 8px 8px 0 0; }
+  .welcome { min-height: 262px; grid-template-columns: minmax(0, 1fr) clamp(110px, 34vw, 160px); border-radius: 8px 8px 0 0; }
   .welcome__copy { padding: 24px 12px 26px 24px; }
   .welcome__eyebrow { font-size: .8125rem; margin-bottom: 14px; }
   .welcome__title { font-size: 1.875rem; line-height: 1.42; letter-spacing: -.055em; max-width: 10em; }
   .welcome__signature { gap: 8px; margin-top: 20px; }
   .welcome__signature p { font-size: .8125rem; }
   .welcome__seal { width: 26px; height: 26px; }
-  .welcome__puang { width: 195px; height: 195px; right: -28px; bottom: -12px; }
-  .welcome__edition { right: 16px; top: 22px; font-size: .75rem; letter-spacing: .02em; line-height: 1.4; }
+  /* Only the source PNG's transparent side margins are clipped by its own column. */
+  .welcome__puang { width: 145%; }
   .public-site .quick { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 15px 0 18px; gap: 4px; }
   .public-site .chip { flex-direction: column; gap: 9px; padding: 4px 1px; min-height: 78px; font-size: .875rem; justify-content: flex-start; }
   .public-site .chip__icon { width: 42px; height: 42px; }
@@ -328,11 +338,8 @@
 
 @media (max-width: 370px) {
   .public-site .wrap { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
-  .welcome { grid-template-columns: minmax(0, 1fr) 96px; }
   .welcome__copy { padding-left: 18px; }
-  .welcome__title { font-size: 1.625rem; max-width: 5.5em; }
-  .welcome__puang { width: 175px; height: 175px; right: -25px; bottom: -9px; }
-  .welcome__edition { right: 12px; }
+  .welcome__title { font-size: 1.625rem; }
   .public-site .chip { font-size: .875rem; }
   .footer__emblem { display: none; }
 }

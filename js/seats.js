@@ -152,6 +152,9 @@
     let taken = 0;
 
     const cols = `repeat(${COLS}, var(--seat-w))`;
+    // 창문 표시도 실제 좌석 격자 너비에 맞춘다. 좁은 화면에서는 계속 보인다.
+    box.style.setProperty('--room-width',
+      `calc(${COLS} * var(--seat-w) + ${COLS - 1} * var(--seat-gap))`);
     /* '창문' 은 옆으로 밀어도 늘 보이도록 스크롤 영역 밖에 둔다 */
     box.appendChild(el('p', { class: 'roomband roomband--window',
       text: ROOM.topLabel || '창문' }));
