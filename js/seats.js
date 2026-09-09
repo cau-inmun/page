@@ -436,16 +436,7 @@
       $('#x-return').textContent = '반납하기';
       $('#x-move').textContent = '자리 변경하기';
       if (e && e.code === 'mismatch') {
-        err.hidden = false;
-        err.innerHTML = '';
-        err.append(
-          '예약할 때 적으신 ',
-          el('strong', { text: '이름 · 학과 · 학번' }),
-          ' 과 달라 비울 수 없습니다. 셋 다 똑같아야 합니다 (전화번호는 확인하지 않습니다).',
-          el('br'),
-          '그대로 넣으셨는데도 안 되면 예약 정보가 서버에 저장되지 않은 경우입니다. ' +
-          '학생회에 좌석 번호를 알려주시면 비워드립니다.'
-        );
+        showWhyBlocked(n, name, sid, err);
         return;
       }
       console.error(e);
@@ -468,6 +459,38 @@
       return;
     }
     toast(seatLabel(n) + ' 을 반납했습니다');
+  }
+
+  /* 서버는 '거부' 라고만 알려주고 무엇이 어긋났는지는 말해주지 않는다.
+     그런데 좌석표에 실린 가린 이름과 학번 앞자리는 우리도 읽을 수 있으니,
+     적어도 이름과 학번이 맞는지는 여기서 가려낼 수 있다.
+     그러면 '뭘 넣어도 안 된다' 대신 어디를 고쳐야 하는지 말할 수 있다. */
+  function showWhyBlocked(n, name, sid, err) {
+    const info = seats[String(n)] || {};
+    const nameOk = !info.nameMasked || maskName(name) === info.nameMasked;
+    const sidOk = !info.sidHead || maskSid(sid) === info.sidHead;
+
+    err.hidden = false;
+    err.innerHTML = '';
+
+    if (!nameOk || !sidOk) {
+      err.append(el('strong', { text: '예약할 때와 다릅니다. ' }));
+      if (!nameOk) err.append(el('br'), '이름 — 이 자리는 ‘' + info.nameMasked + '’ 로 예약돼 있습니다.');
+      if (!sidOk) err.append(el('br'), '학번 — 이 자리는 앞 5자리가 ‘' + info.sidHead + '’ 입니다.');
+      return;
+    }
+
+    /* 이름과 학번은 맞다. 남은 것은 학과이거나, 예약 정보가 저장되지 않은 경우다. */
+    err.append(
+      el('strong', { text: '이름과 학번은 맞습니다. ' }),
+      '남은 것은 두 가지입니다.',
+      el('br'), '① ', el('strong', { text: '학과' }),
+      ' 가 예약할 때와 다릅니다 (전화번호는 확인하지 않습니다).',
+      el('br'), '② 예약 정보가 서버에 저장되지 않았습니다. 이 경우 무엇을 넣어도 되지 않습니다.',
+      el('br'),
+      el('span', { class: 'field__help', style: 'display:block; margin-top:6px',
+        text: '학과를 다시 골라도 안 되면 학생회에 ' + seatLabel(n) + ' 이라고 알려주세요. 바로 비워드립니다.' })
+    );
   }
 
   /* ==========================================================

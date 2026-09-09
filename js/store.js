@@ -189,14 +189,55 @@
      객체를 교체하면 그 참조들이 옛 값을 계속 보게 된다. */
   const SITE_KEYS = [
     'brand', 'college', 'councilTerm', 'councilName', 'tagline', 'description',
-    'quickLinks', 'about', 'contact', 'categories', 'departments', 'consentText'
+    'quickLinks', 'quickLinksSeen', 'about', 'contact', 'categories', 'departments',
+    'consentText'
   ];
+
+  /* js/config.js 에 새로 생긴 빠른 버튼을 저장된 목록에 들여보낸다.
+
+     '사이트 정보 저장' 을 한 번 누르면 그때의 목록이 통째로 저장되어
+     기본값을 덮는다. 그래서 코드에 버튼을 추가해도 이미 저장한 학생회
+     화면에는 영영 나오지 않았다 — 실제로 세 번이나 안 나왔다.
+
+     그렇다고 없는 것을 무조건 되살리면 일부러 지운 버튼이 계속 돌아온다.
+     그래서 저장할 때 '그때 기본에 있던 주소들' 을 quickLinksSeen 에 함께
+     적어두고, 거기 없던 것만 새로 생긴 것으로 본다.
+     그 기록이 없는 옛 저장분은 지금 들어 있는 것만 본 것으로 친다. */
+  function defaultQuickLinks() {
+    return (window.SITE_DEFAULTS && window.SITE_DEFAULTS.quickLinks) || [];
+  }
+
+  function mergeNewQuickLinks(stored) {
+    const defs = defaultQuickLinks();
+    if (!defs.length || !window.SITE) return;
+    const list = (window.SITE.quickLinks || []).slice();
+    const urlOf = (q) => String((q && q.url) || '').trim();
+    const have = new Set(list.map(urlOf));
+    const seen = new Set((stored && stored.quickLinksSeen) || Array.from(have));
+
+    let added = 0;
+    defs.forEach((q, i) => {
+      const url = urlOf(q);
+      if (!url || have.has(url) || seen.has(url)) return;
+      /* 기본 목록에서의 자리를 살려 끼워 넣는다 */
+      const before = defs.slice(0, i).map(urlOf);
+      let at = list.length;
+      for (let k = 0; k < list.length; k++) {
+        if (before.indexOf(urlOf(list[k])) === -1) { at = k; break; }
+      }
+      list.splice(at, 0, JSON.parse(JSON.stringify(q)));
+      have.add(url);
+      added++;
+    });
+    if (added) window.SITE.quickLinks = list;
+  }
 
   function applySite(stored) {
     if (!stored || !window.SITE) return;
     SITE_KEYS.forEach((k) => {
       if (stored[k] !== undefined && stored[k] !== null) window.SITE[k] = stored[k];
     });
+    mergeNewQuickLinks(stored);
   }
 
   /* 지난번에 받아둔 사이트 정보를 곧바로 입힌다.
@@ -234,6 +275,10 @@
   async function saveSite(patch) {
     const body = {};
     SITE_KEYS.forEach((k) => { if (patch[k] !== undefined) body[k] = patch[k]; });
+    /* 지금 기본에 있는 버튼들을 '봤다' 로 남긴다.
+       이러면 일부러 지운 버튼이 다음에 되살아나지 않는다. */
+    body.quickLinksSeen = defaultQuickLinks()
+      .map((q) => String((q && q.url) || '').trim()).filter(Boolean);
     if (mode === 'firebase') {
       await db.collection('config').doc('site').set(
         Object.assign({}, body, { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }));
