@@ -467,8 +467,13 @@
      그러면 '뭘 넣어도 안 된다' 대신 어디를 고쳐야 하는지 말할 수 있다. */
   function showWhyBlocked(n, name, sid, err) {
     const info = seats[String(n)] || {};
+    /* 좌석표에 실린 것은 '가려진' 이름과 학번 앞 5자리뿐이다.
+       그래서 여기서 맞다고 나와도 가려진 부분까지 맞다는 뜻은 아니다.
+       (홍길동 과 홍민동 은 둘 다 홍*동 이 된다)
+       이 점을 흐리면 학우가 엉뚱한 곳을 고치게 되므로 그대로 적는다. */
     const nameOk = !info.nameMasked || maskName(name) === info.nameMasked;
     const sidOk = !info.sidHead || maskSid(sid) === info.sidHead;
+    const tailLen = Math.max(sid.length - 5, 0);
 
     err.hidden = false;
     err.innerHTML = '';
@@ -480,16 +485,19 @@
       return;
     }
 
-    /* 이름과 학번은 맞다. 남은 것은 학과이거나, 예약 정보가 저장되지 않은 경우다. */
+    /* 가려지지 않은 부분은 맞다. 남은 것은 가려진 부분이거나 학과다. */
     err.append(
-      el('strong', { text: '이름과 학번은 맞습니다. ' }),
-      '남은 것은 두 가지입니다.',
-      el('br'), '① ', el('strong', { text: '학과' }),
-      ' 가 예약할 때와 다릅니다 (전화번호는 확인하지 않습니다).',
-      el('br'), '② 예약 정보가 서버에 저장되지 않았습니다. 이 경우 무엇을 넣어도 되지 않습니다.',
-      el('br'),
-      el('span', { class: 'field__help', style: 'display:block; margin-top:6px',
-        text: '학과를 다시 골라도 안 되면 학생회에 ' + seatLabel(n) + ' 이라고 알려주세요. 바로 비워드립니다.' })
+      el('strong', { text: '보이는 부분(' + (info.nameMasked || '이름') + ' · ' +
+                           (info.sidHead || '학번 앞자리') + ')은 맞습니다. ' }),
+      '가려진 부분까지는 여기서 확인할 수 없어, 아래 중 하나가 다릅니다.',
+      el('ul', { class: 'roomnotes__list', style: 'margin:8px 0 0; padding-left:18px' }, [
+        el('li', { text: '이름 가운데 글자' }),
+        el('li', { text: tailLen ? '학번 뒤 ' + tailLen + '자리' : '학번' }),
+        el('li', { text: '학과 (전화번호는 확인하지 않습니다)' })
+      ]),
+      el('span', { class: 'field__help', style: 'display:block; margin-top:8px',
+        text: '학생회에 ' + seatLabel(n) + ' 이라고 알려주시면 예약할 때 적은 내용을 ' +
+              '확인해 드리거나 자리를 비워드립니다.' })
     );
   }
 
