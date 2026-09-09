@@ -1,8 +1,0 @@
-{
-  "name": "cau-inmun-page",
-  "private": true,
-  "description": "중앙대학교 인문대학 제15대 학생회 '연' 홈페이지. 사이트 자체는 빌드가 없습니다 — HTML·CSS·JS 를 GitHub Pages 가 그대로 내보냅니다. 이 파일은 작업용 의존성만 적어둔 것으로, 배포되는 사이트에는 아무 영향이 없습니다.",
-  "dependencies": {
-    "framer-motion": "^13.2.0"
-  }
-}
