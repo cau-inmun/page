@@ -690,7 +690,7 @@
        무엇을 정확히 적어도 통과할 수 없었는데, 화면은 사람 탓을 했다.
 
      어떻게 보는가
-       학우가 겪는 예약 → 명단 기록 → 반납을 점검용 날짜(__check__)에
+       학우가 겪는 예약 → 명단 기록 → 반납을 점검용 날짜(rules-check)에
        그대로 한 번 돌려본다. 오늘 좌석표는 건드리지 않는다.
        셋 다 통과하면 지금 파일이 게시된 것이다 — 규칙은 통째로 게시되거나
        통째로 거부되므로, 한 부분이 살아 있으면 파일 전체가 살아 있다.
@@ -705,7 +705,10 @@
     const now = window.CORE.seoulNow();
     if (now.hour < 8 || now.hour >= 18) return { ok: false, reason: 'closed', hour: now.hour };
 
-    const day = '__check__';
+    /* 진짜 날짜(YYYY-MM-DD)와 겹치지 않으면서 Firestore 가 받아주는 이름이어야
+       한다. 처음에 '__check__' 로 지었다가 점검 자체가 실패했다 — 문서 ID 는
+       __…__ 모양을 쓸 수 없어서, 서버에 닿기도 전에 SDK 가 거부한다. */
+    const day = 'rules-check';
     const key = '1';
     const who = { name: '규칙점검', dept: '규칙점검', sid: '0' };
     const ref = (c) => seatPath(day).collection(c).doc(key);

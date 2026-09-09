@@ -1434,10 +1434,15 @@
       return;
     }
 
+    /* 무슨 오류였는지를 그대로 실어준다. 앞서 '막힌 곳: seat 단계' 만
+       보여주는 바람에, 정작 원인(문서 이름이 잘못됐다)이 가려져 한 번 더
+       돌아갔다. 모르는 오류일수록 원문을 보여줘야 한다. */
     const d = describeError({ code: r.reason, message: r.message });
     say('error', '점검하지 못했습니다. ', [
       d.title + d.text,
-      r.stage ? '막힌 곳: ' + r.stage + ' 단계' : ''
+      r.stage ? '막힌 곳: ' + r.stage + ' 단계' : '',
+      '오류 코드: ' + (r.reason || '(없음)'),
+      r.message ? '내용: ' + r.message : ''
     ]);
   }
 
