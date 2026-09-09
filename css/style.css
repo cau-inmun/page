@@ -54,11 +54,11 @@
   --shadow:    0 2px 10px rgba(78, 58, 32, .06), 0 1px 2px rgba(78, 58, 32, .04);
   --shadow-lg: 0 12px 32px rgba(78, 58, 32, .10), 0 2px 6px rgba(78, 58, 32, .05);
 
-  /* 글줄은 좁게, 격자는 넓게. 문단까지 넓히면 한 줄이 길어져 오히려
-     읽기 어렵고, 격자를 글줄 폭에 가두면 카드가 한 줄에 하나씩만 선다. */
+  /* 사이트 전체가 같은 폭을 쓴다. 홈만 860 으로 넓혔더니 상단바(760)보다
+     콘텐츠가 튀어나와, 페이지를 오갈 때 기준선이 흔들려 보였다.
+     격자는 이 폭 안에서도 3열이 나오므로 잃는 것이 없다. */
   --wrap: 560px;
   --wrap-wide: 760px;
-  --wrap-lg: 860px;
 
   /* 프리텐다드 하나로 통일한다.
      제목 · 본문은 물론 한글 · 영문 · 숫자가 전부 같은 글꼴이고,
@@ -493,23 +493,27 @@ html.brand-ready .topbar__name { visibility: visible; }
 @media (max-width: 420px) { .depts { grid-template-columns: 1fr; } }
 
 /* ---------- Footer ---------- */
+/* 푸터는 그라데이션의 끝, 완전한 남색 위에 놓인다.
+   배경을 칠하지 않고 글자만 밝게 둔다 — 칠하면 그라데이션과 만나는
+   자리에 선이 생긴다. */
 .footer {
   flex: none;
+  background: var(--navy-900);
   padding-bottom: max(40px, calc(28px + env(safe-area-inset-bottom)));
-  border-top: 1px solid var(--line);
-  background: rgba(255, 253, 249, .7);
+  border-top: 1px solid rgba(255, 255, 255, .12);
   padding: 30px 0 40px;
-  font-size: var(--text-xs); color: var(--ink-3); text-align: center;
+  font-size: var(--text-xs); color: #B6C6DA; text-align: center;
 }
 .footer__name {
   font-family: var(--font-display); font-size: var(--text-sm);
-  font-weight: 700; color: var(--ink-2); margin-bottom: 8px;
+  font-weight: 700; color: #FFFFFF; margin-bottom: 8px;
 }
 .footer p + p { margin-top: 4px; }
 .footer__links { display: flex; justify-content: center; gap: 14px; margin-top: 14px; }
-.footer__links a { color: var(--ink-3); font-weight: 600; }
-.footer__links a:hover { color: var(--brand-deep); }
-.footer__copy { margin-top: 16px; font-size: var(--text-2xs); color: var(--ink-3); opacity: .8; }
+.footer__links a { color: #CFDCEC; font-weight: 600; }
+.footer__links a:hover { color: #FFFFFF; }
+.footer__copy { margin-top: 16px; font-size: var(--text-2xs); color: #A2B4CA; }
+.footer__copy a { color: #C2D2E4; }
 
 /* ---------- Notice archive page ---------- */
 .filters {
@@ -771,25 +775,30 @@ button.seat--taken:hover:not([disabled]) { border-color: var(--brand-deep); }
    같은 구획 안의 항목들은 --i 만큼 차례로 들어온다 (계단식).
    --i 는 js 가 초기화할 때 한 번 매긴다 — 화면에 들어오는 순간에 세면
    하나씩 들어올 때는 늘 0 이 되어 계단이 생기지 않는다. */
-html.js .reveal { opacity: 0; }
+/* 올라오는 움직임에 transform 이 아니라 translate 를 쓴다.
+
+   왜 굳이 갈라놓는가
+     transform 으로 두면 .reveal.is-in { transform: none } 이 계속 걸려 있어
+     특정도가 낮은 .dept:hover 의 '살짝 들림' 을 덮어쓴다. 카드에 손을 얹어도
+     아무 일이 없던 것이 그 때문이었다.
+     그렇다고 animation + fill-mode: backwards 로 피하면 더 나쁘다. 그 구조는
+     '애니메이션이 실제로 돌아야만' 보이는 상태에 도달한다. 어떤 이유로든
+     애니메이션이 진행되지 않으면 시작 상태(투명)에 갇혀 내용이 영영 안 보인다.
+     실제로 그렇게 만들어 놓고 검사에서야 알았다.
+     translate 와 transform 은 따로 놀면서 함께 적용되는 별개의 속성이라,
+     진입은 translate 로 hover 는 transform 으로 나누면 둘 다 산다.
+     그리고 쉬는 상태가 opacity:1 · translate:0 이므로, 전환이 돌지 않아도
+     그냥 보이는 자리로 간다 — 안 보이는 쪽으로 실패하지 않는다. */
+html.js .reveal { opacity: 0; translate: 0 16px; }
 html.js .reveal.is-in {
-  opacity: 1;
-  animation: reveal-in var(--dur-2) var(--ease-out-expo) backwards;
-  animation-delay: calc(var(--i, 0) * var(--stagger));
-}
-/* transition 이 아니라 animation 으로, 그리고 fill-mode 는 backwards 다.
-   transition 으로 두었더니 다 들어온 뒤에도 .reveal.is-in { transform: none }
-   이 계속 걸려 있어서, 특정도가 낮은 .dept:hover 의 '살짝 들림' 을 덮어썼다.
-   카드에 손을 얹어도 아무 일이 없던 것이 그 때문이다.
-   backwards 는 계단으로 기다리는 동안에만 시작 상태를 붙들고, 끝난 뒤에는
-   손을 뗀다 — 그래서 hover 가 제 몫을 되찾는다. */
-@keyframes reveal-in {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  opacity: 1; translate: 0 0;
+  transition: opacity var(--dur-2) var(--ease-out-expo),
+              translate var(--dur-2) var(--ease-out-expo);
+  transition-delay: calc(var(--i, 0) * var(--stagger));
 }
 @media (prefers-reduced-motion: reduce) {
-  html.js .reveal { opacity: 1; }
-  html.js .reveal.is-in { animation: none; }
+  html.js .reveal { opacity: 1; translate: 0 0; }
+  html.js .reveal.is-in { transition: none; transition-delay: 0s; }
 }
 
 /* ---------- Admin (공지 작성 도구) ---------- */
@@ -1218,7 +1227,6 @@ a.draft__title:hover { color: var(--brand-deep); text-decoration: underline; tex
    섹션 리듬 (디자인 개선 2단계)
    ========================================================================== */
 .section { padding-block: var(--space-6); }
-.wrap--lg { max-width: var(--wrap-lg); }
 
 /* 글줄 길이 상한. 컨테이너는 넓혀도 문단은 좁게 둔다 —
    한 줄이 길면 다음 줄 첫 글자를 찾기가 어려워진다. */
@@ -1227,10 +1235,38 @@ a.draft__title:hover { color: var(--brand-deep); text-decoration: underline; tex
 /* 밝은 크림이 이어지다 한 번만 짙어지는 구간.
    페이지에 리듬을 주고 '이제 행동할 차례' 라는 신호가 된다.
    네이비를 넓게 쓰는 곳은 여기 하나뿐이다 — 여러 곳에 두면 크림 기조가 흐려진다. */
+/* 아래로 내려갈수록 남색이 되는 구간.
+
+   처음에는 .page 에 문서 높이 비례 그라데이션을 걸었는데, 마지막 콘텐츠가
+   86.3% 에서 끝나고 남색 구간이 87.5% 에서 시작해 램프를 놓을 자리가
+   50px 밖에 없었다. 억지로 위로 끌어올리니 링크 그룹 제목이 물든 배경
+   위에 놓여 대비가 3.60:1 로 떨어졌다 — 눈으로는 멀쩡해 보이던 곳이다.
+
+   그래서 배경에 겹치는 대신 흐름 안에 실제 구간을 둔다. 자리를 스스로
+   만들어 내므로 글자를 물들일 일이 없고, 페이지 길이와도 무관하다.
+   글자를 올리지 않는다 — 그러라고 만든 자리가 아니다. */
+.tonavy {
+  height: clamp(240px, 34vh, 420px);
+  /* 남색을 크림 위에 반투명으로 얹으면 중간이 탁한 회색이 된다 —
+     따뜻한 크림과 찬 남색을 곧장 섞으면 서로를 죽인다.
+     그래서 불투명한 색으로 잇되, 회색이 아니라 옅은 푸른색 쪽을 지나가게
+     길을 잡았다. 위 끝은 페이지 바탕색(--sand-tint)과 같은 값이라
+     이음매가 보이지 않는다. */
+  background: linear-gradient(180deg,
+    #FDFAF4   0%,
+    #F3F1F1  22%,
+    #DCE3ED  44%,
+    #9FB1CA  64%,
+    #5A6F92  80%,
+    #27395A  92%,
+    #101B30 100%);
+}
+
 .section--dark {
-  margin-top: var(--space-7);
-  padding-block: var(--space-8);
   background: var(--navy-900);
+  padding-block: var(--space-8);
+  /* 배경을 따로 칠하지 않는다. 이 자리쯤이면 .page 의 그라데이션이 이미
+     남색에 닿아 있어, 여기서 또 칠하면 경계선이 생긴다. */
   color: #EAF0F8;
   text-align: center;
 }
@@ -1285,56 +1321,6 @@ main:has(> .section--dark:last-child) { padding-bottom: 0; }
 }
 .hero__body { position: relative; z-index: 1; width: 100%; }
 @media (max-width: 760px) { .hero { min-height: 0; padding: var(--space-7) 0 var(--space-6); } }
-
-/* 3D 씬이 올라올 자리. 지금은 이 폴백만 보인다.
-   금지 목록에 따라 노이즈 · 안개 · 블러를 쓰지 않는다 —
-   경계가 또렷한 도형과 얕은 2색 그라디언트뿐이다. */
-.hero__scene {
-  position: absolute; inset: 0; z-index: 0; overflow: hidden;
-  pointer-events: none;
-}
-/* 도형을 퍼센트로 놓는다. SVG 뷰박스로 두었더니 화면 비율에 따라
-   가장자리에서 반쯤 잘려, 의도가 아니라 실수처럼 보였다.
-   퍼센트 배치는 어떤 비율에서도 같은 자리에 온다.
-   금지 목록대로 노이즈 · 안개 · 블러는 쓰지 않는다 — 경계가 또렷한
-   도형과 얕은 2색 그라디언트뿐이다. */
-.orb {
-  position: absolute; display: block;
-  border-radius: 50%;
-  will-change: transform;
-}
-.orb--1 { left:  6%; top: 16%; width: clamp(64px, 9vw, 116px); aspect-ratio: 1;
-          background: linear-gradient(140deg, #F8E9D4, #E4D0AE); opacity: .5; }
-.orb--2 { left: 15%; top: 62%; width: clamp(28px, 4vw, 52px);  aspect-ratio: 1;
-          background: linear-gradient(140deg, #CFE0F0, #A9C4E0); opacity: .5; }
-.orb--3 { left:  4%; top: 72%; width: clamp(48px, 6.5vw, 84px); aspect-ratio: 1;
-          border-radius: 30%;
-          background: linear-gradient(160deg, #FFFFFF, #F1DFC0); opacity: .85; }
-.orb--4 { right: 6%; top: 12%; width: clamp(72px, 10vw, 136px); aspect-ratio: 1;
-          background: linear-gradient(160deg, #FFFFFF, #F1DFC0); opacity: .85; }
-.orb--5 { right:17%; top: 56%; width: clamp(32px, 4.5vw, 62px); aspect-ratio: 1;
-          background: linear-gradient(140deg, #F8E9D4, #E4D0AE); opacity: .55; }
-.orb--6 { right: 5%; top: 78%; width: clamp(56px, 8vw, 118px); aspect-ratio: 3 / 1;
-          border-radius: 999px;
-          background: linear-gradient(120deg, #CFE0F0, #A9C4E0); opacity: .32; }
-
-/* 좁은 화면에서는 도형이 글자 바로 뒤로 몰린다. 읽기를 방해하지 않게 옅게 둔다. */
-@media (max-width: 760px) { .hero__scene { opacity: .45; } }
-
-/* 아주 느리게 위아래로만 움직인다. 회전이나 튕김은 쓰지 않는다 —
-   기준은 화려함이 아니라 차분함이다. */
-@media (prefers-reduced-motion: no-preference) {
-  .orb { animation: hero-bob 9s ease-in-out infinite alternate; }
-  .orb--2 { animation-duration: 11s; animation-delay: -3s; }
-  .orb--3 { animation-duration: 13s; animation-delay: -6s; }
-  .orb--4 { animation-duration: 10s; animation-delay: -2s; }
-  .orb--5 { animation-duration: 12s; animation-delay: -8s; }
-  .orb--6 { animation-duration: 14s; animation-delay: -5s; }
-}
-@keyframes hero-bob {
-  from { transform: translateY(-6px); }
-  to   { transform: translateY(6px); }
-}
 
 .hero__cta {
   display: flex; flex-wrap: wrap; justify-content: center;

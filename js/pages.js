@@ -307,6 +307,10 @@
         return;
       }
       list.forEach((n) => box.appendChild(el('li', null, [noticeCard(n)])));
+      /* 카드는 여기서 만들어진다. core 의 boot() 가 부르는 revealOnScroll()
+         은 그보다 먼저 돌아서 이 카드들을 못 본다. 부르지 않으면 카드가
+         흐린 채로 영영 남는다 — 실제로 그렇게 만들어 놓고 한동안 몰랐다. */
+      revealOnScroll(box);
     }
 
     render();
