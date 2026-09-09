@@ -582,6 +582,9 @@
       $$('.topbar__name--long').forEach((n) => { if (b.long) n.textContent = b.long; });
       $$('.topbar__name--short').forEach((n) => { if (b.short) n.textContent = b.short; });
     }
+    if (window.SITE && window.SITE.college) {
+      $$('.topbar__college').forEach((n) => { n.textContent = window.SITE.college; });
+    }
     fitBrandName();
   }
 
@@ -610,7 +613,10 @@
       const ics = getComputedStyle(inner);
       let avail = inner.clientWidth
                 - parseFloat(ics.paddingLeft) - parseFloat(ics.paddingRight);
-      if (nav) avail -= nav.getBoundingClientRect().width + gapOf(inner);
+      // 모바일의 하단 고정 메뉴는 상단바 너비를 차지하지 않는다.
+      if (nav && getComputedStyle(nav).position !== 'fixed') {
+        avail -= nav.getBoundingClientRect().width + gapOf(inner);
+      }
       if (mark) avail -= mark.getBoundingClientRect().width + gapOf(brand);
       avail -= 1;   // 반올림 여유
 
@@ -660,6 +666,22 @@
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(fitBrandName).catch(() => {});
     }
+  }
+
+  function watchHomeNavigation() {
+    if (document.body.dataset.page !== 'home') return;
+    const home = $('.nav a[href="./"]');
+    const links = $('.nav a[href="#links"]');
+    if (!home || !links) return;
+    const sync = () => {
+      const atLinks = location.hash === '#links';
+      home.toggleAttribute('aria-current', !atLinks);
+      if (!atLinks) home.setAttribute('aria-current', 'page');
+      links.toggleAttribute('aria-current', atLinks);
+      if (atLinks) links.setAttribute('aria-current', 'location');
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
   }
 
   /* ---------- 새 배포 스스로 받아오기 ----------
@@ -726,6 +748,7 @@
     }
     checkForUpdate();
     watchBrandFit();
+    watchHomeNavigation();
     stickyHeader();
     initLogos();
     revealOnScroll();

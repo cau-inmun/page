@@ -44,7 +44,8 @@ js/seats.js         열람실 좌석 예약
 js/admin.js         관리자 콘솔
 
 css/style.css       디자인 전체
-css/fonts.css       웹폰트 정의 (프리텐다드)
+css/redesign.css    공개 페이지의 모바일 디자인 (크림 · 네이비)
+css/fonts.css       웹폰트 정의 (프리텐다드 · 페이퍼로지)
 data/notices.json   공지 기본값 (Firebase 미연결 시 사용)
 firestore.rules     ★ Firestore 보안 규칙 — 반드시 배포할 것
                       붙여넣기 전 node docs/check-firestore-rules.js 로 점검
@@ -784,3 +785,7 @@ Realtime Database 는 지우지 않아도 되고, 안 쓰면 요금도 들지 �
 - 폼 오류는 `role="alert"` 로 안내하고, 첫 오류 항목으로 포커스를 옮깁니다.
 - 애니메이션은 `prefers-reduced-motion` 설정을 따릅니다.
 - 웹폰트는 `font-display: swap` 이라 글꼴 로딩이 본문 표시를 막지 않습니다.
+
+## 11. 모바일 디자인 변경본과 원본 백업
+
+2026-09-09 디자인 변경 내용과 복원 기준은 [디자인 변경 기록](docs/mobile-redesign.md)에 정리했습니다.
