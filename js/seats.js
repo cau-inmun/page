@@ -8,16 +8,23 @@
 (function () {
   'use strict';
 
-  const { $, el, toast, seoulNow, maskName, maskSid, describeError, errorBoxFor } = window.CORE;
+  const { $, $$, el, toast, seoulNow, maskName, maskSid, describeError, errorBoxFor } = window.CORE;
   const S = window.SITE;
   const ROOM = S.readingRoom || {};
 
-  const ROWS = ROOM.rowNames || ['A', 'B', 'C', 'D', 'E'];
-  const PER_ROW = ROOM.perRow || 12;
-  const AISLE = ROOM.aisleAfter || 0;
-  const TOTAL = ROWS.length * PER_ROW;
-  const OPEN = typeof ROOM.openHour === 'number' ? ROOM.openHour : 9;
-  const CLOSE = typeof ROOM.closeHour === 'number' ? ROOM.closeHour : 21;
+  const GRID = ROOM.grid || [];
+  const COLS = GRID.length ? GRID[0].length : 0;
+  const SEATS = GRID.reduce((a, row) => a.concat(row.filter((n) => n > 0)), []);
+  const TOTAL = SEATS.length;
+  const OPEN = typeof ROOM.openHour === 'number' ? ROOM.openHour : 8;
+  const CLOSE = typeof ROOM.closeHour === 'number' ? ROOM.closeHour : 18;
+  const SEAT_NOTES = ROOM.seatNotes || [];
+
+  /* 좌석 번호 → 그 자리에 붙는 안내들 */
+  const noteMap = {};
+  SEAT_NOTES.forEach((note, i) => {
+    (note.seats || []).forEach((n) => { (noteMap[n] = noteMap[n] || []).push(i); });
+  });
 
   const MINE_KEY = 'cau-inmun:my-seat';
 
@@ -27,8 +34,7 @@
   let timer = null;
 
   const two = (n) => String(n).padStart(2, '0');
-  const seatRow = (n) => ROWS[Math.floor((n - 1) / PER_ROW)];
-  const seatLabel = (n) => seatRow(n) + two(((n - 1) % PER_ROW) + 1) + ' (' + n + '번)';
+  const seatLabel = (n) => n + '번';
 
   /* 예약 시각도 한국 시각으로 적는다.
      브라우저 지역 설정을 따르면 해외에서 볼 때 엉뚱한 시각이 찍힌다. */
@@ -106,6 +112,23 @@
     const ul = $('[data-room-notes]');
     ul.innerHTML = '';
     (ROOM.notes || []).forEach((t) => ul.appendChild(el('li', { text: t })));
+
+    /* 좌석배치 특이사항 */
+    const sec = $('[data-seat-notes]');
+    const list = $('[data-seat-notes-list]');
+    list.innerHTML = '';
+    SEAT_NOTES.forEach((n) => { if (n.text) list.appendChild(el('li', { text: n.text })); });
+    sec.hidden = !list.children.length;
+
+    /* 점이 찍히는 안내는 좌석표 범례에도 올린다 */
+    const legend = $('[data-legend]');
+    $$('.legend--note', legend).forEach((x) => x.remove());
+    SEAT_NOTES.forEach((n) => {
+      if (!n.legend) return;
+      legend.appendChild(el('span', { class: 'legend legend--note' }, [
+        el('span', { class: 'legend__dot', 'aria-hidden': 'true' }), n.legend
+      ]));
+    });
   }
 
   /* ==========================================================
@@ -122,29 +145,45 @@
     const reset = !st.open && st.why === 'after';
     let taken = 0;
 
-    ROWS.forEach((rowName, ri) => {
-      const row = el('div', { class: 'seatrow' });
-      const note = (ROOM.rowNotes || {})[rowName];
-      row.appendChild(el('div', { class: 'seatrow__head' }, [
-        el('span', { class: 'seatrow__name', text: rowName + '열' }),
-        note ? el('span', { class: 'seatrow__note', text: note }) : null
-      ]));
+    const cols = `repeat(${COLS}, var(--seat-w))`;
+    /* '창문' 은 옆으로 밀어도 늘 보이도록 스크롤 영역 밖에 둔다 */
+    box.appendChild(el('p', { class: 'roomband roomband--window',
+      text: ROOM.topLabel || '창문' }));
 
-      const line = el('div', { class: 'seatrow__seats' });
-      for (let i = 1; i <= PER_ROW; i++) {
-        if (AISLE && i === AISLE + 1) {
-          line.appendChild(el('span', { class: 'seatrow__aisle', 'aria-hidden': 'true' }));
-        }
-        const n = ri * PER_ROW + i;
+    const map = el('div', { class: 'seatmap__scroll' });
+    const inner = el('div', { class: 'seatmap__room' });
+
+    const grid = el('div', { class: 'seatgrid', style: 'grid-template-columns:' + cols });
+    GRID.forEach((row) => {
+      row.forEach((n) => {
+        if (!n) { grid.appendChild(el('span', { class: 'seat-gap', 'aria-hidden': 'true' })); return; }
         const info = reset ? null : seats[String(n)];
         if (info) taken++;
-        line.appendChild(seatButton(n, info, st.open, mine && mine.seat === n));
-      }
-      row.appendChild(line);
-      box.appendChild(row);
+        grid.appendChild(seatButton(n, info, st.open, mine && mine.seat === n));
+      });
     });
+    inner.appendChild(grid);
 
-    box.appendChild(el('p', { class: 'seatmap__front', text: '↑ ' + (ROWS[0] || 'A') + '열 방향이 창가입니다' }));
+    /* 아래쪽 벽과 출입문 */
+    const doorCol = typeof ROOM.doorCol === 'number' ? ROOM.doorCol : -1;
+    const wall = el('div', { class: 'roomband roomband--wall', style: 'grid-template-columns:' + cols });
+    const wallText = ROOM.bottomLabel || '벽';
+    if (doorCol >= 0 && doorCol < COLS) {
+      if (doorCol > 0) wall.appendChild(el('span', { class: 'roomband__seg',
+        style: `grid-column: 1 / ${doorCol + 1}`, text: wallText }));
+      wall.appendChild(el('span', { class: 'roomband__seg roomband__seg--door',
+        style: `grid-column: ${doorCol + 1}`, text: '출입문' }));
+      if (doorCol < COLS - 1) wall.appendChild(el('span', { class: 'roomband__seg',
+        style: `grid-column: ${doorCol + 2} / -1`, text: wallText }));
+    } else {
+      wall.appendChild(el('span', { class: 'roomband__seg', style: 'grid-column: 1 / -1', text: wallText }));
+    }
+    inner.appendChild(wall);
+
+    map.appendChild(inner);
+    box.appendChild(map);
+    box.appendChild(el('p', { class: 'seatmap__hint',
+      text: '좌석표가 화면보다 넓으면 옆으로 밀어서 보세요.' }));
 
     $('[data-seat-count]').textContent = reset
       ? '오늘 이용이 끝났습니다 · 좌석 ' + TOTAL + '석'
@@ -153,7 +192,11 @@
   }
 
   function seatButton(n, info, roomOpen, isMine) {
-    const label = seatRow(n) + two(((n - 1) % PER_ROW) + 1);
+    const marks = noteMap[n] || [];
+    const noteText = marks.map((i) => SEAT_NOTES[i].legend)
+                          .filter(Boolean).join(' · ');
+    const dot = marks.some((i) => SEAT_NOTES[i].legend)
+      ? el('span', { class: 'seat__dot', 'aria-hidden': 'true' }) : null;
 
     if (info) {
       /* 예약된 자리 — 색만으로 구분하지 않도록 글자로도 알린다.
@@ -165,10 +208,12 @@
         disabled: roomOpen ? null : '',
         'aria-label': seatLabel(n) + ' 예약됨 · ' +
           (info.nameMasked || '') + ' ' + (info.sidHead || '') +
+          (noteText ? ' · ' + noteText : '') +
           (roomOpen ? ' · 반납하거나 취소하려면 누르세요' : ''),
         onclick: () => openRelease(n)
       }, [
-        el('span', { class: 'seat__no', text: label }),
+        dot,
+        el('span', { class: 'seat__no', text: String(n) }),
         el('span', { class: 'seat__who', text: info.nameMasked || '예약됨' }),
         el('span', { class: 'seat__sid', text: info.sidHead || '' })
       ]);
@@ -178,10 +223,12 @@
       type: 'button',
       class: 'seat seat--free',
       disabled: roomOpen ? null : '',
-      'aria-label': seatLabel(n) + ' 빈 자리' + (roomOpen ? ' · 눌러서 예약' : ' · 지금은 예약할 수 없습니다'),
+      'aria-label': seatLabel(n) + ' 빈 자리' + (noteText ? ' · ' + noteText : '') +
+        (roomOpen ? ' · 눌러서 예약' : ' · 지금은 예약할 수 없습니다'),
       onclick: () => openForm(n)
     }, [
-      el('span', { class: 'seat__no', text: label }),
+      dot,
+      el('span', { class: 'seat__no', text: String(n) }),
       el('span', { class: 'seat__free', text: '빈 자리' })
     ]);
   }

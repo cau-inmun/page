@@ -578,6 +578,7 @@
       }
       box.classList.add('is-hidden');
     });
+    $$('.topbar__name').forEach((box) => box.classList.add('is-ready'));
   }
 
   /* 글자가 실제로 몇 px 인지. 화면 밖에 같은 글꼴로 한 번 그려 재는 방식이라
@@ -666,6 +667,9 @@
        저장된 설정을 불러온 뒤 한 번 더 덮어쓴다.
        STORE.init() 안에서 관리자가 저장한 이름을 가져오기 때문에,
        이 두 번째 호출이 없으면 상단바가 계속 기본값으로 남는다. */
+    /* 지난번에 받아둔 사이트 정보를 먼저 입혀 깜빡임을 없앤다.
+       그다음 config.js 기본값 → 저장된 값 순서로 그린다. */
+    if (window.STORE && STORE.applyCachedSite) STORE.applyCachedSite();
     applyBrand();
     if (window.STORE) {
       STORE.init().then(applyBrand).catch(() => {});

@@ -19,7 +19,8 @@
     forms: 'cau-inmun:forms',
     submissions: 'cau-inmun:submissions',
     notices: 'cau-inmun:notices',
-    seats: 'cau-inmun:seats'
+    seats: 'cau-inmun:seats',
+    siteCache: 'cau-inmun:site-cache'
   };
 
   let mode = 'local';          // 'local' | 'firebase'
@@ -191,6 +192,22 @@
     'quickLinks', 'about', 'contact', 'categories', 'departments', 'consentText'
   ];
 
+  function applySite(stored) {
+    if (!stored || !window.SITE) return;
+    SITE_KEYS.forEach((k) => {
+      if (stored[k] !== undefined && stored[k] !== null) window.SITE[k] = stored[k];
+    });
+  }
+
+  /* 지난번에 받아둔 사이트 정보를 곧바로 입힌다.
+     서버에 물어보는 동안 js/config.js 의 기본값이 잠깐 보였다가 바뀌면,
+     상단바 이름 같은 것이 눈에 띄게 깜빡인다. 저장해둔 값을 먼저 입히면
+     그 깜빡임이 없어지고, 잠시 뒤 서버 값으로 조용히 맞춰진다.
+     화면을 그리기 전에 끝나야 하므로 통신 없이 바로 읽는다. */
+  function applyCachedSite() {
+    try { applySite(lsGet(KEY.siteCache, null)); } catch (e) { /* 무시 */ }
+  }
+
   async function loadSite() {
     let stored = null;
     try {
@@ -203,10 +220,11 @@
     } catch (e) {
       console.warn('[store] 사이트 정보를 불러오지 못해 기본값을 씁니다.', e);
     }
-    if (stored && window.SITE) {
-      SITE_KEYS.forEach((k) => {
-        if (stored[k] !== undefined && stored[k] !== null) window.SITE[k] = stored[k];
-      });
+    if (stored) {
+      applySite(stored);
+      const keep = {};
+      SITE_KEYS.forEach((k) => { if (stored[k] !== undefined && stored[k] !== null) keep[k] = stored[k]; });
+      lsSet(KEY.siteCache, keep);
     }
     return window.SITE;
   }
@@ -223,6 +241,7 @@
       lsSet(KEY.site, body);
     }
     SITE_KEYS.forEach((k) => { if (body[k] !== undefined) window.SITE[k] = body[k]; });
+    lsSet(KEY.siteCache, Object.assign(lsGet(KEY.siteCache, {}) || {}, body));
     return true;
   }
 
@@ -664,7 +683,7 @@
     get isFirebase() { return mode === 'firebase'; },
     configured,
     auth: auth$,
-    getSite, saveSite, loadSite,
+    getSite, saveSite, loadSite, applyCachedSite,
     getLinks, saveLinks,
     getForms, getForm, saveForm, deleteForm,
     submit, listSubmissions, deleteSubmission, testSheet,

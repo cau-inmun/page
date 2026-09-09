@@ -15,14 +15,18 @@
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary">
 
-<link rel="icon" href="assets/favicon.png?v=20260908i" type="image/png">
-<link rel="apple-touch-icon" href="assets/logo.png?v=20260908i">
+<link rel="icon" href="assets/favicon.png?v=20260909a" type="image/png">
+<link rel="apple-touch-icon" href="assets/logo.png?v=20260909a">
 <link rel="canonical" href="./">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="css/fonts.css?v=20260908i">
-<script>document.documentElement.classList.add('js');</script>
-<link rel="stylesheet" href="css/style.css?v=20260908i">
+<link rel="stylesheet" href="css/fonts.css?v=20260909a">
+<script>document.documentElement.classList.add('js');
+/* 상단바 이름은 저장된 값이 정해질 때까지 자리만 잡아둔다.
+   먼저 html 에 적힌 기본 이름이 한 프레임 보였다가 바뀌는 게 눈에 띄었다.
+   js 가 어떤 이유로든 못 돌면 1.5초 뒤에는 그냥 보여준다. */
+setTimeout(function(){document.documentElement.classList.add('brand-ready');},1500);</script>
+<link rel="stylesheet" href="css/style.css?v=20260909a">
 </head>
 
 <body data-page="home">
@@ -33,7 +37,7 @@
   <header class="topbar">
     <div class="wrap wrap--wide topbar__inner">
       <a class="topbar__brand" href="./">
-        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260908i" alt="" width="900" height="673"></span>
+        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260909a" alt="" width="900" height="673"></span>
         <span class="topbar__name"><span class="topbar__name--long">중앙대학교 제15대 인문대학 학생회 ‘연(聯)’</span><span class="topbar__name--short">제15대 학생회 ‘연(聯)’</span></span>
       </a>
       <nav class="nav" aria-label="주요 메뉴">
@@ -52,7 +56,7 @@
     <!-- ================= HERO ================= -->
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero__logo" data-logo>
-        <img src="assets/logo.png?v=20260908i" alt="중앙대학교 인문대학 제15대 학생회 ‘연’ 로고" width="1080" height="1080" fetchpriority="high">
+        <img src="assets/logo.png?v=20260909a" alt="중앙대학교 인문대학 제15대 학생회 ‘연’ 로고" width="1080" height="1080" fetchpriority="high">
       </div>
       <p class="hero__eyebrow" data-site="college">중앙대학교 인문대학</p>
       <h1 class="hero__title" id="hero-title">
@@ -115,10 +119,10 @@
 </div>
 
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script src="js/config.js?v=20260908i"></script>
-<script src="js/firebase-config.js?v=20260908i"></script>
-<script src="js/core.js?v=20260908i"></script>
-<script src="js/store.js?v=20260908i"></script>
-<script src="js/pages.js?v=20260908i"></script>
+<script src="js/config.js?v=20260909a"></script>
+<script src="js/firebase-config.js?v=20260909a"></script>
+<script src="js/core.js?v=20260909a"></script>
+<script src="js/store.js?v=20260909a"></script>
+<script src="js/pages.js?v=20260909a"></script>
 </body>
 </html>
