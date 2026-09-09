@@ -9,7 +9,7 @@
 
   const { $, $$, el, toast, tagEl, renderMarkdown, formatDate, formatDateTime,
           toLocalInput, fromLocalInput, noticeStatus, formStatus, formVisibility,
-          plainText, seoulNow, errorBoxFor } = window.CORE;
+          plainText, seoulNow, errorBoxFor, describeError } = window.CORE;
   const S = window.SITE;
 
   let notices = [], forms = [], linkGroups = [], subs = [];
@@ -1364,6 +1364,83 @@
     ]));
   }
 
+  /* 보안 규칙이 실제로 게시됐는지 점검한다.
+
+     이 단추가 있는 이유
+       규칙 파일에 잘못이 있으면 콘솔은 게시하지 않고 옛 규칙을 그대로 둔다.
+       붙여넣고 게시를 눌러도 화면에는 티가 안 나서, 한동안 학우들이 자리를
+       반납할 때마다 '적으신 내용과 다릅니다' 를 봤다. 무엇을 정확히 적어도
+       통과할 수 없었는데, 사람 탓처럼 보였다. 그래서 사람이 눈으로 확인하는
+       대신 서버에 직접 물어보게 했다. */
+  async function checkRules() {
+    const box = $('#rules-result');
+    const btn = $('#rules-test');
+    box.hidden = false;
+    box.className = 'banner';
+    box.style.marginBottom = '14px';
+    box.textContent = '서버에 물어보는 중…';
+    btn.disabled = true;
+
+    const r = await STORE.probeSeatRules();
+    btn.disabled = false;
+    box.innerHTML = '';
+
+    const say = (kind, title, lines) => {
+      box.className = 'banner' + (kind ? ' banner--' + kind : '');
+      box.style.marginBottom = '14px';
+      box.append(el('strong', { text: title }));
+      lines.filter(Boolean).forEach((t) => box.append(el('br'), document.createTextNode(t)));
+    };
+
+    if (r.ok) {
+      say('ok', '보안 규칙이 최신입니다. ', [
+        '점검용 날짜에서 예약 → 명단 기록 → 반납까지 서버가 실제로 받아줬습니다.',
+        '규칙은 통째로 게시되거나 통째로 거부되므로, 이만큼 통과했다면 파일 전체가 살아 있습니다.',
+        '점검에 쓴 기록은 지웠고, 오늘 좌석표는 건드리지 않았습니다.'
+      ]);
+      return;
+    }
+
+    if (r.reason === 'preview') {
+      say('', '미리보기 모드라 점검할 수 없습니다. ', [
+        '이 브라우저에만 저장되는 상태여서 서버에 물어볼 것이 없습니다.',
+        'Firebase 에 연결된 상태로 로그인한 뒤 눌러주세요.'
+      ]);
+      return;
+    }
+
+    if (r.reason === 'closed') {
+      say('', '지금은 점검할 수 없습니다. ', [
+        '규칙이 개방 시간(한국 08:00~18:00)을 따지기 때문에, 그 밖에서는 ' +
+        '거부돼도 규칙이 옛것이어서인지 시간 때문인지 가릴 수 없습니다.',
+        '지금 한국 시각으로 ' + r.hour + '시입니다. 개방 시간 안에 다시 눌러주세요.'
+      ]);
+      return;
+    }
+
+    if (r.reason === 'permission-denied') {
+      const WHERE = {
+        seat: '좌석을 잡는 첫 단계',
+        log: '명단에 기록하는 단계 (전화번호 칸이 규칙에 없을 때 여기서 막힙니다)',
+        release: '반납하는 단계 — 학우들이 실제로 막히던 바로 그 지점입니다'
+      };
+      say('error', '옛 보안 규칙이 아직 돌고 있습니다. ', [
+        '막힌 곳: ' + (WHERE[r.stage] || r.stage),
+        '이 저장소의 firestore.rules 를 Firestore → 규칙 탭에 붙여넣고 게시해 주세요.',
+        '게시 버튼을 누른 뒤 오류 없이 게시됐는지 눈으로 확인하셔야 합니다 — ' +
+        '잘못된 규칙은 게시되지 않고 옛 규칙이 그대로 남습니다.',
+        '붙여넣기 전에 node docs/check-firestore-rules.js 로 파일을 먼저 검사할 수 있습니다.'
+      ]);
+      return;
+    }
+
+    const d = describeError({ code: r.reason, message: r.message });
+    say('error', '점검하지 못했습니다. ', [
+      d.title + d.text,
+      r.stage ? '막힌 곳: ' + r.stage + ' 단계' : ''
+    ]);
+  }
+
   /* 화면에는 '반납' 과 '자리 변경' 두 가지만 있다.
      서버에는 규칙이 받아주는 'return' / 'cancel' 로 저장되고,
      'cancel' 이 자리 변경을 뜻한다 (규칙을 다시 배포하지 않으려는 선택). */
@@ -1442,6 +1519,7 @@
     $('#sub-csv').addEventListener('click', exportCsv);
     $('#sub-refresh').addEventListener('click', () => { loadSubs(); toast('새로고침했습니다'); });
     $('#sheet-test').addEventListener('click', checkSheet);
+    $('#rules-test').addEventListener('click', checkRules);
     $('#seat-date').value = seoulNow().date;
     $('#seat-date').addEventListener('change', loadSeats);
     $('#seat-today').addEventListener('click', () => {

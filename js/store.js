@@ -680,6 +680,61 @@
     return true;
   }
 
+  /* 관리자용 — 보안 규칙이 실제로 게시됐는지 서버에 물어본다.
+
+     왜 필요한가
+       규칙 파일에 잘못이 있으면 콘솔은 게시하지 않고 옛 규칙을 그대로 둔다.
+       화면에는 아무 표시도 없어서 '분명히 배포했는데 안 된다' 가 된다.
+       실제로 그 일이 났다 — 함수 두 개가 지워진 채로 오래갔고, 그동안
+       학우들은 자리를 반납할 때마다 '적으신 내용과 다릅니다' 를 봤다.
+       무엇을 정확히 적어도 통과할 수 없었는데, 화면은 사람 탓을 했다.
+
+     어떻게 보는가
+       학우가 겪는 예약 → 명단 기록 → 반납을 점검용 날짜(__check__)에
+       그대로 한 번 돌려본다. 오늘 좌석표는 건드리지 않는다.
+       셋 다 통과하면 지금 파일이 게시된 것이다 — 규칙은 통째로 게시되거나
+       통째로 거부되므로, 한 부분이 살아 있으면 파일 전체가 살아 있다.
+
+     한계
+       규칙이 개방 시간을 따지므로 08~18시(한국) 안에서만 볼 수 있다.
+       관리자로 지우는 길(isAdmin)이 먼저 통과해버려서, 학우가 스스로
+       지우는 길(releasedAfterBooking)까지 이 방법으로 확인하지는 못한다. */
+  async function probeSeatRules() {
+    if (mode !== 'firebase') return { ok: false, reason: 'preview' };
+
+    const now = window.CORE.seoulNow();
+    if (now.hour < 8 || now.hour >= 18) return { ok: false, reason: 'closed', hour: now.hour };
+
+    const day = '__check__';
+    const key = '1';
+    const who = { name: '규칙점검', dept: '규칙점검', sid: '0' };
+    const ref = (c) => seatPath(day).collection(c).doc(key);
+    const stamp = () => firebase.firestore.FieldValue.serverTimestamp();
+
+    const done = [];
+    let stage = 'seat';
+    try {
+      await ref('seats').set({ seat: 1, nameMasked: '', sidHead: '', createdAt: stamp() });
+      done.push('seat');
+      stage = 'log';
+      await ref('logs').set(Object.assign({ seat: 1, tel: '0' }, who, { createdAt: stamp() }));
+      done.push('log');
+      stage = 'release';
+      await ref('releases').set(Object.assign({ seat: 1, kind: 'return' }, who, { createdAt: stamp() }));
+      done.push('release');
+      return { ok: true, done: done };
+    } catch (err) {
+      console.warn('[규칙 점검] ' + stage + ' 단계에서 막혔습니다.', err);
+      return { ok: false, reason: (err && err.code) || 'error', stage: stage,
+               done: done, message: err && err.message };
+    } finally {
+      /* 점검 흔적을 치운다. 중간에 막혀 아무것도 안 남았어도 그만이다. */
+      for (const c of ['releases', 'logs', 'seats']) {
+        try { await ref(c).delete(); } catch (e) { /* 없으면 넘어간다 */ }
+      }
+    }
+  }
+
   /* ---------- 공지 ---------- */
   /* 공지는 전부 가져오고, 예약·보관 판정은 화면에서 한다.
      (예전에는 where('publishAt','<=',now) 로 서버에서 걸렀는데,
@@ -765,6 +820,6 @@
     submit, listSubmissions, deleteSubmission, testSheet,
     getNotices, saveNotice, deleteNotice, replaceNotices,
     getSeats, reserveSeat, releaseSeat, listSeatLogs, listSeatReleases,
-    listOrphanSeats, cancelSeat
+    listOrphanSeats, cancelSeat, probeSeatRules
   };
 })();

@@ -39,7 +39,7 @@
        화면에는 권한 문제처럼 보인다. 실제로 그렇게 헤맨 적이 있어
        Firebase 를 보기도 전에 이것부터 짚는다. */
     const NEED = ['getSeats', 'reserveSeat', 'releaseSeat', 'listSeatLogs',
-                  'listSeatReleases', 'cancelSeat'];
+                  'listSeatReleases', 'cancelSeat', 'probeSeatRules'];
     const mine = (window.SITE && window.SITE.APP_VERSION) || '(없음)';
     let latest = '';
     try {
