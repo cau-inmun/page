@@ -310,8 +310,9 @@
 
     const btn = $('#r-submit');
     btn.disabled = true; btn.textContent = '예약하는 중…';
+    let outcome = true;
     try {
-      await STORE.reserveSeat(today, picking, { name: name, dept: dept, sid: sid, tel: tel });
+      outcome = await STORE.reserveSeat(today, picking, { name: name, dept: dept, sid: sid, tel: tel });
     } catch (e) {
       btn.disabled = false; btn.textContent = '이 자리로 예약하기';
       if (e && e.code === 'taken') {
@@ -324,7 +325,7 @@
     }
 
     const booked = { date: today, seat: picking, name: name, dept: dept, sid: sid, tel: tel,
-                     at: new Date().toISOString() };
+                     at: new Date().toISOString(), noLog: outcome === 'no-log' };
     rememberBooking(booked);
     $('[data-seat-form]').hidden = true;
     $('[data-seat-form]').innerHTML = '';
@@ -396,6 +397,17 @@
     if (!name || !dept || !sid) return fail(err, '이름 · 학과 · 학번을 모두 넣어주세요.');
     err.hidden = true;
 
+    /* 서버가 거부하는 이유는 여러 가지인데 화면에는 하나로만 보였다.
+       미리 알 수 있는 것은 여기서 갈라 정확히 알려준다. */
+    if (!roomState().open) {
+      renderHead();
+      return fail(err, '지금은 개방 시간이 아닙니다. ' + two(OPEN) + ':00~' + two(CLOSE) + ':00 에만 비울 수 있습니다.');
+    }
+    if (!seats[String(n)]) {
+      await refresh();
+      return fail(err, '이미 비워진 자리입니다.');
+    }
+
     const btns = [$('#x-return'), $('#x-cancel')];
     btns.forEach((b) => { b.disabled = true; });
     $(kind === 'cancel' ? '#x-cancel' : '#x-return').textContent = word + '하는 중…';
@@ -407,7 +419,17 @@
       $('#x-return').textContent = '반납하기';
       $('#x-cancel').textContent = '예약 취소하기';
       if (e && e.code === 'mismatch') {
-        return fail(err, '예약할 때 적으신 내용과 다릅니다. 이름 · 학과 · 학번을 다시 확인해 주세요.');
+        err.hidden = false;
+        err.innerHTML = '';
+        err.append(
+          '예약할 때 적으신 ',
+          el('strong', { text: '이름 · 학과 · 학번' }),
+          ' 과 달라 비울 수 없습니다. 셋 다 똑같아야 합니다 (전화번호는 확인하지 않습니다).',
+          el('br'),
+          '그대로 넣으셨는데도 안 되면 예약 정보가 서버에 저장되지 않은 경우입니다. ' +
+          '학생회에 좌석 번호를 알려주시면 비워드립니다.'
+        );
+        return;
       }
       console.error(e);
       const d = describeError(e);
@@ -458,6 +480,10 @@
         el('button', { type: 'button', class: 'btn', text: '자리 반납 · 예약 취소',
           onclick: () => openRelease(b.seat) })
       ]),
+      b.noLog ? el('p', { class: 'field__error', style: 'margin-top:12px' }, [
+        el('strong', { text: '예약 정보가 서버에 저장되지 않았습니다. ' }),
+        '자리는 잡혔지만 스스로 반납 · 취소할 수 없습니다. 학생회에 알려주세요.'
+      ]) : null,
       el('p', { class: 'ticket__foot',
         text: '이 화면은 캡처해 두시면 좋습니다. 자리를 비울 때는 위 단추를 누르고 ' +
               '예약할 때 적으신 이름 · 학과 · 학번을 그대로 넣어주세요.' })

@@ -1259,7 +1259,7 @@
      좌석표에 실리는 것은 가린 이름과 학번 앞 5자리뿐이라,
      누가 어느 자리에 앉았는지는 이 표에서만 확인할 수 있다.
      ========================================================== */
-  let seatLogs = [], seatReleases = [];
+  let seatLogs = [], seatReleases = [], seatOrphans = [];
 
   function seatDay() {
     const v = $('#seat-date').value;
@@ -1271,10 +1271,10 @@
     box.innerHTML = '<div class="skeleton" style="height:120px"></div>';
     try {
       const day = seatDay();
-      const [logs, rels] = await Promise.all([
-        STORE.listSeatLogs(day), STORE.listSeatReleases(day)
+      const [logs, rels, orphans] = await Promise.all([
+        STORE.listSeatLogs(day), STORE.listSeatReleases(day), STORE.listOrphanSeats(day)
       ]);
-      seatLogs = logs; seatReleases = rels;
+      seatLogs = logs; seatReleases = rels; seatOrphans = orphans;
     } catch (err) {
       console.error(err);
       box.innerHTML = '';
@@ -1284,6 +1284,7 @@
       $('#seat-rel-count').textContent = '';
       return;
     }
+    renderOrphans();
     renderSeats();
     renderSeatReleases();
   }
@@ -1333,6 +1334,34 @@
     });
     table.appendChild(tbody);
     box.appendChild(el('div', { class: 'table-wrap' }, [table]));
+  }
+
+  /* 좌석표에는 잡혀 있는데 명단에 기록이 없는 자리.
+     예약 순간 기록 쓰기가 막히면 생긴다 (보안 규칙이 예전 것이었다든지).
+     그 자리는 학우가 스스로 반납 · 취소할 수 없으므로 여기서 치워줘야 한다. */
+  function renderOrphans() {
+    const box = $('#seat-orphan');
+    box.innerHTML = '';
+    box.hidden = !seatOrphans.length;
+    if (!seatOrphans.length) return;
+
+    box.appendChild(el('div', { class: 'banner banner--error', style: 'margin-bottom:14px' }, [
+      el('strong', { text: '기록이 없는 자리가 ' + seatOrphans.length + '곳 있습니다. ' }),
+      '좌석표에는 잡혀 있는데 누가 앉았는지가 저장되지 않았습니다. ',
+      '그 자리는 학우가 스스로 반납 · 취소할 수 없으니 여기서 비워주세요.',
+      el('div', { style: 'margin-top:10px; display:flex; gap:8px; flex-wrap:wrap' },
+        seatOrphans.map((o) => el('button', {
+          type: 'button', class: 'btn',
+          text: o.id + '번 비우기' + (o.nameMasked ? ' (' + o.nameMasked + ')' : ''),
+          onclick: async () => {
+            if (!confirm(`${o.id}번 자리를 비울까요?`)) return;
+            try { await STORE.cancelSeat(seatDay(), o.id); }
+            catch (e) { console.error(e); toast('비우지 못했습니다'); return; }
+            await loadSeats();
+            toast(o.id + '번 자리를 비웠습니다');
+          }
+        })))
+    ]));
   }
 
   const RELEASE_WORD = { return: '반납', cancel: '취소' };

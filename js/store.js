@@ -494,12 +494,16 @@
         throw err;
       }
       /* 좌석을 먼저 잡고 기록을 남긴다. 순서가 반대면 자리를 못 잡았는데
-         기록만 남는다. 기록 쪽이 실패해도 예약 자체는 유효하다. */
+         기록만 남는다. 기록 쪽이 실패해도 예약 자체는 유효하다.
+         다만 그 자리는 학우가 스스로 비울 수 없게 된다 — 비우기 확인이
+         이 기록을 대조하기 때문이다. 그래서 실패를 조용히 넘기지 않고
+         화면까지 알린다 (예전에 이걸 콘솔에만 남겼다가 원인을 못 찾았다). */
       try {
         await seatPath(day).collection('logs').doc(key).set(
           Object.assign({}, full, { createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
       } catch (e) {
         console.warn('[열람실] 좌석은 잡혔지만 명단 기록에 실패했습니다.', e);
+        return 'no-log';
       }
       return true;
     }
@@ -584,10 +588,27 @@
       list = snap.docs.map((d) => Object.assign({ id: d.id }, d.data(),
                                 { createdAt: tsToIso(d.data().createdAt) }));
     } else {
+      /* 미리보기 모드는 공개용과 명단을 한 곳에 담는다.
+         이름이 없는 기록은 서버에서 명단 쓰기가 막힌 경우에 해당하므로
+         (실제 모드에서 logs 문서가 없는 것과 같다) 명단에서 뺀다. */
       const dayMap = (lsGet(KEY.seats, {}) || {})[day] || {};
-      list = Object.keys(dayMap).map((k) => Object.assign({ id: k }, dayMap[k]));
+      list = Object.keys(dayMap)
+        .filter((k) => dayMap[k] && dayMap[k].name)
+        .map((k) => Object.assign({ id: k }, dayMap[k]));
     }
     return list.sort((a, b) => (a.seat || 0) - (b.seat || 0));
+  }
+
+  /* 관리자용 — 좌석표에는 잡혀 있는데 명단에 기록이 없는 자리.
+     예약 순간 기록 쓰기가 막히면 이런 자리가 생기고, 학우가 스스로 비울 수
+     없게 된다. 관리자가 찾아서 치울 수 있도록 따로 알려준다. */
+  async function listOrphanSeats(day) {
+    const [taken, logs] = await Promise.all([getSeats(day), listSeatLogs(day)]);
+    const known = new Set(logs.map((l) => String(l.seat || l.id)));
+    return Object.keys(taken)
+      .filter((k) => !known.has(k))
+      .map((k) => Object.assign({ id: k }, taken[k]))
+      .sort((a, b) => Number(a.id) - Number(b.id));
   }
 
   /* 관리자용 — 자리 비우기 */
@@ -688,6 +709,7 @@
     getForms, getForm, saveForm, deleteForm,
     submit, listSubmissions, deleteSubmission, testSheet,
     getNotices, saveNotice, deleteNotice, replaceNotices,
-    getSeats, reserveSeat, releaseSeat, listSeatLogs, listSeatReleases, cancelSeat
+    getSeats, reserveSeat, releaseSeat, listSeatLogs, listSeatReleases,
+    listOrphanSeats, cancelSeat
   };
 })();
