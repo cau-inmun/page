@@ -979,7 +979,8 @@
         textField('기수', d.councilTerm, '예) 제15대 학생회', (v) => { d.councilTerm = v; }),
         textField('학생회 이름', d.councilName, '예) 연', (v) => { d.councilName = v; })
       ]),
-      textField('한 줄 소개', d.tagline, '홈 제목 아래 문구', (v) => { d.tagline = v; }),
+      textField('홈 대표 문구', d.tagline, '줄을 바꾸면 홈 화면에도 그대로 반영됩니다.',
+        (v) => { d.tagline = v; }, { multiline: true }),
       textField('공유 미리보기 문구', d.description,
         '카카오톡 · 검색 결과에 나오는 설명', (v) => { d.description = v; }, { multiline: true })
     ]));
@@ -1048,7 +1049,7 @@
     drawMissing();
     box.appendChild(el('div', { class: 'editor-group' }, [
       el('p', { class: 'schedule__title', text: '상단 빠른 버튼' }),
-      el('p', { class: 'schedule__hint', text: '홈 로고 아래 동그란 버튼들입니다. 주소를 비우면 ‘준비 중’ 으로 보입니다.' }),
+      el('p', { class: 'schedule__hint', text: '홈 대표 문구 아래의 바로가기입니다. 주소를 비우면 ‘준비 중’ 으로 보입니다.' }),
       missingBox,
       quickBox
     ]));

@@ -67,15 +67,25 @@
   /* ==========================================================
      1) 홈
      ========================================================== */
+  function renderTagline() {
+    const title = $('[data-site="tagline"]');
+    if (!title || !S.tagline) return;
+    // Keep the council's two-line slogan even when the saved value has no newline.
+    // Other slogans still respect line breaks entered in the site editor.
+    const value = S.tagline.trim().replace(/학문을\s*잇다,\s*인문의\s*가치를\s*잇다/, '학문을 잇다,\n인문의 가치를 잇다');
+    title.replaceChildren(...value.split(/\r?\n/).filter((line) => line.trim()).map((line) =>
+      el('span', { class: 'welcome__line', text: line.trim() })));
+  }
+
   async function initHome() {
+    renderTagline();
     renderQuickLinks();
     /* 저장된 사이트 정보를 먼저 반영한다 (없으면 config.js 기본값) */
     if (window.STORE) { try { await STORE.init(); } catch (e) {} }
 
     /* 기본 텍스트 */
-    const setText = (sel, value) => { const n = $(sel); if (n && value) n.textContent = value; };
     $$('[data-site="college"]').forEach((n) => { n.textContent = S.college; });
-    setText('[data-site="tagline"]', S.tagline);
+    renderTagline();
     $$('[data-site="council"]').forEach((n) => { n.textContent = S.councilTerm; });
     $$('[data-site="name"]').forEach((n) => { n.textContent = S.councilName; });
     document.title = `${S.college} ${S.councilTerm} ‘${S.councilName}’`;
@@ -93,9 +103,9 @@
         catch (err) { console.warn('[링크] 서버에서 불러오지 못해 기본값을 씁니다.', err); }
       }
       linkWrap.innerHTML = '';
-      groups.forEach((g) => {
-        linkWrap.appendChild(el('div', { class: 'linkgroup reveal' }, [
-          el('h3', { class: 'linkgroup__title', text: g.group }),
+      groups.forEach((g, i) => {
+        linkWrap.appendChild(el('section', { class: 'linkgroup reveal', 'aria-labelledby': `link-group-${i}` }, [
+          el('h2', { class: 'directory-title linkgroup__title', id: `link-group-${i}`, text: g.group }),
           el('ul', { class: 'links' }, g.items.map((it) => el('li', null, [linkButton(it)])))
         ]));
       });
