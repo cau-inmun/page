@@ -15,22 +15,22 @@
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary">
 
-<link rel="icon" href="assets/favicon.png?v=20260911i" type="image/png">
-<link rel="apple-touch-icon" href="assets/logo.png?v=20260911i">
+<link rel="icon" href="assets/favicon.png?v=20260911j" type="image/png">
+<link rel="apple-touch-icon" href="assets/logo.png?v=20260911j">
 <link rel="canonical" href="./">
 
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="stylesheet" href="css/fonts.css?v=20260911i">
+<link rel="stylesheet" href="css/fonts.css?v=20260911j">
 <script>document.documentElement.classList.add('js');
 /* 상단바 이름은 저장된 값이 정해질 때까지 자리만 잡아둔다.
    먼저 html 에 적힌 기본 이름이 한 프레임 보였다가 바뀌는 게 눈에 띄었다.
    js 가 어떤 이유로든 못 돌면 1.5초 뒤에는 그냥 보여준다. */
 setTimeout(function(){document.documentElement.classList.add('brand-ready');},1500);</script>
-<link rel="stylesheet" href="css/style.css?v=20260911i">
-<link rel="stylesheet" href="css/redesign.css?v=20260911i">
+<link rel="stylesheet" href="css/style.css?v=20260911j">
+<link rel="stylesheet" href="css/redesign.css?v=20260911j">
 </head>
 
-<body class="public-site" data-page="home">
+<body class="site-theme public-site" data-page="home">
 <div class="page">
 
   <a class="skip-link" href="#main">본문으로 건너뛰기</a>
@@ -38,7 +38,7 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
   <header class="topbar">
     <div class="wrap wrap--wide topbar__inner">
       <a class="topbar__brand" href="./">
-        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260911i" alt="" width="900" height="673"></span>
+        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260911j" alt="" width="900" height="673"></span>
         <span class="topbar__identity"><span class="topbar__college">중앙대학교 인문대학</span><span class="topbar__name"><span class="topbar__name--long">중앙대학교 제15대 인문대학 학생회 ‘연(聯)’</span><span class="topbar__name--short">제15대 학생회 ‘연(聯)’</span></span></span>
       </a>
       <nav class="nav" aria-label="주요 메뉴">
@@ -58,9 +58,9 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
     <section class="welcome" aria-labelledby="hero-title">
       <div class="welcome__copy">
         <p class="welcome__eyebrow" data-site="college">중앙대학교 인문대학</p>
-        <h1 class="welcome__title" id="hero-title" data-site="tagline">인문대학의 모든 소식을 한곳에서</h1>
+        <h1 class="welcome__title" id="hero-title" data-site="tagline"><span class="welcome__line">학문을 잇다,</span><span class="welcome__line">인문의 가치를 잇다</span></h1>
         <div class="welcome__signature">
-          <span class="welcome__seal" data-logo><img src="assets/logo.png?v=20260911i" alt="" width="900" height="673"></span>
+          <span class="welcome__seal" data-logo><img src="assets/logo.png?v=20260911j" alt="" width="900" height="673"></span>
           <p><span data-site="council">제15대 학생회</span> ‘<span data-site="name">연</span>’</p>
         </div>
       </div>
@@ -95,17 +95,14 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
     </section>
     </div>
 
-    <!-- ================= 5. 학과 · 링크 ================= -->
-    <section class="section home-links" id="links" aria-labelledby="links-head">
-      <div class="sec-head">
-        <h2 id="links-head">학과 · 링크</h2>
-      </div>
+    <!-- ================= 바로가기 ================= -->
+    <div class="section home-links" id="links">
       <div data-links></div>
-      <div class="major-directory">
-        <h3 class="sub-head">인문대학 학과</h3>
+      <section class="major-directory" aria-labelledby="majors-head">
+        <h2 class="directory-title" id="majors-head">인문대학 학과</h2>
         <ul class="majors" data-majors></ul>
-      </div>
-    </section>
+      </section>
+    </div>
 
     <section class="section home-teams" id="teams" aria-labelledby="teams-head">
       <div class="sec-head"><h2 id="teams-head">집행국</h2></div>
@@ -134,10 +131,10 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
 </div>
 
 <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
-<script src="js/config.js?v=20260911i"></script>
-<script src="js/firebase-config.js?v=20260911i"></script>
-<script src="js/core.js?v=20260911i"></script>
-<script src="js/store.js?v=20260911i"></script>
-<script src="js/pages.js?v=20260911i"></script>
+<script src="js/config.js?v=20260911j"></script>
+<script src="js/firebase-config.js?v=20260911j"></script>
+<script src="js/core.js?v=20260911j"></script>
+<script src="js/store.js?v=20260911j"></script>
+<script src="js/pages.js?v=20260911j"></script>
 </body>
 </html>
