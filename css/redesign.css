@@ -414,7 +414,7 @@
 .welcome__mascot img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; }
 @media (max-width: 680px) {
   .welcome--compact {
-    grid-template-columns: minmax(0, 1fr) clamp(64px, 20vw, 112px);
+    grid-template-columns: minmax(0, 1fr) clamp(100px, 32vw, 180px);
     grid-template-areas: 'eyebrow eyebrow' 'title art' 'signature signature';
     gap: 0 8px; padding: 20px 16px;
   }
@@ -423,6 +423,9 @@
   .welcome--compact .welcome__line { white-space: nowrap; }
   .welcome--compact .welcome__signature { margin: 16px 0 0; }
   .welcome__mascot { grid-area: art; width: 100%; max-width: none; padding: 0; margin: 0; align-self: center; }
+  /* Remove transparent image margins from the layout, keeping the entire drawing visible. */
+  .welcome__mascot { position: relative; overflow: hidden; aspect-ratio: 1337 / 1740; }
+  .welcome__mascot img { position: absolute; width: 148%; max-width: none; height: auto; left: -24%; top: -7%; }
   .nav__desktop-label { display: none; }
 }
 
