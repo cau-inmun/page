@@ -1296,3 +1296,13 @@ a.major:hover .major__arrow { color: var(--brand-deep); }
 }
 .card__title { font-size: var(--text-base); font-weight: 700; color: var(--ink); }
 .card__desc { margin-top: 4px; font-size: var(--text-xs); color: var(--ink-3); line-height: 1.6; }
+
+/* No animation or animated scrolling, including admin and keyboard navigation. */
+html { scroll-behavior: auto !important; }
+*, *::before, *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+.chip:hover, .notice:hover, .linkbtn:hover, .linkbtn:hover .linkbtn__arrow,
+.major:hover, .dept:hover, .btn:active, button.seat:active { transform: none !important; }

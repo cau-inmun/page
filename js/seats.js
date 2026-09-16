@@ -16,8 +16,8 @@
   const COLS = GRID.length ? GRID[0].length : 0;
   const SEATS = GRID.reduce((a, row) => a.concat(row.filter((n) => n > 0)), []);
   const TOTAL = SEATS.length;
-  const OPEN = typeof ROOM.openHour === 'number' ? ROOM.openHour : 8;
-  const CLOSE = typeof ROOM.closeHour === 'number' ? ROOM.closeHour : 18;
+  const OPEN = typeof ROOM.openHour === 'number' ? ROOM.openHour : 0;
+  const CLOSE = typeof ROOM.closeHour === 'number' ? ROOM.closeHour : 24;
   const SEAT_NOTES = ROOM.seatNotes || [];
 
   /* 좌석 번호 → 그 자리에 붙는 안내들 */
@@ -33,6 +33,8 @@
   let picking = null;    // 지금 예약하려는 좌석 번호
   let moving = null;     // 자리 변경 중일 때 이어 쓸 내용
   let timer = null;
+  let midnightTimer = null;
+  let refreshVersion = 0;
 
   const two = (n) => String(n).padStart(2, '0');
   const seatLabel = (n) => n + '번';
@@ -256,6 +258,11 @@
      예약 폼
      ========================================================== */
   function openForm(n) {
+    if (seoulNow().date !== today) {
+      refresh();
+      toast('자정이 지나 좌석이 초기화되었습니다. 새로 선택해 주세요.');
+      return;
+    }
     const mine = myBooking();
     if (mine) {
       toast('이미 ' + seatLabel(mine.seat) + ' 을 예약하셨습니다. 옮기시려면 먼저 그 자리를 비워주세요');
@@ -314,13 +321,18 @@
       ])
     ]));
 
-    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => nameIn.focus(), 300);
+    box.scrollIntoView({ behavior: 'instant', block: 'center' });
+    nameIn.focus({ preventScroll: true });
   }
 
   function fail(err, msg) { err.hidden = false; err.textContent = msg; }
 
   async function submit(err) {
+    if (seoulNow().date !== today) {
+      refresh();
+      toast('자정이 지나 좌석이 초기화되었습니다. 새로 선택해 주세요.');
+      return;
+    }
     const name = $('#r-name').value.trim();
     const dept = $('#r-dept').value;
     const sid = $('#r-sid').value.replace(/\D/g, '');
@@ -341,8 +353,9 @@
     const btn = $('#r-submit');
     btn.disabled = true; btn.textContent = '예약하는 중…';
     let outcome = true;
+    const bookingDay = today, bookingSeat = picking;
     try {
-      outcome = await STORE.reserveSeat(today, picking, { name: name, dept: dept, sid: sid, tel: tel });
+      outcome = await STORE.reserveSeat(bookingDay, bookingSeat, { name: name, dept: dept, sid: sid, tel: tel });
     } catch (e) {
       btn.disabled = false; btn.textContent = '이 자리로 예약하기';
       if (e && e.code === 'taken') {
@@ -354,7 +367,8 @@
       return fail(err, '예약하지 못했습니다. ' + d.title + d.text);
     }
 
-    const booked = { date: today, seat: picking, name: name, dept: dept, sid: sid, tel: tel,
+    if (bookingDay !== seoulNow().date) { await refresh(); return; }
+    const booked = { date: bookingDay, seat: bookingSeat, name: name, dept: dept, sid: sid, tel: tel,
                      at: new Date().toISOString(), noLog: outcome === 'no-log' };
     rememberBooking(booked);
     moving = null;
@@ -362,7 +376,7 @@
     $('[data-seat-form]').innerHTML = '';
     picking = null;
     await refresh();
-    showTicket(booked);
+    if (booked.date === seoulNow().date) showTicket(booked);
   }
 
   /* ==========================================================
@@ -372,6 +386,11 @@
      아무나 남의 자리를 비울 수 있기 때문이다.
      ========================================================== */
   function openRelease(n) {
+    if (seoulNow().date !== today) {
+      refresh();
+      toast('자정이 지나 좌석이 초기화되었습니다. 새로 선택해 주세요.');
+      return;
+    }
     picking = null;
     const mine = myBooking();
     const isMine = mine && mine.seat === n;
@@ -415,11 +434,16 @@
       ])
     ]));
 
-    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setTimeout(() => (isMine ? $('#x-return') : nameIn).focus(), 300);
+    box.scrollIntoView({ behavior: 'instant', block: 'center' });
+    (isMine ? $('#x-return') : nameIn).focus({ preventScroll: true });
   }
 
   async function release(n, kind, err) {
+    if (seoulNow().date !== today) {
+      refresh();
+      toast('자정이 지나 좌석이 초기화되었습니다. 새로 선택해 주세요.');
+      return;
+    }
     const name = $('#x-name').value.trim();
     const dept = $('#x-dept').value;
     const sid = $('#x-sid').value.replace(/\D/g, '');
@@ -443,6 +467,7 @@
       return;
     }
 
+    const releaseDay = today;
     const btns = [$('#x-return'), $('#x-move')];
     btns.forEach((b) => { b.disabled = true; });
     $(moveTo ? '#x-move' : '#x-return').textContent = word + '하는 중…';
@@ -451,10 +476,11 @@
        규칙을 다시 배포하게 하지 않으려고 '변경' 을 'cancel' 로 적는다.
        관리자 화면은 이 값을 '변경' 으로 읽어준다. */
     try {
-      await STORE.releaseSeat(today, n, { name: name, dept: dept, sid: sid },
+      await STORE.releaseSeat(releaseDay, n, { name: name, dept: dept, sid: sid },
                               moveTo ? 'cancel' : 'return');
     } catch (e) {
       btns.forEach((b) => { b.disabled = false; });
+      if (seoulNow().date !== today || !$('#x-return')) { await refresh(); return; }
       $('#x-return').textContent = '반납하기';
       $('#x-move').textContent = '자리 변경하기';
       if (e && e.code === 'mismatch') {
@@ -466,6 +492,7 @@
       return fail(err, word + '하지 못했습니다. ' + d.title + d.text);
     }
 
+    if (releaseDay !== seoulNow().date) { await refresh(); return; }
     const mine = myBooking();
     /* 변경이면 다음 자리에 그대로 쓸 수 있도록 적은 내용을 들고 있는다 */
     moving = moveTo ? { name: name, dept: dept, sid: sid, tel: (mine && mine.tel) || '' } : null;
@@ -477,7 +504,7 @@
 
     if (moveTo) {
       toast(seatLabel(n) + ' 을 비웠습니다. 이어서 새 자리를 골라주세요');
-      $('[data-map-section]').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $('[data-map-section]').scrollIntoView({ behavior: 'instant', block: 'start' });
       return;
     }
     toast(seatLabel(n) + ' 을 반납했습니다');
@@ -569,7 +596,7 @@
         text: '이 화면은 캡처해 두시면 좋습니다. 자리를 비울 때는 위 단추를 누르고 ' +
               '예약할 때 적으신 이름 · 학과 · 학번을 그대로 넣어주세요.' })
     ]));
-    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    box.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 
   /* ==========================================================
@@ -577,15 +604,30 @@
      ========================================================== */
   async function refresh() {
     const now = seoulNow();
-    if (now.date !== today) {          // 자정을 넘겼으면 새 날짜로
+    if (now.date !== today) {
       today = now.date;
-      try { if (myBooking() === null) $('[data-ticket]').hidden = true; } catch (e) { /* 무시 */ }
+      picking = null;
+      moving = null;
+      seats = {};
+      forgetBooking();
+      ['[data-ticket]', '[data-seat-form]'].forEach((selector) => {
+        const node = $(selector);
+        node.hidden = true;
+        node.replaceChildren();
+      });
+      renderHead();
+      renderMap();
     }
+    const requestDay = today;
+    const version = ++refreshVersion;
     let loaded;
     try {
-      loaded = await STORE.getSeats(today);
+      loaded = await STORE.getSeats(requestDay);
+      if (version !== refreshVersion) return;
+      if (requestDay !== seoulNow().date) return refresh();
     } catch (e) {
       console.error(e);
+      if (version !== refreshVersion) return;
       const box = $('[data-seatmap]');
       box.innerHTML = '';
       box.appendChild(errorBoxFor(e, '좌석표를 불러오지 못했습니다.'));
@@ -608,6 +650,28 @@
     renderMap();
   }
 
+  // Korea has a fixed UTC+9 offset. One timeout, no per-second clock/polling.
+  function scheduleMidnight() {
+    clearTimeout(midnightTimer);
+    const day = 86400000;
+    const delay = day - ((Date.now() + 9 * 3600000) % day);
+    midnightTimer = setTimeout(() => {
+      refresh();
+      scheduleMidnight();
+    }, delay + 20);
+  }
+
+  function resume(event) {
+    if (document.hidden) return;
+    if (event) refresh();
+    clearInterval(timer);
+    timer = setInterval(() => {
+      if (document.hidden) return;
+      if (seoulNow().date !== today || picking === null) refresh();
+    }, 30000);
+    scheduleMidnight();
+  }
+
   /* ---------- 시작 ---------- */
   document.addEventListener('DOMContentLoaded', async () => {
     window.CORE.boot();
@@ -622,13 +686,13 @@
       await refresh(); toast('좌석표를 새로 불러왔습니다');
     });
 
-    /* 다른 사람이 잡은 자리가 바로 보이도록 주기적으로 다시 읽는다.
-       화면을 보고 있지 않거나 예약 폼을 여는 중이면 건너뛴다. */
-    timer = setInterval(() => {
-      if (document.hidden || picking !== null) return;
-      refresh();
-    }, 30000);
-    window.addEventListener('pagehide', () => clearInterval(timer));
+    resume();
+    document.addEventListener('visibilitychange', resume);
+    window.addEventListener('pageshow', resume);
+    window.addEventListener('pagehide', () => {
+      clearInterval(timer);
+      clearTimeout(midnightTimer);
+    });
 
     /* 마감 뒤에는 확인증도 내린다 — 그날 이용이 끝났기 때문 */
     const mine = myBooking();

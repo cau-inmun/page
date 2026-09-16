@@ -119,7 +119,7 @@
       const target = firstBad === '__consent'
         ? $('#f-consent', root)
         : $(`.field[data-key="${CSS.escape(firstBad)}"] input, .field[data-key="${CSS.escape(firstBad)}"] textarea, .field[data-key="${CSS.escape(firstBad)}"] select`, root);
-      if (target) { target.focus(); target.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+      if (target) { target.focus(); target.scrollIntoView({ behavior: 'instant', block: 'center' }); }
       toast('입력하지 않은 항목이 있습니다');
       return;
     }
@@ -134,7 +134,7 @@
       box.innerHTML = '';
       box.append(el('strong', { text: '접수가 마감되었습니다. ' }),
                  '페이지를 새로고침하면 현재 상태를 볼 수 있습니다.');
-      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      box.scrollIntoView({ behavior: 'instant', block: 'center' });
       return;
     }
 
@@ -162,7 +162,7 @@
         el('strong', { text: '제출하지 못했습니다. ' }),
         '잠시 후 다시 시도해 주세요. 계속 안 되면 인스타그램 DM으로 알려주시면 도와드리겠습니다.'
       );
-      box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      box.scrollIntoView({ behavior: 'instant', block: 'center' });
     }
   }
 
@@ -178,7 +178,7 @@
         el('a', { class: 'btn', href: 'notices.html' }, ['공지사항 보기'])
       ])
     ]));
-    root.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    root.scrollIntoView({ behavior: 'instant', block: 'start' });
   }
 
   /* ---------- 폼 목록 (id 없이 들어온 경우) ---------- */

@@ -190,7 +190,7 @@
   const SITE_KEYS = [
     'brand', 'college', 'councilTerm', 'councilName', 'tagline', 'description',
     'quickLinks', 'quickLinksSeen', 'about', 'contact', 'categories', 'departments',
-    'consentText'
+    'consentText', 'homeNotices', 'homeForms'
   ];
 
   /* js/config.js 에 새로 생긴 빠른 버튼을 저장된 목록에 들여보낸다.
@@ -235,7 +235,7 @@
   function applySite(stored) {
     if (!stored || !window.SITE) return;
     SITE_KEYS.forEach((k) => {
-      if (stored[k] !== undefined && stored[k] !== null) window.SITE[k] = stored[k];
+      if (stored[k] !== undefined && (stored[k] !== null || k === 'homeNotices' || k === 'homeForms')) window.SITE[k] = stored[k];
     });
     mergeNewQuickLinks(stored);
   }
@@ -264,7 +264,7 @@
     if (stored) {
       applySite(stored);
       const keep = {};
-      SITE_KEYS.forEach((k) => { if (stored[k] !== undefined && stored[k] !== null) keep[k] = stored[k]; });
+      SITE_KEYS.forEach((k) => { if (stored[k] !== undefined && (stored[k] !== null || k === 'homeNotices' || k === 'homeForms')) keep[k] = stored[k]; });
       lsSet(KEY.siteCache, keep);
     }
     return window.SITE;

@@ -15,6 +15,7 @@
   let notices = [], forms = [], linkGroups = [], subs = [];
   let editingNoticeId = null;
   let activeFormId = null;
+  let refreshHomeChoices = () => {};
 
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -318,7 +319,7 @@
             $('#n-save').textContent = '수정 내용 저장';
             $('#n-cancel').hidden = false;
             previewNotice();
-            $('#panel-notice-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            $('#panel-notice-form').scrollIntoView({ behavior: 'instant', block: 'start' });
           }
         }),
         el('button', {
@@ -963,8 +964,44 @@
       contact: JSON.parse(JSON.stringify(S.contact || {})),
       categories: (S.categories || []).slice(),
       departments: (S.departments || []).slice(),
-      consentText: S.consentText
+      consentText: S.consentText,
+      homeNotices: Array.isArray(S.homeNotices) ? S.homeNotices.slice(0, 3) : null,
+      homeForms: Array.isArray(S.homeForms) ? S.homeForms.slice(0, 3) : null
     };
+
+    const featured = el('div', { class: 'editor-group' }, [
+      el('h3', { text: '메인화면 노출' }),
+      el('p', { class: 'field__help', text: '공지와 신청 폼을 각각 최대 3개 선택하세요. 위에서부터 표시됩니다. 예약 게시·보관 항목은 공개 기간에만 보입니다. 아래 사이트 정보 저장을 눌러 반영하세요.' })
+    ]);
+    const homeDrawers = [];
+    [['homeNotices', '공지사항'], ['homeForms', '신청 · 참여']].forEach(([key, title]) => {
+      const controls = el('div');
+      const mode = el('select', { 'aria-label': title + ' 노출 방식' }, [
+        el('option', { value: 'auto', text: '자동 선택 (최대 3개)', selected: d[key] === null ? '' : null }),
+        el('option', { value: 'manual', text: '직접 선택', selected: d[key] !== null ? '' : null })
+      ]);
+      const draw = () => {
+        controls.replaceChildren();
+        if (d[key] === null) {
+          controls.appendChild(el('p', { class: 'field__help', text: '최근 공지 또는 순서가 앞선 폼 6개 중 공개 중인 항목을 최대 3개 표시합니다.' }));
+          return;
+        }
+        while (d[key].length < 3) d[key].push('');
+        for (let i = 0; i < 3; i++) {
+          const select = el('select', { 'aria-label': title + ' ' + (i + 1) + '번째', onchange: (e) => { d[key][i] = e.target.value; } }, [
+            el('option', { value: '', text: '표시 안 함', selected: !d[key][i] ? '' : null }),
+            ...(key === 'homeNotices' ? notices : forms).map((item) => el('option', { value: item.id, text: item.title || '(제목 없음)', selected: d[key][i] === item.id ? '' : null }))
+          ]);
+          controls.appendChild(el('label', { class: 'field' }, [title + ' ' + (i + 1), select]));
+        }
+      };
+      homeDrawers.push(draw);
+      mode.onchange = () => { d[key] = mode.value === 'auto' ? null : []; draw(); };
+      featured.append(el('h4', { text: title }), mode, controls);
+      draw();
+    });
+    refreshHomeChoices = () => homeDrawers.forEach((draw) => draw());
+    box.appendChild(featured);
 
     /* --- 이름 · 제목 --- */
     box.appendChild(el('div', { class: 'editor-group' }, [
@@ -1049,7 +1086,7 @@
     drawMissing();
     box.appendChild(el('div', { class: 'editor-group' }, [
       el('p', { class: 'schedule__title', text: '상단 빠른 버튼' }),
-      el('p', { class: 'schedule__hint', text: '홈 대표 문구 아래의 바로가기입니다. 주소를 비우면 ‘준비 중’ 으로 보입니다.' }),
+      el('p', { class: 'schedule__hint', text: '학사 · 학과 링크 페이지의 바로가기입니다. 주소를 비우면 ‘준비 중’으로 보입니다.' }),
       missingBox,
       quickBox
     ]));
@@ -1083,7 +1120,7 @@
          값은 그대로 보관하되, 지금 어디에도 안 뜬다는 것을 적어 둔다 —
          고쳐도 화면이 안 바뀌면 사람이 한참 헤매게 된다. */
       textField('소개 글', d.about.intro,
-        '지금은 사이트 어디에도 표시되지 않습니다. 홈의 소개 구획이 히어로 문구와 겹쳐 걷어냈습니다.',
+        '학생회 소개 페이지에 표시됩니다.',
         (v) => { d.about.intro = v; }, { multiline: true }),
       deptBox
     ]));
@@ -1507,6 +1544,7 @@
     tabs.forEach((t) => t.addEventListener('click', () => {
       tabs.forEach((x) => x.setAttribute('aria-selected', String(x === t)));
       $$('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== t.dataset.tab; });
+      if (t.dataset.tab === 'site') refreshHomeChoices();
       if (t.dataset.tab === 'subs') loadSubs();
       if (t.dataset.tab === 'archive') renderArchive();
       if (t.dataset.tab === 'seats') loadSeats();
