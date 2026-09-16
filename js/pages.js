@@ -12,6 +12,9 @@
 
   /* ---------- 공통: 링크 버튼 ---------- */
   function linkButton(item) {
+    if (/^(?:\.\/)?seats\.html(?:[?#]|$)/.test(item.url || '') && S.readingRoom.openHour === 0 && S.readingRoom.closeHour === 24) {
+      item = Object.assign({}, item, { desc: '24시간 예약 · 매일 자정 초기화' });
+    }
     const url = safeUrl(item.url);
     const ready = !!url;
 
@@ -88,7 +91,7 @@
     renderTagline();
     $$('[data-site="council"]').forEach((n) => { n.textContent = S.councilTerm; });
     $$('[data-site="name"]').forEach((n) => { n.textContent = S.councilName; });
-    document.title = `${S.college} ${S.councilTerm} ‘${S.councilName}’`;
+    document.title = `${document.body.dataset.page === 'links' ? '학사 · 학과 링크' : '학생회 소개'} · ${S.college}`;
     const metaDesc = $('meta[name="description"]');
     if (metaDesc && S.description) metaDesc.setAttribute('content', S.description);
 
@@ -439,7 +442,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     window.CORE.boot();
     const page = document.body.dataset.page;
-    if (page === 'home')        initHome();
+    if (page === 'links' || page === 'about') initHome();
     else if (page === 'notices') initNoticeList();
     else if (page === 'notice')  initNoticeDetail();
   });

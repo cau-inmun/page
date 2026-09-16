@@ -696,14 +696,10 @@
        통째로 거부되므로, 한 부분이 살아 있으면 파일 전체가 살아 있다.
 
      한계
-       규칙이 개방 시간을 따지므로 08~18시(한국) 안에서만 볼 수 있다.
        관리자로 지우는 길(isAdmin)이 먼저 통과해버려서, 학우가 스스로
        지우는 길(releasedAfterBooking)까지 이 방법으로 확인하지는 못한다. */
   async function probeSeatRules() {
     if (mode !== 'firebase') return { ok: false, reason: 'preview' };
-
-    const now = window.CORE.seoulNow();
-    if (now.hour < 8 || now.hour >= 18) return { ok: false, reason: 'closed', hour: now.hour };
 
     /* 진짜 날짜(YYYY-MM-DD)와 겹치지 않으면서 Firestore 가 받아주는 이름이어야
        한다. 처음에 '__check__' 로 지었다가 점검 자체가 실패했다 — 문서 ID 는

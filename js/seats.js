@@ -92,7 +92,8 @@
     $('[data-room-name]').textContent = (ROOM.name || '열람실') + ' 좌석 예약';
     $('[data-room-desc]').textContent =
       (ROOM.place ? ROOM.place + ' · ' : '') +
-      '개방 ' + two(OPEN) + ':00–' + two(CLOSE) + ':00 · 좌석 ' + TOTAL + '석 · 매일 초기화';
+      (OPEN === 0 && CLOSE === 24 ? '24시간 예약 가능' : '예약 ' + two(OPEN) + ':00–' + two(CLOSE) + ':00') +
+      ' · 좌석 ' + TOTAL + '석 · 매일 자정 초기화 (한국 시각)';
 
     const box = $('[data-room-state]');
     box.className = 'banner';
@@ -151,48 +152,38 @@
     const reset = !st.open && st.why === 'after';
     let taken = 0;
 
-    const cols = `repeat(${COLS}, var(--seat-w))`;
-    // 창문 표시도 실제 좌석 격자 너비에 맞춘다. 좁은 화면에서는 계속 보인다.
-    box.style.setProperty('--room-width',
-      `calc(${COLS} * var(--seat-w) + ${COLS - 1} * var(--seat-gap))`);
-    /* '창문' 은 옆으로 밀어도 늘 보이도록 스크롤 영역 밖에 둔다 */
-    box.appendChild(el('p', { class: 'roomband roomband--window',
-      text: ROOM.topLabel || '창문' }));
-
-    const map = el('div', { class: 'seatmap__scroll' });
-    const inner = el('div', { class: 'seatmap__room' });
-
-    const grid = el('div', { class: 'seatgrid', style: 'grid-template-columns:' + cols });
-    GRID.forEach((row) => {
-      row.forEach((n) => {
+    // Split by physical columns, not seat number: every seat keeps its neighbours.
+    const split = Math.ceil(COLS / 2);
+    const sections = el('div', { class: 'seatmap__sections' });
+    [[0, split, '왼쪽 구역'], [split, COLS, '오른쪽 구역']].forEach(([start, end, label], index) => {
+      const width = end - start;
+      if (!width) return;
+      const cols = `repeat(${width}, minmax(0, 1fr))`;
+      const section = el('section', { class: 'seatmap__section', 'aria-labelledby': `seat-zone-${index}` });
+      section.appendChild(el('h2', { id: `seat-zone-${index}`, class: 'seatmap__zone-title', text: label }));
+      section.appendChild(el('p', { class: 'roomband roomband--window', text: ROOM.topLabel || '창문' }));
+      const grid = el('div', { class: 'seatgrid', style: 'grid-template-columns:' + cols });
+      GRID.forEach((row) => row.slice(start, end).forEach((n) => {
         if (!n) { grid.appendChild(el('span', { class: 'seat-gap', 'aria-hidden': 'true' })); return; }
         const info = reset ? null : seats[String(n)];
         if (info) taken++;
         grid.appendChild(seatButton(n, info, st.open, mine && mine.seat === n));
-      });
+      }));
+      section.appendChild(grid);
+      const wall = el('div', { class: 'roomband roomband--wall', style: 'grid-template-columns:' + cols });
+      const door = ROOM.doorCol - start;
+      if (door >= 0 && door < width) {
+        if (door > 0) wall.appendChild(el('span', { class: 'roomband__seg', style: `grid-column: 1 / ${door + 1}`, text: ROOM.bottomLabel || '벽' }));
+        wall.appendChild(el('span', { class: 'roomband__seg roomband__seg--door', style: `grid-column: ${door + 1}`, text: '출입문' }));
+        if (door < width - 1) wall.appendChild(el('span', { class: 'roomband__seg', style: `grid-column: ${door + 2} / -1`, text: ROOM.bottomLabel || '벽' }));
+      } else {
+        wall.appendChild(el('span', { class: 'roomband__seg', style: 'grid-column: 1 / -1', text: ROOM.bottomLabel || '벽' }));
+      }
+      section.appendChild(wall);
+      sections.appendChild(section);
     });
-    inner.appendChild(grid);
-
-    /* 아래쪽 벽과 출입문 */
-    const doorCol = typeof ROOM.doorCol === 'number' ? ROOM.doorCol : -1;
-    const wall = el('div', { class: 'roomband roomband--wall', style: 'grid-template-columns:' + cols });
-    const wallText = ROOM.bottomLabel || '벽';
-    if (doorCol >= 0 && doorCol < COLS) {
-      if (doorCol > 0) wall.appendChild(el('span', { class: 'roomband__seg',
-        style: `grid-column: 1 / ${doorCol + 1}`, text: wallText }));
-      wall.appendChild(el('span', { class: 'roomband__seg roomband__seg--door',
-        style: `grid-column: ${doorCol + 1}`, text: '출입문' }));
-      if (doorCol < COLS - 1) wall.appendChild(el('span', { class: 'roomband__seg',
-        style: `grid-column: ${doorCol + 2} / -1`, text: wallText }));
-    } else {
-      wall.appendChild(el('span', { class: 'roomband__seg', style: 'grid-column: 1 / -1', text: wallText }));
-    }
-    inner.appendChild(wall);
-
-    map.appendChild(inner);
-    box.appendChild(map);
-    box.appendChild(el('p', { class: 'seatmap__hint',
-      text: '좌석표가 화면보다 넓으면 옆으로 밀어서 보세요.' }));
+    box.appendChild(el('p', { class: 'seatmap__hint', text: '실제 좌석표를 왼쪽·오른쪽으로 나누었습니다. 각 구역의 위쪽이 창문 방향입니다.' }));
+    box.appendChild(sections);
 
     /* 남은 자리 수만 따로 세어 올린다. 자리를 잡거나 비웠을 때 어느
        숫자가 달라졌는지 눈이 먼저 찾아가도록 하는 것이 목적이라,

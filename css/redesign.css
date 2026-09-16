@@ -16,7 +16,7 @@
   --brand: #315372;
   --brand-deep: #182c46;
   --focus: #315372;
-  --font-display: 'Paperlogy', var(--font-ui);
+  --font-display: var(--font-ui);
   --radius-lg: 12px;
   --radius: 8px;
   --radius-sm: 6px;
@@ -358,4 +358,38 @@
   .site-theme .footer { color: #222; background: transparent; }
   .site-theme .footer__name, .site-theme .footer__copy { color: #222; }
   .footer__emblem { display: none; }
+}
+
+/* A lightweight front door: details load on their own pages. */
+.welcome--compact { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; min-height: 0; padding: 0; }
+.welcome--compact .welcome__copy { display: block; padding: 28px 32px; }
+.welcome--compact .welcome__title { max-width: none; }
+.welcome--compact .welcome__signature { margin: 18px 0 0; }
+.home-menu { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; margin-top: 22px; }
+.home-menu a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 4px; min-height: 72px; border-bottom: 1px solid var(--line); color: var(--ink); font-size: 1.25rem; font-weight: 700; }
+.home-menu a:hover { background: var(--sand-soft); text-decoration: none; }
+.home-menu a > span:last-child { font-size: 1.125rem; color: var(--ink-3); }
+.about-mascot { width: 220px; height: auto; margin: 36px auto 0; }
+[data-contact-place] { white-space: pre-line; }
+
+/* Each physical half fits the screen; no horizontal seat-map scroller. */
+.seatmap__sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin-top: 20px; }
+.seatmap__section { min-width: 0; margin: 0; }
+.seatmap__zone-title { font-size: 1.125rem; margin: 0 0 12px; }
+.public-site .seatmap__section .roomband--window { width: 100%; }
+.seatmap__section .seatgrid { grid-auto-rows: minmax(48px, auto); gap: 4px; }
+.seatmap__section .seat { min-width: 0; border-radius: 5px; }
+.seatmap__section .roomband--wall { gap: 4px; }
+.seatmap__section .roomband__seg--door { font-size: .75rem; overflow-wrap: anywhere; }
+.public-site .seatmap__hint { font-size: .875rem; line-height: 1.65; }
+@media (max-width: 760px) {
+  .seatmap__sections { grid-template-columns: minmax(0, 1fr); max-width: 420px; margin-inline: auto; gap: 32px; }
+}
+@media (max-width: 680px) {
+  .welcome--compact .welcome__copy { padding: 24px; }
+  .home-menu { grid-template-columns: minmax(0, 1fr); margin-top: 12px; }
+  .home-menu a { padding: 20px 4px; min-height: 66px; font-size: 1.125rem; }
+  .public-site[data-page='seats'] .article { padding: 22px 12px; }
+  .seatmap__section .seatgrid, .seatmap__section .roomband--wall { gap: 3px; }
+  .seatmap__section .seat__no { font-size: .875rem; }
 }

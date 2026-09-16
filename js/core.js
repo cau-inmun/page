@@ -440,86 +440,13 @@
     toastTimer = setTimeout(() => node.classList.remove('is-on'), 2200);
   }
 
-  /* ---------- 스크롤 등장 애니메이션 ---------- */
-  function revealOnScroll(root) {
-    const targets = $$('.reveal', root || document);
-    if (!('IntersectionObserver' in window) || !targets.length) {
-      targets.forEach((t) => t.classList.add('is-in'));
-      return;
-    }
+  /* Content is visible immediately; no observers, stagger timers or animation frames. */
+  function revealOnScroll() {}
 
-    /* 계단 순서를 미리 매긴다.
-       예전에는 화면에 들어오는 순간의 배열 위치로 셌는데, 항목이 하나씩
-       들어올 때는 그 값이 늘 0 이라 계단이 생기지 않았다. 같은 구획
-       안에서 몇 번째인지는 처음부터 정해져 있으니 그때 세어 둔다.
-       너무 뒤에 있는 항목까지 밀리면 '느리다' 로 느껴져 다섯째에서 끊는다. */
-    const seen = new Map();
-    targets.forEach((t) => {
-      const group = t.closest('section') || document.body;
-      const n = seen.get(group) || 0;
-      t.style.setProperty('--i', String(Math.min(n, 5)));
-      seen.set(group, n + 1);
-    });
-
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (!e.isIntersecting) return;
-        e.target.classList.add('is-in');
-        io.unobserve(e.target);
-      });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: .06 });
-    targets.forEach((t) => io.observe(t));
-
-    /* 안전장치 — 옵저버가 어떤 이유로든 동작하지 않아도 본문은 보이게 한다.
-       다만 '지금 화면 안에 있는 것' 만 연다. 예전에는 1.2초 뒤에 아래쪽
-       내용까지 전부 열어버려서, 정작 스크롤 진입 효과가 거의 동작하지
-       않았다 (게다가 계단 순서까지 0 으로 지웠다). */
-    setTimeout(() => targets.forEach((t) => {
-      if (t.classList.contains('is-in')) return;
-      const r = t.getBoundingClientRect();
-      if (r.top < window.innerHeight && r.bottom > 0) t.classList.add('is-in');
-    }), 1200);
-  }
-
-  /* ---------- 숫자 세어 올리기 ----------
-     값이 바뀐 숫자를 0.6초 동안 굴려 보여준다. 장식이 아니라 '이 숫자가
-     방금 바뀌었다' 는 신호다 — 자리를 잡거나 비웠을 때 어디가 달라졌는지
-     눈이 먼저 찾아간다.
-     움직임을 원치 않는 설정이면 바로 최종값을 넣는다. */
   function countUp(node, to, opts) {
-    const o = opts || {};
-    const dur = o.duration || 600;
-    const from = Number(o.from != null ? o.from : (node.dataset.countValue || 0));
-    const target = Number(to);
-    node.dataset.countValue = String(target);
-    const fmt = o.format || ((v) => String(v));
-
-    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce || !Number.isFinite(from) || !Number.isFinite(target) || from === target) {
-      node.textContent = fmt(target);
-      return;
-    }
-
-    /* 이징은 진입 애니메이션과 같은 out-expo 계열로 맞춘다 */
-    const ease = (t) => 1 - Math.pow(1 - t, 3);
-    const t0 = performance.now();
-    if (node._countRaf) cancelAnimationFrame(node._countRaf);
-    const tick = (now) => {
-      const t = Math.min((now - t0) / dur, 1);
-      node.textContent = fmt(Math.round(from + (target - from) * ease(t)));
-      if (t < 1) node._countRaf = requestAnimationFrame(tick);
-      else node._countRaf = 0;
-    };
-    node._countRaf = requestAnimationFrame(tick);
-  }
-
-  /* ---------- 상단바 그림자 ---------- */
-  function stickyHeader() {
-    const bar = $('.topbar');
-    if (!bar) return;
-    const onScroll = () => bar.classList.toggle('is-stuck', window.scrollY > 4);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
+    const value = Number(to);
+    node.dataset.countValue = String(value);
+    node.textContent = opts && opts.format ? opts.format(value) : String(value);
   }
 
   /* ---------- 로고 fallback ---------- */
@@ -542,37 +469,6 @@
   /* ---------- 웹폰트 로딩 점검 ----------
      글꼴이 안 보일 때 원인을 바로 알 수 있도록 콘솔에 알려준다.
      (실패해도 시스템 글꼴로 정상 표시되므로 화면에는 영향 없음) */
-  function checkFonts() {
-    if (!document.fonts || !document.fonts.ready) return;
-    /* 애플 기기에서는 운영체제의 San Francisco 를 쓰므로 확인할 것이 없다.
-       확인이 필요한 쪽은 그 대역으로 쓰는 프리텐다드뿐이다. */
-    const want = [
-      ['Pretendard Variable', '프리텐다드']
-    ];
-    document.fonts.ready.then(() => setTimeout(() => {
-      /* check() 만으로는 부족하다. @font-face 규칙 자체가 등록되지 않으면
-         (예: fonts.css 의 @import 가 실패한 경우) 브라우저가 시스템 글꼴로
-         대체하면서 check() 가 true 를 돌려준다. 규칙 등록 여부도 함께 본다. */
-      const registered = new Set();
-      try { document.fonts.forEach((ff) => registered.add(ff.family.replace(/^["']|["']$/g, ''))); }
-      catch (e) { /* 순회를 지원하지 않으면 이 검사만 건너뛴다 */ }
-
-      const missing = want.filter(([family]) => {
-        if (registered.size && !registered.has(family)) return true;
-        try { return !document.fonts.check('700 16px "' + family + '"', '가'); }
-        catch (e) { return false; }
-      });
-      if (!missing.length) return;
-      console.warn(
-        '[글꼴] 불러오지 못했습니다: ' + missing.map((m) => m[1]).join(', ') +
-        '\n맥 · 아이폰에서는 운영체제의 San Francisco 를 쓰므로 화면에 차이가 없습니다.' +
-        '\n윈도우 · 안드로이드에서만 시스템 글꼴로 바뀝니다.' +
-        '\ncss/fonts.css 의 주소가 만료됐다면 아래에서 최신 코드를 가져와 교체하세요.' +
-        '\n  프리텐다드  https://github.com/orioncactus/pretendard'
-      );
-    }, 400));
-  }
-
   /* 상단바 이름을 설정값으로 채운다.
      HTML 에 기본 문구가 들어 있어 JS 가 없어도 보이고,
      관리자에서 이름을 바꾸면 이 함수가 덮어쓴다. */
@@ -668,22 +564,6 @@
     }
   }
 
-  function watchHomeNavigation() {
-    if (document.body.dataset.page !== 'home') return;
-    const home = $('.nav a[href="./"]');
-    const links = $('.nav a[href="#links"]');
-    if (!home || !links) return;
-    const sync = () => {
-      const atLinks = location.hash === '#links';
-      home.toggleAttribute('aria-current', !atLinks);
-      if (!atLinks) home.setAttribute('aria-current', 'page');
-      links.toggleAttribute('aria-current', atLinks);
-      if (atLinks) links.setAttribute('aria-current', 'location');
-    };
-    sync();
-    window.addEventListener('hashchange', sync);
-  }
-
   /* ---------- 새 배포 스스로 받아오기 ----------
      GitHub Pages 는 파일을 한동안 캐시에 둔다. js·css·이미지에는 ?v= 를
      붙여 해결했지만, 정작 html 자체에는 붙일 수가 없다. 그래서 html 이
@@ -746,13 +626,19 @@
     if (window.STORE) {
       STORE.init().then(applyBrand).catch(() => {});
     }
-    checkForUpdate();
+    // Check once per session version, after the first paint rather than on every page.
+    setTimeout(() => {
+      const key = 'cau-inmun:checked-version';
+      const version = (window.SITE || {}).APP_VERSION;
+      try {
+        if (sessionStorage.getItem(key) === version) return;
+        sessionStorage.setItem(key, version);
+      } catch (e) {}
+      checkForUpdate();
+    }, 5000);
     watchBrandFit();
-    watchHomeNavigation();
-    stickyHeader();
     initLogos();
     revealOnScroll();
-    checkFonts();
   }
 
   window.CORE = {
