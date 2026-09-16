@@ -286,7 +286,7 @@
   .site-theme .topbar__name { font-size: .9375rem; }
   .public-site .nav {
     position: fixed; inset: auto 0 0;
-    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0;
     padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
     background: var(--paper-raise); border-top: 1px solid var(--line);
     z-index: 50;
@@ -413,12 +413,12 @@
 .welcome__mascot img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; }
 @media (max-width: 680px) {
   .welcome--compact {
-    grid-template-columns: minmax(0, 1fr) clamp(100px, 32vw, 180px);
+    grid-template-columns: minmax(0, 1fr) clamp(80px, 28vw, 168px);
     grid-template-areas: 'eyebrow eyebrow' 'title art' 'signature signature';
-    gap: 0 8px; padding: 20px 16px;
+    gap: 0 6px; padding: 20px 12px;
   }
   .welcome--compact .welcome__copy { display: contents; }
-  .welcome--compact .welcome__title { font-size: clamp(18px, 4.7vw, 30px); line-height: 1.45; }
+  .welcome--compact .welcome__title { font-size: clamp(22px, 6vw, 32px); line-height: 1.45; }
   .welcome--compact .welcome__line { white-space: nowrap; }
   .welcome--compact .welcome__signature { margin: 16px 0 0; }
   .welcome__mascot { grid-area: art; width: 100%; max-width: none; padding: 0; margin: 0; align-self: center; }
@@ -432,3 +432,7 @@
 .teamroom-pending h1 { margin: 12px 0 16px; font-size: clamp(26px, 5vw, 38px); }
 .teamroom-pending p { margin-bottom: 24px; line-height: 1.7; }
 .home-menu .home-menu__status { font-size: .8125rem; white-space: nowrap; }
+
+@media (max-width: 370px) {
+  .welcome--compact { grid-template-columns: minmax(0, 1fr) 80px; column-gap: 4px; }
+}
