@@ -349,7 +349,6 @@
   .public-site .wrap { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
   .welcome { padding: 22px 18px 0; }
   .public-site .chip { font-size: .875rem; }
-  .footer__emblem { display: none; }
 }
 
 @media print {
