@@ -137,8 +137,8 @@ service cloud.firestore {
     //    한 번 실수로 지웠더니 규칙 전체가 게시되지 않아, 옛 규칙이 살아 있는
     //    채로 '배포했는데도 반납이 안 되는' 일이 오래갔다. 지우지 말 것.
     function releasedAfterBooking(day, seatNo) {
-      return exists(/databases/$(database)/documents/seatdays/$(day)/releases/$(seatNo))
-             && get(/databases/$(database)/documents/seatdays/$(day)/releases/$(seatNo)).data.createdAt
+      return existsAfter(/databases/$(database)/documents/seatdays/$(day)/releases/$(seatNo))
+             && getAfter(/databases/$(database)/documents/seatdays/$(day)/releases/$(seatNo)).data.createdAt
                 > resource.data.createdAt;
     }
     function matchesBooking(day, seatNo, d) {
@@ -201,6 +201,52 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && exists(/databases/$(database)/documents/seatdays/$(day)/seats/$(seatNo))
         && matchesBooking(day, seatNo, request.resource.data);
+    }
+
+    // Private append-only archive; every event must accompany its actual seat mutation.
+    function eventIdentity(a, b) {
+      return a.name == b.name && a.dept == b.dept && a.sid == b.sid;
+    }
+    function archiveReservation(day, d) {
+      let key = string(d.seat);
+      let log = getAfter(/databases/$(database)/documents/seatdays/$(day)/logs/$(key)).data;
+      return (d.kind == 'reserve' || d.kind == 'move-in')
+        && !exists(/databases/$(database)/documents/seatdays/$(day)/seats/$(key))
+        && getAfter(/databases/$(database)/documents/seatdays/$(day)/seats/$(key)).data.createdAt == request.time
+        && log.createdAt == request.time && eventIdentity(d, log) && d.tel == log.tel
+        && ((d.kind == 'reserve' && d.fromSeat == 0)
+          || (d.kind == 'move-in' && d.fromSeat >= 1 && d.fromSeat <= 60
+            && eventIdentity(d, get(/databases/$(database)/documents/seatdays/$(day)/releases/$(string(d.fromSeat))).data)
+            && get(/databases/$(database)/documents/seatdays/$(day)/releases/$(string(d.fromSeat))).data.kind == 'cancel'));
+    }
+    function archiveRelease(day, d) {
+      let key = string(d.seat);
+      let proof = getAfter(/databases/$(database)/documents/seatdays/$(day)/releases/$(key)).data;
+      return (d.kind == 'return' || d.kind == 'cancel' || d.kind == 'move-out')
+        && d.fromSeat == 0 && matchesBooking(day, key, d)
+        && exists(/databases/$(database)/documents/seatdays/$(day)/seats/$(key))
+        && !existsAfter(/databases/$(database)/documents/seatdays/$(day)/seats/$(key))
+        && proof.createdAt == request.time && eventIdentity(d, proof)
+        && ((d.kind == 'return' && proof.kind == 'return')
+          || ((d.kind == 'cancel' || d.kind == 'move-out') && proof.kind == 'cancel'));
+    }
+    match /seatdays/{day}/events/{eventId} {
+      allow read: if isAdmin();
+      allow update, delete: if false;
+      allow create: if request.resource.data.keys().hasAll(['kind', 'seat', 'fromSeat', 'name', 'dept', 'sid', 'tel', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['kind', 'seat', 'fromSeat', 'name', 'dept', 'sid', 'tel', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.seat is int && request.resource.data.seat >= 1 && request.resource.data.seat <= 60
+        && request.resource.data.fromSeat is int
+        && request.resource.data.name is string && request.resource.data.name.size() <= 20
+        && request.resource.data.dept is string && request.resource.data.dept.size() <= 40
+        && request.resource.data.sid is string && request.resource.data.sid.size() <= 12
+        && request.resource.data.tel is string && request.resource.data.tel.size() <= 16
+        && ((request.resource.data.kind == 'admin-cancel' && isAdmin()
+            && exists(/databases/$(database)/documents/seatdays/$(day)/seats/$(string(request.resource.data.seat)))
+            && !existsAfter(/databases/$(database)/documents/seatdays/$(day)/seats/$(string(request.resource.data.seat))))
+          || ((request.resource.data.kind == 'reserve' || request.resource.data.kind == 'move-in') && archiveReservation(day, request.resource.data))
+          || ((request.resource.data.kind == 'return' || request.resource.data.kind == 'cancel' || request.resource.data.kind == 'move-out') && archiveRelease(day, request.resource.data)));
     }
 
     // 그 밖의 모든 경로는 차단

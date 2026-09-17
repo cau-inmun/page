@@ -355,7 +355,7 @@
     let outcome = true;
     const bookingDay = today, bookingSeat = picking;
     try {
-      outcome = await STORE.reserveSeat(bookingDay, bookingSeat, { name: name, dept: dept, sid: sid, tel: tel });
+      outcome = await STORE.reserveSeat(bookingDay, bookingSeat, { name: name, dept: dept, sid: sid, tel: tel, fromSeat: moving ? moving.fromSeat : 0 });
     } catch (e) {
       btn.disabled = false; btn.textContent = '이 자리로 예약하기';
       if (e && e.code === 'taken') {
@@ -477,7 +477,7 @@
        관리자 화면은 이 값을 '변경' 으로 읽어준다. */
     try {
       await STORE.releaseSeat(releaseDay, n, { name: name, dept: dept, sid: sid },
-                              moveTo ? 'cancel' : 'return');
+                              moveTo ? 'move' : 'return');
     } catch (e) {
       btns.forEach((b) => { b.disabled = false; });
       if (seoulNow().date !== today || !$('#x-return')) { await refresh(); return; }
@@ -495,7 +495,7 @@
     if (releaseDay !== seoulNow().date) { await refresh(); return; }
     const mine = myBooking();
     /* 변경이면 다음 자리에 그대로 쓸 수 있도록 적은 내용을 들고 있는다 */
-    moving = moveTo ? { name: name, dept: dept, sid: sid, tel: (mine && mine.tel) || '' } : null;
+    moving = moveTo ? { fromSeat: n, name: name, dept: dept, sid: sid, tel: (mine && mine.tel) || '' } : null;
     if (mine && mine.seat === n) forgetBooking();
     $('[data-seat-form]').hidden = true;
     $('[data-seat-form]').innerHTML = '';

@@ -517,7 +517,7 @@
   /* 예약. 이미 잡힌 자리면 'taken' 을 던진다.
      보안 규칙이 덮어쓰기(update)를 막아두어, 같은 순간에 두 사람이 같은
      자리를 눌러도 뒤에 도착한 쪽만 거부된다 (화면 검사만으로는 못 막는다). */
-  async function reserveSeat(day, seat, person) {
+  async function reserveSeatLegacy(day, seat, person) {
     const key = String(seat);
     /* 좌석표에 실리는 문서에는 '자리가 찼다' 는 사실만 담는다.
        seats 는 보안 규칙상 누구나 읽는다. 예전에는 가린 이름(홍*동)과
@@ -577,7 +577,7 @@
      대조는 화면이 아니라 보안 규칙이 서버에서 한다 — 화면 검사만으로는
      아무나 남의 자리를 비울 수 있기 때문이다.
      맞지 않으면 code 가 'mismatch' 인 오류를 던진다. */
-  async function releaseSeat(day, seat, person, kind) {
+  async function releaseSeatLegacy(day, seat, person, kind) {
     const key = String(seat);
     const proof = {
       seat: Number(seat),
@@ -667,7 +667,7 @@
   }
 
   /* 관리자용 — 자리 비우기 */
-  async function cancelSeat(day, seat) {
+  async function cancelSeatLegacy(day, seat) {
     const key = String(seat);
     if (mode === 'firebase') {
       await seatPath(day).collection('seats').doc(key).delete();
@@ -678,6 +678,106 @@
     const all = lsGet(KEY.seats, {}) || {};
     if (all[day]) { delete all[day][key]; lsSet(KEY.seats, all); }
     return true;
+  }
+
+  /* Append-only private events. Batch with the seat change once archive rules are live.
+     Until rules are published, keep the old booking flow available; admin shows a warning. */
+  function seatEvent(kind, seat, person, fromSeat = 0) {
+    return { kind, seat: Number(seat), fromSeat: Number(fromSeat) || 0,
+      name: String(person.name || '').trim(), dept: String(person.dept || '').trim(),
+      sid: String(person.sid || '').replace(/\D/g, ''),
+      tel: String(person.tel || '').replace(/\D/g, '') };
+  }
+  function appendLocalEvent(day, event) {
+    const all = lsGet(KEY.seats, {}) || {};
+    const key = 'events:' + day;
+    const events = all[key] || [];
+    events.push(Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2), createdAt: new Date().toISOString() }, event));
+    all[key] = events;
+    lsSet(KEY.seats, all);
+  }
+  function addEvent(batch, day, event) {
+    batch.set(seatPath(day).collection('events').doc(), Object.assign({}, event,
+      { createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
+  }
+  async function reserveSeat(day, seat, person) {
+    const event = seatEvent(person.fromSeat ? 'move-in' : 'reserve', seat, person, person.fromSeat);
+    if (mode !== 'firebase') {
+      const result = await reserveSeatLegacy(day, seat, person);
+      event.createdAt = (lsGet(KEY.seats, {}) || {})[day][String(seat)].createdAt;
+      appendLocalEvent(day, event);
+      return result;
+    }
+    const batch = db.batch(), key = String(seat);
+    const createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    batch.set(seatPath(day).collection('seats').doc(key), { seat: Number(seat), nameMasked: '', sidHead: '', createdAt });
+    batch.set(seatPath(day).collection('logs').doc(key), {
+      seat: event.seat, name: event.name, dept: event.dept, sid: event.sid, tel: event.tel, createdAt
+    });
+    addEvent(batch, day, event);
+    try { await batch.commit(); return true; }
+    catch (e) {
+      if (e.code !== 'permission-denied') throw e;
+      return reserveSeatLegacy(day, seat, person);
+    }
+  }
+  async function releaseSeat(day, seat, person, kind) {
+    const proofKind = kind === 'move' || kind === 'cancel' ? 'cancel' : 'return';
+    const event = seatEvent(kind === 'move' ? 'move-out' : proofKind, seat, person);
+    if (mode !== 'firebase') {
+      const result = await releaseSeatLegacy(day, seat, person, proofKind);
+      event.createdAt = (lsGet(KEY.seats, {}) || {})['releases:' + day][String(seat)].createdAt;
+      appendLocalEvent(day, event);
+      return result;
+    }
+    const batch = db.batch(), key = String(seat);
+    batch.set(seatPath(day).collection('releases').doc(key), {
+      seat: event.seat, name: event.name, dept: event.dept, sid: event.sid, kind: proofKind,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    batch.delete(seatPath(day).collection('seats').doc(key));
+    batch.delete(seatPath(day).collection('logs').doc(key));
+    addEvent(batch, day, event);
+    try { await batch.commit(); return true; }
+    catch (e) {
+      if (e.code !== 'permission-denied') throw e;
+      return releaseSeatLegacy(day, seat, person, proofKind);
+    }
+  }
+  async function cancelSeat(day, seat) {
+    if (mode !== 'firebase') {
+      const person = ((lsGet(KEY.seats, {}) || {})[day] || {})[String(seat)] || {};
+      const result = await cancelSeatLegacy(day, seat);
+      appendLocalEvent(day, seatEvent('admin-cancel', seat, person));
+      return result;
+    }
+    const ref = seatPath(day), key = String(seat);
+    try {
+      await db.runTransaction(async (tx) => {
+        const log = await tx.get(ref.collection('logs').doc(key));
+        const seatDoc = await tx.get(ref.collection('seats').doc(key));
+        if (!seatDoc.exists) return;
+        addEvent(tx, day, seatEvent('admin-cancel', seat, log.exists ? log.data() : {}));
+        tx.delete(ref.collection('seats').doc(key));
+        tx.delete(ref.collection('logs').doc(key));
+      });
+      return true;
+    } catch (e) {
+      if (e.code !== 'permission-denied') throw e;
+      return cancelSeatLegacy(day, seat);
+    }
+  }
+  async function listSeatEvents(day) {
+    if (mode !== 'firebase') {
+      return { enabled: true, events: (lsGet(KEY.seats, {}) || {})['events:' + day] || [] };
+    }
+    try {
+      const snap = await seatPath(day).collection('events').get();
+      return { enabled: true, events: snap.docs.map((d) => Object.assign({ id: d.id }, d.data(), { createdAt: tsToIso(d.data().createdAt) })) };
+    } catch (e) {
+      if (e.code !== 'permission-denied') throw e;
+      return { enabled: false, events: [] };
+    }
   }
 
   /* 관리자용 — 보안 규칙이 실제로 게시됐는지 서버에 물어본다.
@@ -819,6 +919,6 @@
     submit, listSubmissions, deleteSubmission, testSheet,
     getNotices, saveNotice, deleteNotice, replaceNotices,
     getSeats, reserveSeat, releaseSeat, listSeatLogs, listSeatReleases,
-    listOrphanSeats, cancelSeat, probeSeatRules
+    listOrphanSeats, cancelSeat, listSeatEvents, probeSeatRules
   };
 })();

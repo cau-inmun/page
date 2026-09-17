@@ -1302,7 +1302,36 @@
      좌석표에는 '예약됨' 만 실린다. 누가 어느 자리에 앉았는지는 이 표에서만
      확인할 수 있다 — 공개되는 문서에 아예 담지 않기 때문이다.
      ========================================================== */
-  let seatLogs = [], seatReleases = [], seatOrphans = [];
+  let seatLogs = [], seatReleases = [], seatOrphans = [], seatHistory = [];
+  let loadedSeatDay = '', archiveEnabled = false, seatLoadVersion = 0;
+  const EVENT_WORD = { reserve: '예약', 'move-out': '자리 변경 · 기존 자리 해제', 'move-in': '자리 변경 · 새 자리 예약', return: '반납', cancel: '예약 취소', 'admin-cancel': '관리자 취소', 'legacy-release': '취소/변경 (기존 기록)' };
+  function historyRows(events, logs, releases) {
+    const rows = events.map((r) => Object.assign({ source: '누적 이력' }, r));
+    const matches = (r, types) => events.some((e) => Number(e.seat) === Number(r.seat) && e.createdAt === r.createdAt && types.includes(e.kind));
+    logs.forEach((r) => { if (!matches(r, ['reserve', 'move-in'])) rows.push(Object.assign({}, r, { kind: 'reserve', source: '기존 잔존 기록' })); });
+    releases.forEach((r) => { if (!matches(r, ['return', 'cancel', 'move-out'])) rows.push(Object.assign({}, r, { kind: r.kind === 'return' ? 'return' : 'legacy-release', source: '기존 잔존 기록' })); });
+    return rows.sort((a,b) => String(a.createdAt).localeCompare(String(b.createdAt)) || Number(a.seat)-Number(b.seat));
+  }
+  function historyTime(value) {
+    if (!value || isNaN(Date.parse(value))) return '';
+    const date = new Date(Date.parse(value) + 9 * 3600000);
+    return date.toISOString().slice(0, 19).replace('T', ' ');
+  }
+  function renderSeatHistory() {
+    $('#seat-history-count').textContent = seatHistory.length + '건';
+    $('#seat-history-status').textContent = archiveEnabled
+      ? '누적 기록과 기존에 남아 있는 기록을 표시합니다. 기능 적용 전에 삭제·덮어쓴 기록은 복원되지 않습니다.'
+      : '이력 저장 규칙이 아직 적용되지 않았습니다. GitHub의 firestore.rules를 Firebase에 게시해 주세요. 현재는 남아 있는 예약·반납 기록만 표시하며 전체 이력이 아닙니다.';
+    const box = $('#seat-history');
+    box.replaceChildren();
+    if (!seatHistory.length) { box.appendChild(el('p', { class: 'empty', text: loadedSeatDay + '의 기록이 없습니다.' })); return; }
+    const table = el('table', { class: 'table' }, [el('thead', null, [el('tr', null,
+      ['시각 (한국)', '구분', '좌석', '이전 좌석', '이름', '학과', '학번', '기록 출처'].map((text) => el('th', { text })))])]);
+    table.appendChild(el('tbody', null, seatHistory.map((r) => el('tr', null,
+      [historyTime(r.createdAt), EVENT_WORD[r.kind] || r.kind, r.seat, r.fromSeat || '', r.name, r.dept, r.sid, r.source]
+        .map((value) => el('td', { text: String(value == null ? '' : value) }))))));
+    box.appendChild(el('div', { class: 'table-wrap' }, [table]));
+  }
 
   function seatDay() {
     const v = $('#seat-date').value;
@@ -1310,23 +1339,41 @@
   }
 
   async function loadSeats() {
+    const version = ++seatLoadVersion;
+    const day = seatDay();
+    loadedSeatDay = '';
+    $('#seat-csv').disabled = true;
+    $('#seat-history').replaceChildren();
+    $('#seat-releases').replaceChildren();
+    $('#seat-orphan').replaceChildren();
+    $('#seat-orphan').hidden = true;
+    $('#seat-count').textContent = '';
+    $('#seat-rel-count').textContent = '';
+    $('#seat-history-count').textContent = '';
+    $('#seat-history-status').textContent = day + ' 내역을 불러오는 중입니다.';
     const box = $('#seat-table');
     box.innerHTML = '<div class="skeleton" style="height:120px"></div>';
     try {
-      const day = seatDay();
-      const [logs, rels, orphans] = await Promise.all([
-        STORE.listSeatLogs(day), STORE.listSeatReleases(day), STORE.listOrphanSeats(day)
+      const [logs, rels, orphans, history] = await Promise.all([
+        STORE.listSeatLogs(day), STORE.listSeatReleases(day), STORE.listOrphanSeats(day), STORE.listSeatEvents(day)
       ]);
+      if (version !== seatLoadVersion) return;
+      loadedSeatDay = day; archiveEnabled = history.enabled;
       seatLogs = logs; seatReleases = rels; seatOrphans = orphans;
+      seatHistory = historyRows(history.events, logs, rels);
+      $('#seat-csv').disabled = false;
     } catch (err) {
+      if (version !== seatLoadVersion) return;
       console.error(err);
       box.innerHTML = '';
       box.appendChild(errorBoxFor(err, '좌석 명단을 불러오지 못했습니다.'));
+      $('#seat-history-status').textContent = '불러오지 못했습니다. 새로고침을 눌러 다시 시도해 주세요.';
       $('#seat-releases').innerHTML = '';
       $('#seat-count').textContent = '';
       $('#seat-rel-count').textContent = '';
       return;
     }
+    renderSeatHistory();
     renderOrphans();
     renderSeats();
     renderSeatReleases();
@@ -1528,15 +1575,25 @@
     box.appendChild(el('div', { class: 'table-wrap' }, [table]));
   }
 
-  function exportSeatCsv() {
-    if (!seatLogs.length) { toast('내보낼 예약이 없습니다'); return; }
-    const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-    const head = ['좌석', '이름', '학과', '학번', '전화번호', '예약 시각'];
-    const rows = seatLogs.map((r) => [r.seat || r.id, r.name, r.dept, r.sid, telText(r.tel),
-      r.createdAt ? formatWhen(r.createdAt) : ''].map(esc).join(','));
-    const csv = '\ufeff' + [head.map(esc).join(',')].concat(rows).join('\r\n') + '\r\n';
-    download(`열람실-${seatDay()}.csv`, csv, 'text/csv;charset=utf-8');
-    toast('CSV 로 내려받았습니다');
+  async function exportSeatXlsx() {
+    if (!loadedSeatDay || loadedSeatDay !== seatDay()) { toast('선택한 날짜를 먼저 불러와 주세요'); return; }
+    const day = loadedSeatDay;
+    const sheets = [
+      { name: '이용 내역', rows: [['일자', '시각 (한국)', '구분', '좌석', '이전 좌석', '이름', '학과', '학번', '전화번호', '기록 출처'],
+        ...seatHistory.map((r) => [day, historyTime(r.createdAt), EVENT_WORD[r.kind] || r.kind, r.seat, r.fromSeat || '', r.name, r.dept, r.sid, r.tel, r.source])] },
+      { name: '남아 있는 예약', rows: [['일자', '좌석', '이름', '학과', '학번', '전화번호', '예약 시각 (한국)'],
+        ...seatLogs.map((r) => [day, r.seat, r.name, r.dept, r.sid, r.tel, historyTime(r.createdAt)])] },
+      { name: '안내', rows: [['항목', '내용'], ['조회 일자', day], ['시간대', '한국 (UTC+09:00)'],
+        ['이력 저장', archiveEnabled ? '누적 이력 조회 가능' : '규칙 미적용: 기존 잔존 기록만 포함'],
+        ['과거 기록', '기능 적용 전 삭제·덮어쓴 기록은 복원되지 않습니다.'],
+        ['자리 변경', '기존 자리 해제와 새 자리 예약이 별도 행으로 남습니다. 새 예약 전 중단하면 해제 내역만 남습니다.'],
+        ['자정 초기화', '날짜별 좌석표 전환이며 전날 이용 내역은 삭제하지 않습니다.']] }
+    ];
+    try {
+      const { workbook } = await import('./seat-xlsx.js?v=20260917a');
+      download(`열람실-이용내역-${day}.xlsx`, workbook(sheets), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      toast('엑셀 파일을 내려받았습니다');
+    } catch (e) { console.error(e); toast('엑셀 파일을 만들지 못했습니다. 다시 시도해 주세요'); }
   }
 
   function bindTabs() {
@@ -1566,7 +1623,7 @@
       $('#seat-date').value = seoulNow().date; loadSeats();
     });
     $('#seat-refresh').addEventListener('click', () => { loadSeats(); toast('새로고침했습니다'); });
-    $('#seat-csv').addEventListener('click', exportSeatCsv);
+    $('#seat-csv').addEventListener('click', exportSeatXlsx);
 
     await STORE.init();
 
