@@ -1,7 +1,7 @@
 /* Small public previews only: no Firebase SDK, article bodies, images or form fields. */
 (function () {
   'use strict';
-  const { $, $$, el, safeUrl, applyBrand } = window.CORE;
+  const { $, $$, el, applyBrand, renderFooter } = window.CORE;
   const S = window.SITE;
   const cacheKey = 'cau-inmun:home-cache';
   const keys = ['brand', 'college', 'councilTerm', 'councilName', 'tagline', 'description', 'contact', 'homeNotices', 'homeForms'];
@@ -21,14 +21,7 @@
       el('span', { class: 'welcome__line', text: line })));
     document.title = `${S.college} ${S.councilTerm} ‘${S.councilName}’`;
     $('meta[name="description"]').content = S.description || '';
-    const contact = S.contact || {};
-    $('[data-contact-place]').textContent = contact.place || '';
-    const links = $('[data-footer-links]');
-    links.replaceChildren(el('a', { href: 'notices.html', text: '공지사항' }));
-    [['instagram', '인스타그램'], ['kakao', '카카오톡 채널'], ['email', '이메일 문의']].forEach(([key, label]) => {
-      const url = safeUrl(key === 'email' && contact[key] ? 'mailto:' + contact[key] : contact[key]);
-      if (url) links.appendChild(el('a', { href: url, text: label, target: '_blank', rel: 'noopener noreferrer' }));
-    });
+    renderFooter();
   }
 
   function decode(value) {

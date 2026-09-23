@@ -6,7 +6,7 @@
 
   const { $, $$, el, icon, loadNotices, noticeCard, renderMarkdown,
           formatDate, formatDateTime, noticeStatus, safeUrl, isExternal,
-          tagEl, toast, revealOnScroll } = window.CORE;
+          tagEl, toast, revealOnScroll, renderFooter } = window.CORE;
 
   const S = window.SITE;
 
@@ -178,30 +178,8 @@
       });
     }
 
-    /* 푸터 */
-    const place = $('[data-contact-place]');
-    if (place) {
-      /* 설정의 줄바꿈을 그대로 살린다. textContent 로 넣어 이스케이프는 유지 */
-      place.innerHTML = '';
-      String(S.contact.place || '').split('\n').forEach((line, i) => {
-        if (i) place.appendChild(document.createElement('br'));
-        place.appendChild(document.createTextNode(line));
-      });
-    }
-    const fLinks = $('[data-footer-links]');
-    if (fLinks && S.contact.instagram) {
-      fLinks.appendChild(el('a', {
-        href: S.contact.instagram, target: '_blank', rel: 'noopener noreferrer', text: '인스타그램'
-      }));
-    }
-    if (fLinks && S.contact.kakao) {
-      fLinks.appendChild(el('a', {
-        href: S.contact.kakao, target: '_blank', rel: 'noopener noreferrer', text: '카카오톡 채널'
-      }));
-    }
-    if (fLinks && S.contact.email) {
-      fLinks.appendChild(el('a', { href: 'mailto:' + S.contact.email, text: '이메일 문의' }));
-    }
+    /* 관리자에 저장된 연락처를 공통 푸터에 반영한다. */
+    renderFooter();
 
     /* 최근 공지 */
     const box = $('[data-recent]');
