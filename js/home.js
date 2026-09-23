@@ -1,7 +1,7 @@
 /* Small public previews only: no Firebase SDK, article bodies, images or form fields. */
 (function () {
   'use strict';
-  const { $, $$, el, applyBrand, renderFooter } = window.CORE;
+  const { $, $$, el, applyBrand, renderFooter, decodeFirestore } = window.CORE;
   const S = window.SITE;
   const cacheKey = 'cau-inmun:home-cache';
   const keys = ['brand', 'college', 'councilTerm', 'councilName', 'tagline', 'description', 'contact', 'homeNotices', 'homeForms'];
@@ -22,17 +22,6 @@
     document.title = `${S.college} ${S.councilTerm} ‘${S.councilName}’`;
     $('meta[name="description"]').content = S.description || '';
     renderFooter();
-  }
-
-  function decode(value) {
-    if ('mapValue' in value) return Object.fromEntries(Object.entries(value.mapValue.fields || {}).map(([k, v]) => [k, decode(v)]));
-    if ('arrayValue' in value) return (value.arrayValue.values || []).map(decode);
-    if ('integerValue' in value) return Number(value.integerValue);
-    if ('doubleValue' in value) return Number(value.doubleValue);
-    if ('booleanValue' in value) return value.booleanValue;
-    if ('timestampValue' in value) return value.timestampValue;
-    if ('stringValue' in value) return value.stringValue;
-    return null;
   }
 
   const base = 'https://firestore.googleapis.com/v1/projects/' +
@@ -59,7 +48,7 @@
         }))
       : (await read(collection, previewFields, { pageSize: '6', orderBy: collection === 'notices' ? 'date desc' : 'order asc' })).documents || [];
     return docs.filter(Boolean).map((doc) => Object.assign(
-      decode({ mapValue: { fields: doc.fields || {} } }), { id: doc.name.split('/').pop() }
+      decodeFirestore({ mapValue: { fields: doc.fields || {} } }), { id: doc.name.split('/').pop() }
     )).filter((item) => window.CORE.noticeStatus(item) === 'live').slice(0, 3);
   }
 
@@ -94,7 +83,7 @@
       const response = await fetch(url, { signal: controller.signal });
       if (!response.ok) return;
       const doc = await response.json();
-      const value = decode({ mapValue: { fields: doc.fields || {} } });
+      const value = decodeFirestore({ mapValue: { fields: doc.fields || {} } });
       apply(value);
       render();
       try { localStorage.setItem(cacheKey, JSON.stringify(value)); } catch (e) {}

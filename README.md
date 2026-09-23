@@ -40,14 +40,16 @@ js/config.js        ★ 링크 · 폼 · 학과 · 소개 · 연락처 기본값
 js/firebase-config.js ★ Firebase 설정 (여기를 채워야 폼이 동작)
 js/store.js         데이터 계층 (Firestore ↔ 브라우저 저장소)
 js/core.js          공통 기능 (공지 불러오기, 본문 렌더링)
-js/pages.js         홈 · 목록 · 상세 화면
+js/home.js          홈 화면
+js/directory.js     학사·학과 링크와 학생회 소개
+js/pages.js         공지 목록 · 상세 화면
 js/apply.js         폼 화면
 js/seats.js         열람실 좌석 예약
 js/admin.js         관리자 콘솔
 
 css/style.css       디자인 전체
 css/redesign.css    공개 페이지의 모바일 디자인 (크림 · 네이비)
-css/fonts.css       웹폰트 정의 (프리텐다드 · 페이퍼로지)
+웹폰트             각 HTML 에서 프리텐다드 스타일시트를 직접 불러옴
 data/notices.json   공지 기본값 (Firebase 미연결 시 사용)
 firestore.rules     ★ Firestore 보안 규칙 — 반드시 배포할 것
                       붙여넣기 전 node docs/check-firestore-rules.js 로 점검
@@ -643,7 +645,7 @@ readingRoom: {
 | --- | --- |
 | 글꼴 | 프리텐다드 Pretendard (길형진) |
 | 라이선스 | SIL Open Font License — 상업적 이용 무료 |
-| 받는 곳 | jsDelivr CDN (`css/fonts.css` 의 `@import`) |
+| 받는 곳 | jsDelivr CDN (각 HTML의 `<link rel="stylesheet">`) |
 
 프리텐다드는 애플 시스템 글꼴(Apple SD Gothic Neo)을 다른 환경에서도 쓰려고
 만든 글꼴입니다. 애플 글꼴 자체는 웹사이트에 심을 수 없습니다 — 애플이 따로
@@ -661,22 +663,21 @@ readingRoom: {
 `--font-ui` 뒤쪽에 적힌 이름들은 프리텐다드를 못 받았을 때의 대비입니다
 (애플 기기는 Apple SD Gothic Neo, 윈도우는 맑은 고딕).
 
-### 바꾸고 싶을 때 (각각 한 줄)
+### 바꾸고 싶을 때
 
 ```css
 /* 애플 기기에서만 그 기기의 글꼴을 쓰기 — 한글·영문·숫자 모두 통일된다 */
 --font-ui: 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont,
            'Pretendard Variable', Pretendard, 'Malgun Gothic', system-ui, sans-serif;
-
-/* 제목만 페이퍼로지로 되돌리기 (@font-face 는 css/fonts.css 에 남겨두었습니다) */
---font-display: 'Paperlogy', var(--font-ui);
 ```
+
+웹폰트 파일 주소를 바꾸려면 각 HTML의 jsDelivr 스타일시트 링크도 함께 수정합니다.
 
 ### 글꼴이 안 보일 때
 
 1. **F12 → Console** 에서 `[글꼴] 불러오지 못했습니다: …` 경고를 확인합니다.
 2. <https://github.com/orioncactus/pretendard> 의 최신 코드로
-   `css/fonts.css` 의 블록을 교체합니다.
+   각 HTML에 있는 프리텐다드 스타일시트 주소를 교체합니다.
 
 못 불러와도 시스템 한글 글꼴로 정상 표시되므로 화면이 깨지지는 않습니다.
 

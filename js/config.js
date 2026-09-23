@@ -10,7 +10,7 @@ const SITE = {
      html 의 ?v= 값과 반드시 같아야 합니다. js·css·이미지를 고칠 때
      두 곳을 함께 올려주세요. 이 값이 다르면 사이트가 스스로 알아채고
      새 파일을 받아옵니다 (js/core.js 의 checkForUpdate).      */
-  APP_VERSION: '20260923a',
+  APP_VERSION: '20260923b',
 
   /* ---- 학생회 기본 정보 ---- */
   /* ---- 상단바에 보이는 이름 ----
@@ -91,25 +91,27 @@ const SITE = {
   /* ---- 공지 카테고리 (색상은 css 의 .tag[data-cat] 와 연결) ---- */
   categories: ['전체', '학사', '행사', '모집', '복지', '일반'],
 
-  /* ---- 인문대학 학과 소개 (홈의 '학과 · 링크' 격자) ----
-     아래 departments 와 따로 두는 이유:
-       · 여기에는 학과 홈페이지 주소가 붙는다
-       · 여기에는 '한국어교육 · 한국문화' 가 들어가고,
-         '기타 (타 단대 · 복수전공 등)' 는 들어가지 않는다
-     처음에는 목록 하나를 걸러 쓰려 했는데, 담기는 내용 자체가 달라져
-     한 목록으로는 둘 다 맞출 수 없게 됐다. 대신 둘 다 여기 한 파일에
-     나란히 두어, 한쪽만 고치고 다른 쪽을 잊지 않도록 한다. */
+  /* ---- 학사 · 학과 링크의 인문대학 목록 ----
+     전공이 있는 학부는 children 을 두면 학부를 눌러 펼칠 수 있다.
+     학과는 url 을 두면 바로 홈페이지로 이동한다.
+     신청 폼의 학과 선택지인 departments 와는 용도가 다르다. */
   majors: [
-    { name: '국어국문학과',        url: 'https://koll.cau.ac.kr/' },
-    { name: '한국어교육 · 한국문화', url: 'https://keducation-kculture.github.io/homepage_tem/' },
-    { name: '영어영문학과',        url: 'http://english.cau.ac.kr/' },
-    { name: '독일어문학전공',      url: 'https://germania.cau.ac.kr/' },
-    { name: '프랑스어문학전공',    url: 'https://caufrance.cau.ac.kr/' },
-    { name: '러시아어문학전공',    url: 'https://caurussia.cau.ac.kr/' },
-    { name: '일본어문학전공',      url: 'https://caujapanese.kr/' },
-    { name: '중국어문학전공',      url: 'https://ccll.cau.ac.kr/' },
-    { name: '철학과',              url: 'https://philosophy.cau.ac.kr/' },
-    { name: '역사학과',            url: 'https://history.cau.ac.kr/' }
+    { name: '국어국문학부', children: [
+      { name: '국어국문학전공', url: 'https://koll.cau.ac.kr/' },
+      { name: '한국어교육・한국문화전공', url: 'https://keducation-kculture.github.io/homepage_tem/' }
+    ] },
+    { name: '영어영문학과', url: 'http://english.cau.ac.kr/' },
+    { name: '유럽문화학부', children: [
+      { name: '독일어문학전공', url: 'https://germania.cau.ac.kr/' },
+      { name: '프랑스어문학전공', url: 'https://caufrance.cau.ac.kr/' },
+      { name: '러시아어문학전공', url: 'https://caurussia.cau.ac.kr/' }
+    ] },
+    { name: '아시아문화학부', children: [
+      { name: '일본어문학전공', url: 'https://caujapanese.kr/' },
+      { name: '중국어문학전공', url: 'https://ccll.cau.ac.kr/' }
+    ] },
+    { name: '철학과', url: 'https://philosophy.cau.ac.kr/' },
+    { name: '역사학과', url: 'https://history.cau.ac.kr/' }
   ],
 
   /* ---- 인문대학 학과 (신청 폼 선택지에 사용) ----

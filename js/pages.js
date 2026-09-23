@@ -1,42 +1,14 @@
 /* ============================================================
-   pages.js — 페이지별 렌더링 (body[data-page] 로 분기)
+   pages.js — 공지 목록과 상세 화면
    ============================================================ */
 (function () {
   'use strict';
 
   const { $, $$, el, icon, loadNotices, noticeCard, renderMarkdown,
-          formatDate, formatDateTime, noticeStatus, safeUrl, isExternal,
-          tagEl, toast, revealOnScroll, renderFooter } = window.CORE;
+          formatDate, formatDateTime, noticeStatus, linkButton,
+          tagEl, toast, revealOnScroll } = window.CORE;
 
   const S = window.SITE;
-
-  /* ---------- 공통: 링크 버튼 ---------- */
-  function linkButton(item) {
-    if (/^(?:\.\/)?seats\.html(?:[?#]|$)/.test(item.url || '') && S.readingRoom.openHour === 0 && S.readingRoom.closeHour === 24) {
-      item = Object.assign({}, item, { desc: '24시간 예약 · 매일 자정 초기화' });
-    }
-    const url = safeUrl(item.url);
-    const ready = !!url;
-
-    const label = el('div', { class: 'linkbtn__label' }, [
-      item.label,
-      item.badge && ready ? el('span', { class: 'badge', text: item.badge }) : null,
-      !ready ? el('span', { class: 'badge badge--soon', text: '준비 중' }) : null
-    ]);
-
-    const attrs = ready
-      ? { class: 'linkbtn', href: url, target: isExternal(url) ? '_blank' : null,
-          rel: isExternal(url) ? 'noopener noreferrer' : null }
-      : { class: 'linkbtn is-disabled', href: '#', 'aria-disabled': 'true', tabindex: '-1' };
-
-    return el('a', attrs, [
-      el('div', { class: 'linkbtn__body' }, [
-        label,
-        item.desc ? el('div', { class: 'linkbtn__desc', text: item.desc }) : null
-      ]),
-      el('span', { class: 'linkbtn__arrow', html: icon('arrow') })
-    ]);
-  }
 
   /* ---------- 공통: 빈 상태 / 오류 ---------- */
   const emptyBox = (title, sub) =>
@@ -46,160 +18,6 @@
     el('div', { class: 'banner banner--error' }, [
       el('strong', { text: '공지를 불러오지 못했습니다. ' }), msg
     ]);
-
-  // Cached/default shortcuts are usable while the saved configuration loads.
-  function renderQuickLinks() {
-    const quick = $('[data-quick]');
-    if (!quick) return;
-    quick.innerHTML = '';
-    (S.quickLinks || []).forEach((q) => {
-      const url = safeUrl(q.url);
-      const children = [
-        el('span', { class: 'chip__icon', html: icon(q.icon), 'aria-hidden': 'true' }),
-        el('span', { class: 'chip__label', text: q.label })
-      ];
-      if (!url) children.push(el('span', { class: 'chip__soon', text: '준비 중' }));
-      quick.appendChild(url
-        ? el('a', { class: 'chip', href: url,
-            target: isExternal(url) ? '_blank' : null,
-            rel: isExternal(url) ? 'noopener noreferrer' : null }, children)
-        : el('span', { class: 'chip is-disabled' }, children));
-    });
-  }
-
-  /* ==========================================================
-     1) 홈
-     ========================================================== */
-  function renderTagline() {
-    const title = $('[data-site="tagline"]');
-    if (!title || !S.tagline) return;
-    // Keep the council's two-line slogan even when the saved value has no newline.
-    // Other slogans still respect line breaks entered in the site editor.
-    const value = S.tagline.trim().replace(/학문을\s*잇다,\s*인문의\s*가치를\s*잇다/, '학문을 잇다,\n인문의 가치를 잇다');
-    title.replaceChildren(...value.split(/\r?\n/).filter((line) => line.trim()).map((line) =>
-      el('span', { class: 'welcome__line', text: line.trim() })));
-  }
-
-  async function initHome() {
-    renderTagline();
-    renderQuickLinks();
-    /* 저장된 사이트 정보를 먼저 반영한다 (없으면 config.js 기본값) */
-    if (window.STORE) { try { await STORE.init(); } catch (e) {} }
-
-    /* 기본 텍스트 */
-    $$('[data-site="college"]').forEach((n) => { n.textContent = S.college; });
-    renderTagline();
-    $$('[data-site="council"]').forEach((n) => { n.textContent = S.councilTerm; });
-    $$('[data-site="name"]').forEach((n) => { n.textContent = S.councilName; });
-    document.title = `${document.body.dataset.page === 'links' ? '학사 · 학과 링크' : '학생회 소개'} · ${S.college}`;
-    const metaDesc = $('meta[name="description"]');
-    if (metaDesc && S.description) metaDesc.setAttribute('content', S.description);
-
-    renderQuickLinks();
-
-    /* 링크 모음 — 서버에 등록된 게 있으면 그걸, 없으면 config.js 기본값 */
-    const linkWrap = $('[data-links]');
-    if (linkWrap) {
-      let groups = S.linkGroups;
-      if (window.STORE) {
-        try { await STORE.init(); groups = await STORE.getLinks(); }
-        catch (err) { console.warn('[링크] 서버에서 불러오지 못해 기본값을 씁니다.', err); }
-      }
-      linkWrap.innerHTML = '';
-      groups.forEach((g, i) => {
-        linkWrap.appendChild(el('section', { class: 'linkgroup reveal', 'aria-labelledby': `link-group-${i}` }, [
-          el('h2', { class: 'directory-title linkgroup__title', id: `link-group-${i}`, text: g.group }),
-          el('ul', { class: 'links' }, g.items.map((it) => el('li', null, [linkButton(it)])))
-        ]));
-      });
-    }
-
-    /* 학생회 소개 */
-    const aboutIntro = $('[data-about-intro]');
-    if (aboutIntro) aboutIntro.textContent = S.about.intro;
-
-    /* 집행부 · 국 — 관리자에서 저장한 구성이 있으면 그것이 쓰인다
-       (store 의 SITE_KEYS 에 about 이 들어 있어 서버 값이 config.js 를 덮는다) */
-    const depts = $('[data-depts]');
-    if (depts) {
-      const list = (S.about && S.about.departments) || [];
-      depts.innerHTML = '';
-      if (!list.length) {
-        depts.replaceWith(emptyBox('집행부 구성을 준비하고 있습니다.',
-          '정해지는 대로 이곳에 올라갑니다.'));
-      } else {
-        list.forEach((d) => {
-          depts.appendChild(el('li', { class: 'dept reveal' }, [
-            el('div', { class: 'dept__name', text: d.name }),
-            el('div', { class: 'dept__desc', text: d.desc })
-          ]));
-        });
-      }
-    }
-
-    /* 사업 · 행사 — 아직 자료가 없다.
-       TODO: js/config.js 에 programs: [{ title, when, desc, url }] 를 넣으면
-             이 자리에 카드로 뜹니다. 없는 행사를 지어내지 않으려고 비워 둡니다. */
-    const programs = $('[data-programs]');
-    if (programs) {
-      const list = (S.programs || []);
-      programs.innerHTML = '';
-      if (!list.length) {
-        programs.appendChild(emptyBox('올해 사업 · 행사를 준비하고 있습니다.',
-          '일정이 정해지면 이곳과 공지사항에 함께 올리겠습니다.'));
-      } else {
-        programs.appendChild(el('ul', { class: 'cards' }, list.map((p) =>
-          el('li', { class: 'card reveal' }, [
-            p.when ? el('div', { class: 'card__when', text: p.when }) : null,
-            el('div', { class: 'card__title', text: p.title }),
-            p.desc ? el('div', { class: 'card__desc', text: p.desc }) : null
-          ]))));
-      }
-    }
-
-    /* 인문대학 학과 — 누르면 각 학과 홈페이지로 간다.
-       주소가 비어 있으면 링크 대신 그냥 이름만 보여준다 (죽은 링크를
-       누르게 하지 않는다). */
-    const majors = $('[data-majors]');
-    if (majors) {
-      majors.innerHTML = '';
-      (S.majors || []).forEach((m) => {
-        const url = safeUrl(m.url);
-        majors.appendChild(el('li', { class: 'reveal' }, [
-          url
-            ? el('a', { class: 'major', href: url,
-                        target: isExternal(url) ? '_blank' : null,
-                        rel: isExternal(url) ? 'noopener noreferrer' : null }, [
-                el('span', { class: 'major__name', text: m.name }),
-                el('span', { class: 'major__arrow', 'aria-hidden': 'true', text: '↗' })
-              ])
-            : el('span', { class: 'major is-plain', text: m.name })
-        ]));
-      });
-    }
-
-    /* 관리자에 저장된 연락처를 공통 푸터에 반영한다. */
-    renderFooter();
-
-    /* 최근 공지 */
-    const box = $('[data-recent]');
-    if (box) {
-      try {
-        const list = (await loadNotices()).filter((n) => noticeStatus(n) === 'live');
-        box.innerHTML = '';
-        if (!list.length) {
-          box.appendChild(emptyBox('아직 등록된 공지가 없습니다.', '새 소식이 올라오면 이곳에 표시됩니다.'));
-        } else {
-          list.slice(0, 4).forEach((n) => box.appendChild(el('li', null, [noticeCard(n)])));
-        }
-      } catch (err) {
-        box.innerHTML = '';
-        box.appendChild(errorBox(err.message));
-      }
-    }
-
-    revealOnScroll();
-  }
 
   /* ==========================================================
      2) 공지 목록
@@ -211,7 +29,6 @@
     const count  = $('[data-count]');
     if (!box) return;
 
-    if (window.STORE) { try { await STORE.init(); } catch (e) {} }
     let all = [];
     const params = new URLSearchParams(location.search);
     let cat = params.get('cat') || '전체';
@@ -257,9 +74,9 @@
     function buildFilters() {
       if (!filters2) return;
       const pool = inView();
-      const used = ['전체'].concat(
-        S.categories.filter((c) => c !== '전체' && pool.some((n) => n.category === c))
-      );
+      const actual = [...new Set(pool.map((n) => n.category).filter(Boolean))];
+      const preferred = (S.categories || []).filter((c) => c !== '전체' && actual.includes(c));
+      const used = ['전체', ...preferred, ...actual.filter((c) => !preferred.includes(c))];
       if (!used.includes(cat)) cat = '전체';
       filters2.innerHTML = '';
       used.forEach((c) => {
@@ -418,10 +235,8 @@
 
   /* ---------- 부팅 ---------- */
   document.addEventListener('DOMContentLoaded', () => {
-    window.CORE.boot();
     const page = document.body.dataset.page;
-    if (page === 'links' || page === 'about') initHome();
-    else if (page === 'notices') initNoticeList();
+    if (page === 'notices') initNoticeList();
     else if (page === 'notice')  initNoticeDetail();
   });
 })();

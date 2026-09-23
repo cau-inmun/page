@@ -339,6 +339,45 @@
   /* ---------- 공지 데이터 ---------- */
   let cache = null;
 
+  /* 공개 Firestore 응답의 자료형을 일반 JavaScript 값으로 바꾼다. */
+  function decodeFirestore(value) {
+    if ('mapValue' in value) return Object.fromEntries(
+      Object.entries(value.mapValue.fields || {}).map(([key, field]) => [key, decodeFirestore(field)]));
+    if ('arrayValue' in value) return (value.arrayValue.values || []).map(decodeFirestore);
+    if ('integerValue' in value) return Number(value.integerValue);
+    if ('doubleValue' in value) return Number(value.doubleValue);
+    if ('booleanValue' in value) return value.booleanValue;
+    if ('timestampValue' in value) return value.timestampValue;
+    if ('stringValue' in value) return value.stringValue;
+    return null;
+  }
+
+  async function publicNotices() {
+    const project = (window.FIREBASE_CONFIG || {}).projectId;
+    if (!project) return null;
+    const base = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(project)}/databases/(default)/documents/notices`;
+    const list = [];
+    let pageToken = '';
+    do {
+      const query = new URLSearchParams({ pageSize: '100' });
+      if (pageToken) query.set('pageToken', pageToken);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      let response;
+      try { response = await fetch(`${base}?${query}`, { signal: controller.signal }); }
+      finally { clearTimeout(timeout); }
+      if (response.status === 404) return list.length ? list : null;
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const result = await response.json();
+      (result.documents || []).forEach((doc) => {
+        list.push(Object.assign({ id: doc.name.split('/').pop() },
+          decodeFirestore({ mapValue: { fields: doc.fields || {} } })));
+      });
+      pageToken = result.nextPageToken || '';
+    } while (pageToken);
+    return list.length ? list : null;
+  }
+
   async function loadNotices() {
     if (cache) return cache;
 
@@ -352,6 +391,9 @@
       } catch (err) {
         console.warn('[공지] 서버에서 불러오지 못해 파일로 대체합니다.', err);
       }
+    } else if ((window.FIREBASE_CONFIG || {}).projectId) {
+      try { source = await publicNotices(); }
+      catch (err) { console.warn('[공지] 공개 자료를 불러오지 못해 파일로 대체합니다.', err); }
     }
     if (!source) {
       const res = await fetch(DATA_URL + '?v=' + Date.now(), { cache: 'no-store' });
@@ -402,6 +444,33 @@
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15.5V3.8"/><path d="m8 7.5 4-3.7 4 3.7"/><path d="M5.5 12.5v6a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-6"/></svg>'
   };
   const icon = (name) => ICONS[name] || ICONS.link;
+
+  /* 링크 모음과 공지 첨부 링크가 쓰는 공통 버튼. */
+  function linkButton(item) {
+    const room = window.SITE && window.SITE.readingRoom;
+    if (room && /^(?:\.\/)?seats\.html(?:[?#]|$)/.test(item.url || '') &&
+        room.openHour === 0 && room.closeHour === 24) {
+      item = Object.assign({}, item, { desc: '24시간 예약 · 매일 자정 초기화' });
+    }
+    const url = safeUrl(item.url);
+    const ready = !!url;
+    const label = el('div', { class: 'linkbtn__label' }, [
+      item.label,
+      item.badge && ready ? el('span', { class: 'badge', text: item.badge }) : null,
+      !ready ? el('span', { class: 'badge badge--soon', text: '준비 중' }) : null
+    ]);
+    const external = ready && isExternal(url);
+    return el('a', ready
+      ? { class: 'linkbtn', href: url, target: external ? '_blank' : null,
+          rel: external ? 'noopener noreferrer' : null }
+      : { class: 'linkbtn is-disabled', href: '#', 'aria-disabled': 'true', tabindex: '-1' }, [
+      el('div', { class: 'linkbtn__body' }, [
+        label,
+        item.desc ? el('div', { class: 'linkbtn__desc', text: item.desc }) : null
+      ]),
+      el('span', { class: 'linkbtn__arrow', html: icon('arrow') })
+    ]);
+  }
 
   /* ---------- 태그 / 배지 ---------- */
   function tagEl(text, variant, cat) {
@@ -673,6 +742,6 @@
     seoulNow, maskName, maskSid, describeError, errorBoxFor, countUp,
     noticeStatus, formStatus, formVisibility, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
-    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, renderFooter, fitBrandName, checkForUpdate, boot
+    loadNotices, decodeFirestore, icon, ICONS, linkButton, tagEl, noticeCard, toast, revealOnScroll, applyBrand, renderFooter, fitBrandName, checkForUpdate, boot
   };
 })();

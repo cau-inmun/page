@@ -1590,7 +1590,7 @@
         ['자정 초기화', '날짜별 좌석표 전환이며 전날 이용 내역은 삭제하지 않습니다.']] }
     ];
     try {
-      const { workbook } = await import('./seat-xlsx.js?v=20260923a');
+      const { workbook } = await import('./seat-xlsx.js?v=20260923b');
       download(`열람실-이용내역-${day}.xlsx`, workbook(sheets), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       toast('엑셀 파일을 내려받았습니다');
     } catch (e) { console.error(e); toast('엑셀 파일을 만들지 못했습니다. 다시 시도해 주세요'); }
