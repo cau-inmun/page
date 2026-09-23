@@ -484,6 +484,31 @@
     fitBrandName();
   }
 
+  /* 공개 페이지 푸터는 모두 같은 사이트 정보와 연락처를 사용한다. */
+  function renderFooter() {
+    const links = $('[data-footer-links]');
+    if (!links || !window.SITE) return;
+    const site = window.SITE;
+    $$('[data-site="college"]').forEach((node) => { node.textContent = site.college || ''; });
+    $$('[data-site="council"]').forEach((node) => { node.textContent = site.councilTerm || ''; });
+    $$('[data-site="name"]').forEach((node) => { node.textContent = site.councilName || ''; });
+
+    const contact = site.contact || {};
+    const place = $('[data-contact-place]');
+    if (place) place.textContent = contact.place || '';
+    links.replaceChildren(el('a', { href: 'notices.html', text: '공지사항' }));
+    [['instagram', '인스타그램'], ['kakao', '카카오톡 채널'], ['email', '이메일 문의']].forEach(([key, label]) => {
+      const url = safeUrl(key === 'email' && contact[key] ? 'mailto:' + contact[key] : contact[key]);
+      if (!url) return;
+      const external = isExternal(url);
+      links.appendChild(el('a', {
+        href: url, text: label,
+        target: external ? '_blank' : null,
+        rel: external ? 'noopener noreferrer' : null
+      }));
+    });
+  }
+
   /* 상단바 이름을 자리에 맞춰 고른다.
      긴 이름 → 안 들어가면 짧은 이름 → 그것도 안 들어가면 감춘다.
      화면 폭 기준(중단점)으로 하지 않는 이유: 메뉴가 하나 늘거나 이름이
@@ -623,8 +648,9 @@
        그다음 config.js 기본값 → 저장된 값 순서로 그린다. */
     if (window.STORE && STORE.applyCachedSite) STORE.applyCachedSite();
     applyBrand();
+    renderFooter();
     if (window.STORE) {
-      STORE.init().then(applyBrand).catch(() => {});
+      STORE.init().then(() => { applyBrand(); renderFooter(); }).catch(() => {});
     }
     // Check once per session version, after the first paint rather than on every page.
     setTimeout(() => {
@@ -647,6 +673,6 @@
     seoulNow, maskName, maskSid, describeError, errorBoxFor, countUp,
     noticeStatus, formStatus, formVisibility, NOTICE_STATUS_LABEL,
     renderMarkdown, plainText,
-    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, fitBrandName, checkForUpdate, boot
+    loadNotices, icon, ICONS, tagEl, noticeCard, toast, revealOnScroll, applyBrand, renderFooter, fitBrandName, checkForUpdate, boot
   };
 })();
