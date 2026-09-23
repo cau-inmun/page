@@ -212,10 +212,19 @@
 .public-site .linkbtn.is-disabled .linkbtn__arrow { visibility: hidden; }
 .public-site .badge { border-radius: 3px; font-size: .75rem; font-weight: 600; padding: 1px 5px; }
 .home-shell .major-directory { margin-top: 36px; }
-.public-site .majors { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 24px; margin: 0; }
+.public-site .majors { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; margin: 0; }
 .public-site .major { min-width: 0; min-height: 48px; padding: 12px 0; border: 0; border-bottom: 1px solid #d5d7d2; border-radius: 0; background: transparent; font-size: .875rem; font-weight: 500; }
 .public-site a.major:hover { transform: none; box-shadow: none; background: var(--sand); }
 .public-site .major__arrow { font-size: 1rem; }
+.public-site .major-group { flex: 1; min-width: 0; }
+.public-site .major--summary { width: 100%; cursor: pointer; list-style: none; font-weight: 650; }
+.public-site .major--summary::-webkit-details-marker { display: none; }
+.public-site .major--summary:hover { background: var(--sand); }
+.public-site .major--summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.public-site .major__chevron { margin-left: auto; font-size: 1.25rem; line-height: 1; color: var(--ink-3); }
+.public-site .major-group[open] .major__chevron { transform: rotate(180deg); }
+.public-site .major-children { margin: 0; padding: 0 0 10px 16px; list-style: none; }
+.public-site .major--child { min-height: 44px; padding: 10px 0; }
 .public-site .depts { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
 .public-site .dept { padding: 4px 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .public-site .dept:hover { transform: none; box-shadow: none; }
@@ -331,7 +340,7 @@
   .public-site .directory-title { font-size: 1.25rem; }
   .public-site .linkbtn { min-height: 76px; padding: 14px 0; }
   .home-shell .major-directory { margin-top: 30px; }
-  .public-site .majors { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+  .public-site .majors { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .public-site .major { font-size: .875rem; line-height: 1.6; }
   .public-site .depts { gap: 22px; }
   .public-site .dept__desc { font-size: .875rem; }
