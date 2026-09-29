@@ -6,7 +6,7 @@
 <title>관리자 · 인문대학 학생회</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#F8E9D4">
-<link rel="icon" href="assets/favicon.png?v=20260923b" type="image/png">
+<link rel="icon" href="assets/favicon.png?v=20260930b" type="image/png">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script>document.documentElement.classList.add('js');
@@ -14,9 +14,9 @@
    먼저 html 에 적힌 기본 이름이 한 프레임 보였다가 바뀌는 게 눈에 띄었다.
    js 가 어떤 이유로든 못 돌면 1.5초 뒤에는 그냥 보여준다. */
 setTimeout(function(){document.documentElement.classList.add('brand-ready');},1500);</script>
-<link rel="stylesheet" href="css/style.css?v=20260923b">
-<link rel="stylesheet" href="css/redesign.css?v=20260923b">
-<link rel="stylesheet" href="css/admin.css?v=20260923b">
+<link rel="stylesheet" href="css/style.css?v=20260930b">
+<link rel="stylesheet" href="css/redesign.css?v=20260930b">
+<link rel="stylesheet" href="css/admin.css?v=20260930b">
 </head>
 
 <body class="site-theme admin-site" data-page="admin">
@@ -27,7 +27,7 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
   <header class="topbar">
     <div class="wrap admin topbar__inner">
       <a class="topbar__brand" href="./">
-        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260923b" alt="" width="900" height="673"></span>
+        <span class="topbar__mark" data-logo><img src="assets/logo.png?v=20260930b" alt="" width="900" height="673"></span>
         <span class="topbar__identity">
           <span class="topbar__college">중앙대학교 인문대학</span>
           <span class="admin-brand__name">학생회 관리자</span>
@@ -227,21 +227,29 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
           <p class="field__help" style="margin-bottom:14px">
             좌석표에는 좌석 번호와 ‘예약됨’ 만 보입니다.
             이름 · 학과 · 학번 · 전화번호는 이 표에서만 보이고, 학생회 계정으로만 열립니다.
-            날짜가 바뀌면 좌석표는 저절로 비워집니다.
+            오전 8시에 예약이 열리고 오후 6시에 좌석표가 초기화됩니다. 야간 예약은 아래에서 별도로 허용할 수 있습니다.
           </p>
           <div class="admin__actions" style="margin:4px 0 14px; align-items:center">
             <label class="field" style="margin:0">
               <span class="sr-only">날짜</span>
               <input type="date" id="seat-date">
             </label>
+            <label class="field" style="margin:0">
+              <span class="sr-only">예약 구간</span>
+              <select id="seat-session"><option value="day">08~18시</option><option value="evening">18시 이후</option></select>
+            </label>
             <button type="button" class="btn" id="seat-today">오늘</button>
             <button type="button" class="btn" id="seat-refresh">새로고침</button>
+            <button type="button" class="btn" id="seat-after-hours">18시 이후 예약 허용</button>
             <button type="button" class="btn btn--primary" id="seat-csv" disabled>엑셀 내려받기 (.xlsx)</button>
             <button type="button" class="btn" id="rules-test">보안 규칙 점검</button>
           </div>
           <div id="rules-result" class="banner" hidden style="margin-bottom:14px"></div>
+          <p id="seat-after-hours-status" class="field__help" role="status"></p>
+          <button type="button" class="btn" id="seat-photo-delete" disabled>선택한 구간의 인증 사진 삭제</button>
+          <p class="field__help">지난 예약 구간을 선택한 뒤 사진을 삭제할 수 있습니다. 삭제 후에는 복구할 수 없으며, 예약 내역은 남습니다.</p>
           <h3 class="seat-sub">일자별 이용 내역 <span class="count" id="seat-history-count"></span></h3>
-          <p class="field__help">한국 시간 기준입니다. 자정에 좌석표가 초기화되어도 누적 내역은 남습니다. 날짜를 선택해 조회하거나 엑셀로 내려받으세요.</p>
+          <p class="field__help">한국 시간 기준입니다. 18시에 낮 좌석표가 초기화되어도 누적 내역은 남습니다. 날짜와 예약 구간을 선택해 조회하거나 엑셀로 내려받으세요.</p>
           <div id="seat-history-status" class="banner" role="status"></div>
           <div id="seat-history"></div>
           <h3 class="seat-sub">선택한 날짜의 남아 있는 예약</h3>
@@ -317,10 +325,10 @@ setTimeout(function(){document.documentElement.classList.add('brand-ready');},15
 
 </div>
 
-<script defer src="js/config.js?v=20260923b"></script>
-<script defer src="js/firebase-config.js?v=20260923b"></script>
-<script defer src="js/core.js?v=20260923b"></script>
-<script defer src="js/store.js?v=20260923b"></script>
-<script defer src="js/admin.js?v=20260923b"></script>
+<script defer src="js/config.js?v=20260930b"></script>
+<script defer src="js/firebase-config.js?v=20260930b"></script>
+<script defer src="js/core.js?v=20260930b"></script>
+<script defer src="js/store.js?v=20260930b"></script>
+<script defer src="js/admin.js?v=20260930b"></script>
 </body>
 </html>

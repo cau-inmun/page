@@ -396,13 +396,13 @@
       return;
     }
 
-    const cols = form ? form.fields.map((f) => ({ key: f.key, label: f.label })) : [];
+    const cols = form ? form.fields.map((f) => ({ key: f.key, label: f.label, type: f.type })) : [];
     const table = el('table', { class: 'subs' });
     table.appendChild(el('thead', null, [
       el('tr', null,
         [el('th', { text: '접수 시각' })]
           .concat(cols.map((c) => el('th', { text: c.label })))
-          .concat([el('th', { text: '' })]))
+          .concat([el('th', { text: '소속 인증' }), el('th', { text: '' })]))
     ]));
 
     const tbody = el('tbody');
@@ -410,8 +410,14 @@
       const tds = [el('td', { class: 'when', text: formatWhen(s.createdAt) })];
       cols.forEach((c) => {
         const v = (s.data || {})[c.key] || '';
-        tds.push(el('td', { class: String(v).length > 40 ? 'wrap-cell' : '', text: v }));
+        tds.push(c.type === 'file'
+          ? el('td', null, (s.files || []).includes(c.key)
+            ? [privatePhotoButton('물건 사진', () => STORE.getSubmissionImage(s.id, c.key))] : [])
+          : el('td', { class: String(v).length > 40 ? 'wrap-cell' : '', text: v }));
       });
+      tds.push(el('td', null, (s.files || []).includes('verification')
+        ? [privatePhotoButton('소속 인증 사진', () => STORE.getSubmissionImage(s.id, 'verification'))]
+        : [el('span', { text: '없음' })]));
       tds.push(el('td', null, [
         el('button', {
           type: 'button', class: 'rowbtn', text: '삭제',
@@ -428,6 +434,25 @@
     });
     table.appendChild(tbody);
     box.appendChild(el('div', { class: 'table-wrap' }, [table]));
+  }
+
+  function privatePhotoButton(label, load) {
+    const wrap = el('div', { class: 'private-photo' });
+    const button = el('button', { type: 'button', class: 'rowbtn', text: label + ' 보기' });
+    button.addEventListener('click', async () => {
+      const existing = $('img', wrap);
+      if (existing) { existing.remove(); button.textContent = label + ' 보기'; return; }
+      button.disabled = true;
+      try {
+        const data = await load();
+        if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(data)) throw new Error('저장된 사진이 없습니다.');
+        wrap.appendChild(el('img', { src: data, alt: label, class: 'private-photo__image', loading: 'lazy' }));
+        button.textContent = label + ' 닫기';
+      } catch (err) { toast(err.message || '사진을 열지 못했습니다.'); }
+      finally { button.disabled = false; }
+    });
+    wrap.appendChild(button);
+    return wrap;
   }
 
   function formatWhen(iso) {
@@ -464,7 +489,8 @@
     ['email',    '이메일'],
     ['tel',      '전화번호'],
     ['date',     '날짜'],
-    ['number',   '숫자']
+    ['number',   '숫자'],
+    ['file',     '사진 업로드']
   ];
   const CHOICE_TYPES = ['select', 'radio', 'checkbox'];
   const STATUS_BADGE = {
@@ -1304,6 +1330,7 @@
      ========================================================== */
   let seatLogs = [], seatReleases = [], seatOrphans = [], seatHistory = [];
   let loadedSeatDay = '', archiveEnabled = false, seatLoadVersion = 0;
+  const cleanedSeatDays = new Set();
   const EVENT_WORD = { reserve: '예약', 'move-out': '자리 변경 · 기존 자리 해제', 'move-in': '자리 변경 · 새 자리 예약', return: '반납', cancel: '예약 취소', 'admin-cancel': '관리자 취소', 'legacy-release': '취소/변경 (기존 기록)' };
   function historyRows(events, logs, releases) {
     const rows = events.map((r) => Object.assign({ source: '누적 이력' }, r));
@@ -1326,22 +1353,46 @@
     box.replaceChildren();
     if (!seatHistory.length) { box.appendChild(el('p', { class: 'empty', text: loadedSeatDay + '의 기록이 없습니다.' })); return; }
     const table = el('table', { class: 'table' }, [el('thead', null, [el('tr', null,
-      ['시각 (한국)', '구분', '좌석', '이전 좌석', '이름', '학과', '학번', '기록 출처'].map((text) => el('th', { text })))])]);
+      ['시각 (한국)', '구분', '좌석', '이전 좌석', '이름', '학과', '학번', '기록 출처', '소속 인증'].map((text) => el('th', { text })))])]);
     table.appendChild(el('tbody', null, seatHistory.map((r) => el('tr', null,
       [historyTime(r.createdAt), EVENT_WORD[r.kind] || r.kind, r.seat, r.fromSeat || '', r.name, r.dept, r.sid, r.source]
-        .map((value) => el('td', { text: String(value == null ? '' : value) }))))));
+        .map((value) => el('td', { text: String(value == null ? '' : value) }))
+        .concat([el('td', null, r.photoId
+          ? [privatePhotoButton('소속 인증 사진', () => STORE.getSeatImage(loadedSeatDay, r.photoId))] : [])])))));
     box.appendChild(el('div', { class: 'table-wrap' }, [table]));
   }
 
   function seatDay() {
     const v = $('#seat-date').value;
-    return v || seoulNow().date;
+    return (v || seoulNow().date) + ($('#seat-session').value === 'evening' ? '-evening' : '');
+  }
+
+  function seatPhotoIds() {
+    return [...new Set(seatHistory.map((r) => r.photoId).filter(Boolean))];
+  }
+
+  function refreshSeatPhotoDelete() {
+    const now = seoulNow();
+    const current = now.date + (now.hour >= 18 ? '-evening' : '');
+    $('#seat-photo-delete').disabled = !loadedSeatDay || loadedSeatDay >= current ||
+      cleanedSeatDays.has(loadedSeatDay) || !seatPhotoIds().length;
+  }
+
+  async function refreshAfterHoursControl() {
+    const control = await STORE.getSeatControl();
+    const active = Date.parse(control.afterHoursUntil || '') > Date.now();
+    $('#seat-after-hours').textContent = active ? '18시 이후 예약 닫기' : '18시 이후 예약 허용';
+    $('#seat-after-hours-status').textContent = active
+      ? '오늘 18시 이후 예약이 허용되었습니다. 자정에 자동 종료됩니다.'
+      : '18시 이후 예약은 닫혀 있습니다. 허용하면 오늘 자정까지만 열립니다.';
+    $('#seat-after-hours').dataset.active = String(active);
   }
 
   async function loadSeats() {
     const version = ++seatLoadVersion;
     const day = seatDay();
     loadedSeatDay = '';
+    refreshSeatPhotoDelete();
     $('#seat-csv').disabled = true;
     $('#seat-history').replaceChildren();
     $('#seat-releases').replaceChildren();
@@ -1361,6 +1412,7 @@
       loadedSeatDay = day; archiveEnabled = history.enabled;
       seatLogs = logs; seatReleases = rels; seatOrphans = orphans;
       seatHistory = historyRows(history.events, logs, rels);
+      refreshSeatPhotoDelete();
       $('#seat-csv').disabled = false;
     } catch (err) {
       if (version !== seatLoadVersion) return;
@@ -1392,7 +1444,7 @@
       return;
     }
 
-    const head = ['좌석', '이름', '학과', '학번', '전화번호', '예약 시각', ''];
+    const head = ['좌석', '이름', '학과', '학번', '전화번호', '예약 시각', '소속 인증', ''];
     const table = el('table', { class: 'table' });
     table.appendChild(el('thead', null, [
       el('tr', null, head.map((h) => el('th', { text: h })))
@@ -1407,6 +1459,9 @@
         el('td', { text: r.sid || '' }),
         el('td', { text: telText(r.tel) }),
         el('td', { text: r.createdAt ? formatDateTime(r.createdAt) : '' }),
+        el('td', null, r.photoId
+          ? [privatePhotoButton('소속 인증 사진', () => STORE.getSeatImage(loadedSeatDay, r.photoId))]
+          : [el('span', { text: '없음' })]),
         el('td', null, [
           el('button', {
             type: 'button', class: 'rowbtn', text: '자리 비우기',
@@ -1501,6 +1556,7 @@
 
     if (r.reason === 'permission-denied') {
       const WHERE = {
+        reserve: '좌석·명단·인증 사진을 함께 저장하는 단계',
         seat: '좌석을 잡는 첫 단계',
         log: '명단에 기록하는 단계 (전화번호 칸이 규칙에 없을 때 여기서 막힙니다)',
         release: '반납하는 단계 — 학우들이 실제로 막히던 바로 그 지점입니다'
@@ -1587,10 +1643,10 @@
         ['이력 저장', archiveEnabled ? '누적 이력 조회 가능' : '규칙 미적용: 기존 잔존 기록만 포함'],
         ['과거 기록', '기능 적용 전 삭제·덮어쓴 기록은 복원되지 않습니다.'],
         ['자리 변경', '기존 자리 해제와 새 자리 예약이 별도 행으로 남습니다. 새 예약 전 중단하면 해제 내역만 남습니다.'],
-        ['자정 초기화', '날짜별 좌석표 전환이며 전날 이용 내역은 삭제하지 않습니다.']] }
+        ['18시 초기화', '낮 예약과 18시 이후 예약은 별도 좌석표이며 이력은 유지됩니다.']] }
     ];
     try {
-      const { workbook } = await import('./seat-xlsx.js?v=20260923b');
+      const { workbook } = await import('./seat-xlsx.js?v=20260930b');
       download(`열람실-이용내역-${day}.xlsx`, workbook(sheets), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       toast('엑셀 파일을 내려받았습니다');
     } catch (e) { console.error(e); toast('엑셀 파일을 만들지 못했습니다. 다시 시도해 주세요'); }
@@ -1618,14 +1674,44 @@
     $('#sheet-test').addEventListener('click', checkSheet);
     $('#rules-test').addEventListener('click', checkRules);
     $('#seat-date').value = seoulNow().date;
+    $('#seat-session').value = seoulNow().hour >= 18 ? 'evening' : 'day';
     $('#seat-date').addEventListener('change', loadSeats);
+    $('#seat-session').addEventListener('change', loadSeats);
     $('#seat-today').addEventListener('click', () => {
-      $('#seat-date').value = seoulNow().date; loadSeats();
+      const now = seoulNow();
+      $('#seat-date').value = now.date;
+      $('#seat-session').value = now.hour >= 18 ? 'evening' : 'day';
+      loadSeats();
     });
     $('#seat-refresh').addEventListener('click', () => { loadSeats(); toast('새로고침했습니다'); });
     $('#seat-csv').addEventListener('click', exportSeatXlsx);
+    $('#seat-after-hours').addEventListener('click', async () => {
+      const button = $('#seat-after-hours');
+      button.disabled = true;
+      try {
+        await STORE.setAfterHoursOpen(button.dataset.active !== 'true');
+        await refreshAfterHoursControl();
+        toast('예약 시간을 변경했습니다.');
+      } catch (err) { console.error(err); toast('예약 시간을 변경하지 못했습니다.'); }
+      finally { button.disabled = false; }
+    });
+    $('#seat-photo-delete').addEventListener('click', async () => {
+      refreshSeatPhotoDelete();
+      const button = $('#seat-photo-delete');
+      if (button.disabled) return;
+      const day = loadedSeatDay, ids = seatPhotoIds();
+      if (!confirm(`${day} 인증 사진 ${ids.length}장을 삭제할까요?\n사진은 복구할 수 없고 예약 내역은 남습니다.`)) return;
+      button.disabled = true;
+      try {
+        await STORE.deleteSeatPhotos(day, ids);
+        cleanedSeatDays.add(day);
+        toast(`인증 사진 ${ids.length}장을 삭제했습니다.`);
+        await loadSeats();
+      } catch (err) { console.error(err); toast('사진을 삭제하지 못했습니다.'); refreshSeatPhotoDelete(); }
+    });
 
     await STORE.init();
+    await refreshAfterHoursControl().catch(() => {});
 
     if (!STORE.isFirebase) { showApp(null); resetNoticeForm(); return; }
 

@@ -134,3 +134,4 @@
   .admin-site .login__card { padding: 20px; }
   .admin-site .login__heading { padding: 24px 20px; margin: -20px -20px 22px; }
 }
+.private-photo__image { display: block; max-width: min(360px, 70vw); max-height: 480px; width: auto; height: auto; margin-top: 8px; border-radius: 6px; object-fit: contain; }
