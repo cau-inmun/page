@@ -100,10 +100,7 @@ service cloud.firestore {
         && request.resource.data.files is list
         && request.resource.data.files.size() <= 2
         && request.resource.data.files.hasAll(['verification'])
-        && request.resource.data.files.hasOnly(['verification', 'itemPhoto'])
         && existsAfter(/databases/$(database)/documents/submissions/$(docId)/files/verification)
-        && (!('itemPhoto' in request.resource.data.files)
-            || existsAfter(/databases/$(database)/documents/submissions/$(docId)/files/itemPhoto))
         // 시각은 서버 시각만 허용 — 임의 조작 방지
         && request.resource.data.createdAt == request.time
         // 해당 폼이 실제로 존재하고, 열려 있으며, 접수 기간 안일 때만 받는다.
@@ -117,7 +114,7 @@ service cloud.firestore {
     match /submissions/{docId}/files/{fileId} {
       allow read, delete: if isAdmin();
       allow update: if false;
-      allow create: if (fileId == 'verification' || fileId == 'itemPhoto')
+      allow create: if fileId.matches('[A-Za-z][A-Za-z0-9_-]{0,31}')
         && request.resource.data.keys().hasOnly(['imageData', 'createdAt'])
         && request.resource.data.imageData is string
         && request.resource.data.imageData.size() <= 350000
