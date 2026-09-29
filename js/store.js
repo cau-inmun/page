@@ -477,6 +477,7 @@
   async function submit(formId, data, formTitle, labels, images) {
     const files = Object.keys(images || {});
     if (!files.includes('verification')) throw new Error('소속 확인 사진을 선택해 주세요.');
+    if (files.length > 2) throw new Error('사진은 소속 인증 사진을 포함해 최대 2장까지 올릴 수 있습니다.');
     const record = {
       formId: String(formId),
       data: data,
