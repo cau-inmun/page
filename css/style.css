@@ -891,6 +891,7 @@ button.seat--taken:hover:not([disabled]) { border-color: var(--brand-deep); }
 .field.has-error select { border-color: #D98A72; background: #FEF8F6; }
 
 .choices { display: flex; flex-direction: column; gap: 8px; }
+.field label.choice, .field label.check { display: flex; align-items: center; }
 .choice {
   display: flex; align-items: center; gap: 9px; cursor: pointer;
   padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--radius-sm);
@@ -899,6 +900,7 @@ button.seat--taken:hover:not([disabled]) { border-color: var(--brand-deep); }
 }
 .choice:hover { border-color: var(--sand-edge); background: var(--sand-tint); }
 .choice input { width: auto; accent-color: var(--brand); flex: none; }
+.field label.choice { margin-bottom: 0; }
 .choice:has(input:checked) { border-color: var(--brand); background: var(--sand-soft); }
 
 /* 스팸 방지용 숨김 필드 — 사람에게는 보이지 않는다 */

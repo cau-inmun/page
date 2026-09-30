@@ -117,13 +117,15 @@
       }
     });
 
-    const verification = readValue({ key: 'verification', type: 'file' }, root);
-    if (!verification) {
-      setError('verification', '인문대학 소속 확인 사진을 올려주세요.', root);
-      if (!firstBad) firstBad = 'verification';
-    } else {
-      setError('verification', '', root);
-      imageFiles.verification = verification;
+    if (STORE.requiresVerification(form.id)) {
+      const verification = readValue({ key: 'verification', type: 'file' }, root);
+      if (!verification) {
+        setError('verification', '인문대학 소속 확인 사진을 올려주세요.', root);
+        if (!firstBad) firstBad = 'verification';
+      } else {
+        setError('verification', '', root);
+        imageFiles.verification = verification;
+      }
     }
 
     const agreed = $('#f-consent', root).checked;
@@ -324,10 +326,13 @@
 
     const body = el('div');
     form.fields.forEach((f, i) => body.appendChild(fieldNode(f, i)));
-    body.appendChild(fieldNode({
-      key: 'verification', label: '인문대학 소속 확인 사진', type: 'file', required: true,
-      help: [S.verificationText, S.verificationHelp].filter(Boolean).join(' ')
-    }, form.fields.length));
+    const needsVerification = STORE.requiresVerification(form.id);
+    if (needsVerification) {
+      body.appendChild(fieldNode({
+        key: 'verification', label: '인문대학 소속 확인 사진', type: 'file', required: true,
+        help: [S.verificationText, S.verificationHelp].filter(Boolean).join(' ')
+      }, form.fields.length));
+    }
 
     /* 스팸 방지 숨김 필드 */
     body.appendChild(el('div', { class: 'hp', 'aria-hidden': 'true' }, [
@@ -336,8 +341,8 @@
     ]));
 
     body.appendChild(el('div', { class: 'consent' }, [
-      form.consent ? el('p', { class: 'consent__text', text: S.consentText || '' }) : null,
-      el('p', { class: 'consent__text', text: S.photoConsentText || '' }),
+      needsVerification && form.consent ? el('p', { class: 'consent__text', text: S.consentText || '' }) : null,
+      el('p', { class: 'consent__text', text: needsVerification ? (S.photoConsentText || '') : (S.lostFoundConsentText || '') }),
       el('label', { class: 'check' }, [
         el('input', { id: 'f-consent', type: 'checkbox' }),
         '개인정보 수집 · 이용에 동의합니다.'

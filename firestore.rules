@@ -99,8 +99,9 @@ service cloud.firestore {
         && request.resource.data.data.size() <= 30
         && request.resource.data.files is list
         && request.resource.data.files.size() <= 2
-        && request.resource.data.files.hasAll(['verification'])
-        && existsAfter(/databases/$(database)/documents/submissions/$(docId)/files/verification)
+        && (request.resource.data.formId == 'lost-found'
+            || (request.resource.data.files.hasAll(['verification'])
+                && existsAfter(/databases/$(database)/documents/submissions/$(docId)/files/verification)))
         // 시각은 서버 시각만 허용 — 임의 조작 방지
         && request.resource.data.createdAt == request.time
         // 해당 폼이 실제로 존재하고, 열려 있으며, 접수 기간 안일 때만 받는다.
