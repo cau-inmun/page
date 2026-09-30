@@ -350,6 +350,16 @@
       .map((f) => Object.assign({}, f, { _seed: true }));
   }
 
+  function clarifyForm(f) {
+    if (f.id === 'suggestion' && typeof f.description === 'string') {
+      return Object.assign({}, f, { description: f.description.replace(
+        /이름을 비워두면 익명으로 접수됩니다\.?/g,
+        '이름은 선택 사항이지만 소속 확인 사진은 필요합니다.'
+      ) });
+    }
+    return f;
+  }
+
   async function getForms() {
     if (mode === 'firebase') {
       const snap = await db.collection('forms').get();
@@ -365,10 +375,10 @@
         delete builtin._seed; // 이 기본 신고 폼은 보안 규칙에서 직접 접수를 허용한다.
         list.push(builtin);
       }
-      if (list.length) return list.sort((a, b) => (a.order || 0) - (b.order || 0));
+      if (list.length) return list.map(clarifyForm).sort((a, b) => (a.order || 0) - (b.order || 0));
     } else {
       const list = lsGet(KEY.forms, null);
-      if (list && list.length) return list;
+      if (list && list.length) return list.map(clarifyForm);
     }
     return defaultForms();
   }
