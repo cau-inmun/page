@@ -250,6 +250,12 @@
 .site-theme .btn--primary:hover { background: #284462; border-color: #284462; }
 .site-theme .field input, .site-theme .field select, .site-theme .field textarea { font-size: 1rem; min-height: 48px; border-radius: 6px; }
 .site-theme .field label { font-size: .9375rem; }
+.site-theme .field input[type="radio"],
+.site-theme .field input[type="checkbox"],
+.site-theme .check input[type="checkbox"] {
+  width: 1.125rem; height: 1.125rem; min-height: 0;
+  margin: 0; padding: 0; flex: none;
+}
 .site-theme .field__help { font-size: .8125rem; line-height: 1.65; }
 .site-theme .check, .site-theme .radio { min-height: 44px; }
 .public-site .roomnotes__list { font-size: .875rem; line-height: 1.8; }

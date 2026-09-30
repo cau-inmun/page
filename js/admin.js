@@ -1646,7 +1646,7 @@
         ['18시 초기화', '낮 예약과 18시 이후 예약은 별도 좌석표이며 이력은 유지됩니다.']] }
     ];
     try {
-      const { workbook } = await import('./seat-xlsx.js?v=20260930c');
+      const { workbook } = await import('./seat-xlsx.js?v=20260930d');
       download(`열람실-이용내역-${day}.xlsx`, workbook(sheets), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       toast('엑셀 파일을 내려받았습니다');
     } catch (e) { console.error(e); toast('엑셀 파일을 만들지 못했습니다. 다시 시도해 주세요'); }
