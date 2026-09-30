@@ -10,7 +10,7 @@ const SITE = {
      html 의 ?v= 값과 반드시 같아야 합니다. js·css·이미지를 고칠 때
      두 곳을 함께 올려주세요. 이 값이 다르면 사이트가 스스로 알아채고
      새 파일을 받아옵니다 (js/core.js 의 checkForUpdate).      */
-  APP_VERSION: '20260923b',
+  APP_VERSION: '20260930b',
 
   /* ---- 학생회 기본 정보 ---- */
   /* ---- 상단바에 보이는 이름 ----
@@ -42,9 +42,10 @@ const SITE = {
     {
       group: '신청 · 참여',
       items: [
-        { label: '학생회 건의함', desc: '익명으로 의견을 남겨주세요', url: 'apply.html?id=suggestion', badge: '상시' },
+        { label: '학생회 건의함', desc: '의견을 남겨주세요 · 소속 인증 필요', url: 'apply.html?id=suggestion', badge: '상시' },
         { label: '사업 신청 폼', desc: '진행 중인 학생회 사업 신청', url: 'apply.html?id=apply' },
-        { label: '열람실 좌석 예약', desc: '24시간 예약 · 매일 자정 초기화', url: 'seats.html', badge: '상시' },
+        { label: '열람실 좌석 예약', desc: '08시 오픈 · 18시 좌석표 초기화', url: 'seats.html', badge: '상시' },
+        { label: '분실물 신고', desc: '잃어버린 물건 · 발견한 물건', url: 'apply.html?id=lost-found' },
         { label: '학생회비 납부 안내', desc: '납부 방법과 혜택 안내', url: '' }
       ]
     },
@@ -133,7 +134,7 @@ const SITE = {
       id: 'suggestion',
       order: 1,
       title: '학생회 건의함',
-      description: '인문대학 학생회에 전하고 싶은 의견을 남겨주세요. 이름을 비워두면 익명으로 접수됩니다.',
+      description: '인문대학 학생회에 전하고 싶은 의견을 남겨주세요. 이름 칸은 비울 수 있지만 소속 확인 사진은 함께 제출됩니다.',
       submitLabel: '건의 보내기',
       doneMessage: '소중한 의견 감사합니다. 학생회 회의에서 검토한 뒤 필요한 경우 연락드리겠습니다.',
       open: true,
@@ -145,7 +146,7 @@ const SITE = {
           placeholder: '구체적으로 적어주실수록 도움이 됩니다.' },
         { key: 'dept', label: '학과', type: 'select', required: false, useDepartments: true },
         { key: 'name', label: '이름', type: 'text', required: false,
-          help: '익명으로 보내려면 비워두세요.' },
+          help: '이름을 비워도 인증 사진으로 신원을 확인할 수 있습니다.' },
         { key: 'contact', label: '답변받을 연락처', type: 'text', required: false,
           help: '이메일 또는 카카오톡 ID. 답변이 필요할 때만 적어주세요.' }
       ]
@@ -171,8 +172,31 @@ const SITE = {
       ]
     },
     {
-      id: 'example',
+      id: 'lost-found',
       order: 3,
+      title: '분실물 신고',
+      description: '잃어버린 물건과 발견한 물건을 모두 신고할 수 있습니다.',
+      submitLabel: '분실물 신고하기',
+      doneMessage: '신고가 접수되었습니다. 확인이 필요하면 남겨주신 연락처로 연락드리겠습니다.',
+      open: true,
+      consent: true,
+      fields: [
+        { key: 'reportType', label: '신고 유형', type: 'radio', required: true,
+          options: ['잃어버렸어요', '발견했어요'] },
+        { key: 'itemName', label: '물건 이름', type: 'text', required: true },
+        { key: 'details', label: '물건 설명', type: 'textarea', required: true,
+          help: '색상·모양 등 특징을 적어주세요.' },
+        { key: 'when', label: '분실·발견 날짜', type: 'date', required: true },
+        { key: 'where', label: '분실·발견 장소', type: 'text', required: true },
+        { key: 'itemPhoto', label: '물건 사진', type: 'file', required: false,
+          help: '사진이 있다면 올려주세요. 학생회 관리자만 볼 수 있습니다.' },
+        { key: 'contact', label: '연락처', type: 'text', required: true,
+          help: '확인 연락을 받을 전화번호 또는 카카오톡 ID' }
+      ]
+    },
+    {
+      id: 'example',
+      order: 4,
       title: '[예시] 간담회 사전 질문 받기',
       description: '관리자 페이지의 폼 편집 기능을 보여주기 위한 예시 폼입니다. ' +
                    '항목 유형이 어떻게 보이는지 확인한 뒤, 실제로 쓸 때는 내용을 바꾸거나 폼을 지우세요.',
@@ -190,7 +214,7 @@ const SITE = {
         { key: 'preferDate', label: '희망 날짜', type: 'date', required: false },
         { key: 'dept', label: '학과', type: 'select', required: false, useDepartments: true },
         { key: 'name', label: '이름', type: 'text', required: false,
-          help: '익명으로 보내려면 비워두세요.' }
+          help: '이름을 비워도 인증 사진으로 신원을 확인할 수 있습니다.' }
       ]
     }
   ],
@@ -202,8 +226,8 @@ const SITE = {
   readingRoom: {
     name: '인문사회 열람실',
     place: '821호',
-    openHour: 0,        // 시간 제한 없이 예약 가능
-    closeHour: 24,      // 날짜가 바뀌면 새 날짜의 좌석표 사용 (한국 시각)
+    openHour: 8,        // 한국 시각 오전 8시에 예약 시작
+    closeHour: 18,      // 18시에 좌석표를 비움; 관리자가 야간 예약을 켤 수 있음
 
     topLabel: '창문',
     bottomLabel: '벽',
@@ -247,8 +271,11 @@ const SITE = {
   sheetWebhookUrl: 'https://script.google.com/macros/s/AKfycbxMs-_CHLg7-IiH0Pm9KUB8O_BQzGOFnB0vl9RKkMCEXJCMKrrhEL6ffrROO8VMKf_j/exec',
 
   /* ---- 개인정보 수집·이용 동의 문구 ---- */
-  consentText: '입력하신 이름 · 학번 · 연락처는 신청 확인과 결과 안내에만 사용하며, ' +
-               '해당 사업 종료 후 파기합니다. 동의하지 않으셔도 되지만 그 경우 접수가 어렵습니다.'
+  verificationText: 'eID, 학생증 또는 포탈 ‘내 정보 수정’ 화면 등 인문대학 소속을 확인할 수 있는 사진을 올려주세요.',
+  verificationHelp: '이름과 소속이 보이게 하고, 인증에 필요하지 않은 정보는 가려주세요. 사진은 학생회 관리자만 볼 수 있습니다.',
+  photoConsentText: '소속 확인 사진을 제출하면 학생회가 소속 확인과 신청·예약·신고 처리에 사용합니다. 사진은 학생회 관리자만 열람합니다.',
+  consentText: '입력한 내용과 인증 사진은 소속 확인 및 신청·신고 처리에 사용하며, 담당자만 열람합니다. ' +
+               '동의하지 않으면 제출할 수 없습니다.'
 };
 
 window.SITE = SITE;

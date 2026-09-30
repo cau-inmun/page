@@ -89,20 +89,39 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
 
       allow create: if
-           // 보낼 수 있는 필드는 이 셋뿐
-           request.resource.data.keys().hasOnly(['formId', 'data', 'createdAt'])
+           request.resource.data.keys().hasAll(['formId', 'data', 'files', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['formId', 'data', 'files', 'createdAt'])
         && request.resource.data.formId is string
         && request.resource.data.formId.size() > 0
         && request.resource.data.formId.size() <= 64
         && request.resource.data.data is map
         // 항목 수 제한 (폼 필드가 아무리 많아도 30개면 충분)
         && request.resource.data.data.size() <= 30
+        && request.resource.data.files is list
+        && request.resource.data.files.size() <= 2
+        && request.resource.data.files.hasAll(['verification'])
+        && existsAfter(/databases/$(database)/documents/submissions/$(docId)/files/verification)
         // 시각은 서버 시각만 허용 — 임의 조작 방지
         && request.resource.data.createdAt == request.time
         // 해당 폼이 실제로 존재하고, 열려 있으며, 접수 기간 안일 때만 받는다.
         // 화면에서 막는 것과 별개로 서버에서도 반드시 막아야 한다.
-        && exists(/databases/$(database)/documents/forms/$(request.resource.data.formId))
-        && formIsOpen(get(/databases/$(database)/documents/forms/$(request.resource.data.formId)).data);
+        && ((request.resource.data.formId == 'lost-found'
+             && !exists(/databases/$(database)/documents/forms/lost-found))
+            || (exists(/databases/$(database)/documents/forms/$(request.resource.data.formId))
+                && formIsOpen(get(/databases/$(database)/documents/forms/$(request.resource.data.formId)).data)));
+    }
+
+    match /submissions/{docId}/files/{fileId} {
+      allow read, delete: if isAdmin();
+      allow update: if false;
+      allow create: if fileId.matches('[A-Za-z][A-Za-z0-9_-]{0,31}')
+        && request.resource.data.keys().hasOnly(['imageData', 'createdAt'])
+        && request.resource.data.imageData is string
+        && request.resource.data.imageData.size() <= 350000
+        && request.resource.data.imageData.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+')
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/submissions/$(docId)).data.createdAt == request.time
+        && fileId in getAfter(/databases/$(database)/documents/submissions/$(docId)).data.files;
     }
 
     // ---- 열람실 좌석 ----
@@ -117,9 +136,21 @@ service cloud.firestore {
     //
     //  날짜는 문서 경로에 들어 있어, 날이 바뀌면 좌석표가 저절로 비워진다.
     //  따로 초기화해줄 서버가 없어도 되도록 이렇게 짰다.
-    // 예약·반납은 24시간 허용한다. 중복 예약 및 개인정보 보호 규칙은 유지한다.
-    function inOpenHours() {
-      return true;
+    // 08~18시 예약. 18시 이후에는 관리자 설정의 만료 시각까지만 별도 구간을 연다.
+    function inOpenHours(day) {
+      let hour = (request.time + duration.value(9, 'h')).hours();
+      return (isAdmin() && day == 'rules-check')
+        || (hour >= 8 && hour < 18 && day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}'))
+        || (hour >= 18 && day.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}-evening')
+            && exists(/databases/$(database)/documents/config/seatControl)
+            && get(/databases/$(database)/documents/config/seatControl).data.afterHoursUntil > request.time);
+    }
+
+    function bookingProof(day, seatNo) {
+      let log = getAfter(/databases/$(database)/documents/seatdays/$(day)/logs/$(seatNo)).data;
+      let photo = getAfter(/databases/$(database)/documents/seatdays/$(day)/photos/$(log.photoId)).data;
+      return log.createdAt == request.time && photo.createdAt == request.time
+        && photo.seat == int(seatNo);
     }
 
     // 학우가 스스로 자리를 비우는 길 (반납 · 자리 변경)
@@ -153,8 +184,8 @@ service cloud.firestore {
     //  안전하게 만들 방법이 마땅치 않아졌다. 그 검사는 위생 문제일 뿐이고
     //  (엉뚱한 날짜에 쓴 문서는 화면에 뜨지 않고 관리자가 지우면 된다),
     //  중요한 것 — 덮어쓰기 금지, 명단 비공개, 비우기 본인 확인 — 은 그대로다.
-    function seatOk(seatNo, d) {
-      return inOpenHours()
+    function seatOk(day, seatNo, d) {
+      return inOpenHours(day)
              && d.seat is int && d.seat >= 1 && d.seat <= 60
              && string(d.seat) == seatNo
              && d.createdAt == request.time;
@@ -162,7 +193,8 @@ service cloud.firestore {
 
     match /seatdays/{day}/seats/{seatNo} {
       allow read: if true;
-      allow create: if seatOk(seatNo, request.resource.data)
+      allow create: if seatOk(day, seatNo, request.resource.data)
+        && bookingProof(day, seatNo)
         && request.resource.data.keys().hasOnly(['seat', 'nameMasked', 'sidHead', 'createdAt'])
         && (!('nameMasked' in request.resource.data)
             || (request.resource.data.nameMasked is string
@@ -178,8 +210,11 @@ service cloud.firestore {
       allow read, update: if isAdmin();
       // 자리를 비우면 명단에서도 지워야 그 자리를 다시 예약할 수 있다
       allow delete: if isAdmin() || releasedAfterBooking(day, seatNo);
-      allow create: if seatOk(seatNo, request.resource.data)
-        && request.resource.data.keys().hasOnly(['seat', 'name', 'dept', 'sid', 'tel', 'createdAt'])
+      allow create: if seatOk(day, seatNo, request.resource.data)
+        && request.resource.data.keys().hasOnly(['seat', 'name', 'dept', 'sid', 'tel', 'photoId', 'createdAt'])
+        && request.resource.data.photoId is string
+        && request.resource.data.photoId.size() <= 32
+        && getAfter(/databases/$(database)/documents/seatdays/$(day)/photos/$(request.resource.data.photoId)).data.createdAt == request.time
         && request.resource.data.name is string && request.resource.data.name.size() <= 20
         && request.resource.data.dept is string && request.resource.data.dept.size() <= 40
         && request.resource.data.sid  is string && request.resource.data.sid.size()  <= 12
@@ -193,7 +228,7 @@ service cloud.firestore {
     //  학번이 예약 때와 똑같아야만 통과한다.
     match /seatdays/{day}/releases/{seatNo} {
       allow read, delete: if isAdmin();
-      allow create, update: if inOpenHours()
+      allow create, update: if inOpenHours(day)
         && request.resource.data.keys().hasOnly(['seat', 'name', 'dept', 'sid', 'kind', 'createdAt'])
         && request.resource.data.seat is int
         && string(request.resource.data.seat) == seatNo
@@ -201,6 +236,21 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time
         && exists(/databases/$(database)/documents/seatdays/$(day)/seats/$(seatNo))
         && matchesBooking(day, seatNo, request.resource.data);
+    }
+
+    match /seatdays/{day}/photos/{photoId} {
+      allow read, delete: if isAdmin();
+      allow update: if false;
+      allow create: if inOpenHours(day)
+        && request.resource.data.keys().hasOnly(['seat', 'imageData', 'createdAt'])
+        && request.resource.data.seat is int
+        && request.resource.data.seat >= 1 && request.resource.data.seat <= 60
+        && request.resource.data.imageData is string
+        && request.resource.data.imageData.size() <= 350000
+        && request.resource.data.imageData.matches('data:image/jpeg;base64,[A-Za-z0-9+/=]+')
+        && request.resource.data.createdAt == request.time
+        && getAfter(/databases/$(database)/documents/seatdays/$(day)/logs/$(string(request.resource.data.seat))).data.photoId == photoId
+        && getAfter(/databases/$(database)/documents/seatdays/$(day)/logs/$(string(request.resource.data.seat))).data.createdAt == request.time;
     }
 
     // Private append-only archive; every event must accompany its actual seat mutation.
@@ -234,7 +284,9 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow update, delete: if false;
       allow create: if request.resource.data.keys().hasAll(['kind', 'seat', 'fromSeat', 'name', 'dept', 'sid', 'tel', 'createdAt'])
-        && request.resource.data.keys().hasOnly(['kind', 'seat', 'fromSeat', 'name', 'dept', 'sid', 'tel', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['kind', 'seat', 'fromSeat', 'name', 'dept', 'sid', 'tel', 'photoId', 'createdAt'])
+        && (!('photoId' in request.resource.data) ||
+            (request.resource.data.photoId is string && request.resource.data.photoId.size() <= 32))
         && request.resource.data.createdAt == request.time
         && request.resource.data.seat is int && request.resource.data.seat >= 1 && request.resource.data.seat <= 60
         && request.resource.data.fromSeat is int

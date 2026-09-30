@@ -448,9 +448,10 @@
   /* 링크 모음과 공지 첨부 링크가 쓰는 공통 버튼. */
   function linkButton(item) {
     const room = window.SITE && window.SITE.readingRoom;
-    if (room && /^(?:\.\/)?seats\.html(?:[?#]|$)/.test(item.url || '') &&
-        room.openHour === 0 && room.closeHour === 24) {
-      item = Object.assign({}, item, { desc: '24시간 예약 · 매일 자정 초기화' });
+    if (room && /^(?:\.\/)?seats\.html(?:[?#]|$)/.test(item.url || '')) {
+      item = Object.assign({}, item, {
+        desc: `${String(room.openHour).padStart(2, '0')}시 오픈 · ${room.closeHour}시 좌석표 초기화`
+      });
     }
     const url = safeUrl(item.url);
     const ready = !!url;

@@ -43,6 +43,10 @@
           ])));
         break;
 
+      case 'file':
+        input = el('input', { id, name: f.key, type: 'file', accept: 'image/*' });
+        break;
+
       default:
         input = el('input', {
           id, name: f.key, type: f.type || 'text',
@@ -77,6 +81,7 @@
       return hit ? hit.value : '';
     }
     const input = $('input, textarea, select', wrap);
+    if (f.type === 'file') return input && input.files ? input.files[0] || null : null;
     return input ? input.value.trim() : '';
   }
 
@@ -94,6 +99,7 @@
     if (sending) return;
 
     const values = {};
+    const imageFiles = {};
     let firstBad = null;
 
     form.fields.forEach((f) => {
@@ -104,16 +110,26 @@
         if (!firstBad) firstBad = f.key;
       } else {
         setError(f.key, '', root);
-        if (!empty) values[f.key] = Array.isArray(v) ? v.join(', ') : v.slice(0, 2000);
+        if (!empty) {
+          if (f.type === 'file') imageFiles[f.key] = v;
+          else values[f.key] = Array.isArray(v) ? v.join(', ') : v.slice(0, 2000);
+        }
       }
     });
 
-    if (form.consent) {
-      const agreed = $('#f-consent', root).checked;
-      const box = $('#consent-error', root);
-      box.hidden = agreed;
-      if (!agreed) { if (!firstBad) firstBad = '__consent'; }
+    const verification = readValue({ key: 'verification', type: 'file' }, root);
+    if (!verification) {
+      setError('verification', '인문대학 소속 확인 사진을 올려주세요.', root);
+      if (!firstBad) firstBad = 'verification';
+    } else {
+      setError('verification', '', root);
+      imageFiles.verification = verification;
     }
+
+    const agreed = $('#f-consent', root).checked;
+    const consentError = $('#consent-error', root);
+    consentError.hidden = agreed;
+    if (!agreed && !firstBad) firstBad = '__consent';
 
     if (firstBad) {
       const target = firstBad === '__consent'
@@ -144,11 +160,15 @@
     btn.textContent = '보내는 중…';
 
     try {
+      const images = {};
+      for (const [key, file] of Object.entries(imageFiles)) {
+        images[key] = await window.PHOTO.prepare(file);
+      }
       /* 구글 시트 열 이름을 학우가 본 항목 이름으로 쓰기 위해 함께 넘긴다.
          Firestore 에는 지금처럼 항목 키로 저장된다 (이름을 바꿔도 기록이 어긋나지 않도록) */
       const labels = {};
       form.fields.forEach((f) => { labels[f.key] = f.label || f.key; });
-      await STORE.submit(form.id, values, form.title, labels);
+      await STORE.submit(form.id, values, form.title, labels, images);
       showDone();
     } catch (err) {
       console.error(err);
@@ -160,7 +180,7 @@
       box.innerHTML = '';
       box.append(
         el('strong', { text: '제출하지 못했습니다. ' }),
-        '잠시 후 다시 시도해 주세요. 계속 안 되면 인스타그램 DM으로 알려주시면 도와드리겠습니다.'
+        err.message || '잠시 후 다시 시도해 주세요. 계속 안 되면 인스타그램 DM으로 알려주시면 도와드리겠습니다.'
       );
       box.scrollIntoView({ behavior: 'instant', block: 'center' });
     }
@@ -304,6 +324,10 @@
 
     const body = el('div');
     form.fields.forEach((f, i) => body.appendChild(fieldNode(f, i)));
+    body.appendChild(fieldNode({
+      key: 'verification', label: '인문대학 소속 확인 사진', type: 'file', required: true,
+      help: [S.verificationText, S.verificationHelp].filter(Boolean).join(' ')
+    }, form.fields.length));
 
     /* 스팸 방지 숨김 필드 */
     body.appendChild(el('div', { class: 'hp', 'aria-hidden': 'true' }, [
@@ -311,17 +335,16 @@
       el('input', { id: 'f-website', name: 'website', type: 'text', tabindex: '-1', autocomplete: 'off' })
     ]));
 
-    if (form.consent) {
-      body.appendChild(el('div', { class: 'consent' }, [
-        el('p', { class: 'consent__text', text: S.consentText || '' }),
-        el('label', { class: 'check' }, [
-          el('input', { id: 'f-consent', type: 'checkbox' }),
-          '개인정보 수집 · 이용에 동의합니다.'
-        ]),
-        el('p', { class: 'field__error', id: 'consent-error', hidden: true, role: 'alert',
-                  text: '동의하셔야 제출할 수 있습니다.' })
-      ]));
-    }
+    body.appendChild(el('div', { class: 'consent' }, [
+      form.consent ? el('p', { class: 'consent__text', text: S.consentText || '' }) : null,
+      el('p', { class: 'consent__text', text: S.photoConsentText || '' }),
+      el('label', { class: 'check' }, [
+        el('input', { id: 'f-consent', type: 'checkbox' }),
+        '개인정보 수집 · 이용에 동의합니다.'
+      ]),
+      el('p', { class: 'field__error', id: 'consent-error', hidden: true, role: 'alert',
+                text: '동의하셔야 제출할 수 있습니다.' })
+    ]));
 
     body.appendChild(el('div', { class: 'banner banner--error', 'data-form-error': '', hidden: true }));
 

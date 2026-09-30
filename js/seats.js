@@ -3,7 +3,7 @@
      · 좌석표는 누구나 보고, 빈 자리를 눌러 예약합니다.
      · 예약된 자리에는 '예약됨' 만 보입니다. 누가 앉았는지는 싣지 않습니다.
        이름 · 학과 · 학번 · 전화번호는 관리자만 볼 수 있는 곳에 따로 저장됩니다.
-     · 날짜가 바뀌면 좌석표는 저절로 비워집니다 (날짜별로 나눠 저장).
+     · 18시에 낮 예약 구간이 끝나고 좌석표가 새 구간으로 바뀝니다.
    ============================================================ */
 (function () {
   'use strict';
@@ -35,6 +35,7 @@
   let timer = null;
   let midnightTimer = null;
   let refreshVersion = 0;
+  let afterHoursUntil = '';
 
   const two = (n) => String(n).padStart(2, '0');
   const seatLabel = (n) => n + '번';
@@ -65,8 +66,14 @@
   function roomState() {
     const now = seoulNow();
     if (now.hour < OPEN) return { open: false, why: 'before', now: now };
-    if (now.hour >= CLOSE) return { open: false, why: 'after', now: now };
+    if (now.hour >= CLOSE && !(Date.parse(afterHoursUntil || '') > Date.now()))
+      return { open: false, why: 'after', now: now };
     return { open: true, now: now };
+  }
+
+  function sessionKey(now) {
+    const at = now || seoulNow();
+    return at.date + (at.hour >= CLOSE ? '-evening' : '');
   }
 
   /* 이 브라우저에서 오늘 이미 예약했는지 */
@@ -94,8 +101,8 @@
     $('[data-room-name]').textContent = (ROOM.name || '열람실') + ' 좌석 예약';
     $('[data-room-desc]').textContent =
       (ROOM.place ? ROOM.place + ' · ' : '') +
-      (OPEN === 0 && CLOSE === 24 ? '24시간 예약 가능' : '예약 ' + two(OPEN) + ':00–' + two(CLOSE) + ':00') +
-      ' · 좌석 ' + TOTAL + '석 · 매일 자정 초기화 (한국 시각)';
+      '예약 ' + two(OPEN) + ':00–' + two(CLOSE) + ':00' +
+      ' · 좌석 ' + TOTAL + '석 · 매일 18시 좌석표 초기화 (한국 시각)';
 
     const box = $('[data-room-state]');
     box.className = 'banner';
@@ -111,7 +118,7 @@
         ? '아직 개방 전입니다. ' : '오늘 예약은 마감되었습니다. ' }),
       st.why === 'before'
         ? '오늘 ' + two(OPEN) + ':00 부터 예약할 수 있습니다.'
-        : two(CLOSE) + ':00 에 좌석표가 비워졌습니다. 내일 ' + two(OPEN) + ':00 에 새로 열립니다.',
+        : two(CLOSE) + ':00 에 좌석표가 비워졌습니다. 관리자가 야간 예약을 허용하면 다시 예약할 수 있습니다.',
       el('br'),
       '지금은 ' + st.now.date + ' ' + two(st.now.hour) + ':' + two(st.now.minute) + ' (한국 시각) 입니다.'
     );
@@ -258,9 +265,9 @@
      예약 폼
      ========================================================== */
   function openForm(n) {
-    if (seoulNow().date !== today) {
+    if (sessionKey() !== today) {
       refresh();
-      toast('자정이 지나 좌석이 초기화되었습니다. 새로 선택해 주세요.');
+      toast('예약 구간이 바뀌어 좌석표가 초기화되었습니다. 새로 선택해 주세요.');
       return;
     }
     const mine = myBooking();
@@ -289,6 +296,7 @@
       value: pre.sid || '', maxlength: '12', autocomplete: 'off', placeholder: '예) 20241234' });
     const telIn = el('input', { type: 'tel', id: 'r-tel', inputmode: 'tel',
       value: pre.tel || '', maxlength: '16', autocomplete: 'tel', placeholder: '예) 010-1234-5678' });
+    const photoIn = el('input', { type: 'file', id: 'r-verification', name: 'verification', accept: 'image/*', required: '' });
 
     const err = el('p', { class: 'field__error', hidden: true });
 
@@ -312,6 +320,17 @@
         el('label', { for: 'r-tel', text: '전화번호' }), telIn,
         el('p', { class: 'field__help', text: '자리 관련 연락이 필요할 때만 씁니다. 자리를 비울 때는 묻지 않습니다.' })
       ]),
+      el('div', { class: 'field' }, [
+        el('label', { for: 'r-verification', text: '인문대학 소속 확인 사진' }), photoIn,
+        el('p', { class: 'field__help', text: [S.verificationText, S.verificationHelp].filter(Boolean).join(' ') })
+      ]),
+      el('div', { class: 'consent' }, [
+        el('p', { class: 'consent__text', text: S.photoConsentText || '' }),
+        el('label', { class: 'check' }, [
+          el('input', { id: 'r-consent', type: 'checkbox' }),
+          '인증 사진 수집·이용에 동의합니다.'
+        ])
+      ]),
       err,
       el('div', { class: 'fcard__actions' }, [
         el('button', { type: 'button', class: 'btn btn--primary', id: 'r-submit',
@@ -328,20 +347,23 @@
   function fail(err, msg) { err.hidden = false; err.textContent = msg; }
 
   async function submit(err) {
-    if (seoulNow().date !== today) {
+    if (sessionKey() !== today) {
       refresh();
-      toast('자정이 지나 좌석이 초기화되었습니다. 새로 선택해 주세요.');
+      toast('예약 구간이 바뀌어 좌석표가 초기화되었습니다. 새로 선택해 주세요.');
       return;
     }
     const name = $('#r-name').value.trim();
     const dept = $('#r-dept').value;
     const sid = $('#r-sid').value.replace(/\D/g, '');
     const tel = $('#r-tel').value.replace(/\D/g, '');
+    const proofFile = $('#r-verification').files[0];
 
     if (!name) return fail(err, '이름을 적어주세요.');
     if (!dept) return fail(err, '학과를 선택해 주세요.');
     if (sid.length < 6 || sid.length > 10) return fail(err, '학번을 숫자로 정확히 적어주세요.');
     if (tel.length < 9 || tel.length > 11) return fail(err, '전화번호를 숫자로 정확히 적어주세요. 예) 01012345678');
+    if (!proofFile) return fail(err, '인문대학 소속 확인 사진을 올려주세요.');
+    if (!$('#r-consent').checked) return fail(err, '인증 사진 수집·이용에 동의해 주세요.');
     err.hidden = true;
 
     /* 누르는 사이에 시간이 지났을 수 있으므로 다시 본다 */
@@ -355,7 +377,9 @@
     let outcome = true;
     const bookingDay = today, bookingSeat = picking;
     try {
-      outcome = await STORE.reserveSeat(bookingDay, bookingSeat, { name: name, dept: dept, sid: sid, tel: tel, fromSeat: moving ? moving.fromSeat : 0 });
+      const verificationImage = await window.PHOTO.prepare(proofFile);
+      outcome = await STORE.reserveSeat(bookingDay, bookingSeat, { name: name, dept: dept, sid: sid, tel: tel,
+        fromSeat: moving ? moving.fromSeat : 0, verificationImage });
     } catch (e) {
       btn.disabled = false; btn.textContent = '이 자리로 예약하기';
       if (e && e.code === 'taken') {
@@ -367,7 +391,7 @@
       return fail(err, '예약하지 못했습니다. ' + d.title + d.text);
     }
 
-    if (bookingDay !== seoulNow().date) { await refresh(); return; }
+    if (bookingDay !== sessionKey()) { await refresh(); return; }
     const booked = { date: bookingDay, seat: bookingSeat, name: name, dept: dept, sid: sid, tel: tel,
                      at: new Date().toISOString(), noLog: outcome === 'no-log' };
     rememberBooking(booked);
@@ -376,7 +400,7 @@
     $('[data-seat-form]').innerHTML = '';
     picking = null;
     await refresh();
-    if (booked.date === seoulNow().date) showTicket(booked);
+    if (booked.date === sessionKey()) showTicket(booked);
   }
 
   /* ==========================================================
@@ -386,9 +410,9 @@
      아무나 남의 자리를 비울 수 있기 때문이다.
      ========================================================== */
   function openRelease(n) {
-    if (seoulNow().date !== today) {
+    if (sessionKey() !== today) {
       refresh();
-      toast('자정이 지나 좌석이 초기화되었습니다. 새로 선택해 주세요.');
+      toast('예약 구간이 바뀌어 좌석표가 초기화되었습니다. 새로 선택해 주세요.');
       return;
     }
     picking = null;
@@ -439,9 +463,9 @@
   }
 
   async function release(n, kind, err) {
-    if (seoulNow().date !== today) {
+    if (sessionKey() !== today) {
       refresh();
-      toast('자정이 지나 좌석이 초기화되었습니다. 새로 선택해 주세요.');
+      toast('예약 구간이 바뀌어 좌석표가 초기화되었습니다. 새로 선택해 주세요.');
       return;
     }
     const name = $('#x-name').value.trim();
@@ -480,7 +504,7 @@
                               moveTo ? 'move' : 'return');
     } catch (e) {
       btns.forEach((b) => { b.disabled = false; });
-      if (seoulNow().date !== today || !$('#x-return')) { await refresh(); return; }
+      if (sessionKey() !== today || !$('#x-return')) { await refresh(); return; }
       $('#x-return').textContent = '반납하기';
       $('#x-move').textContent = '자리 변경하기';
       if (e && e.code === 'mismatch') {
@@ -492,7 +516,7 @@
       return fail(err, word + '하지 못했습니다. ' + d.title + d.text);
     }
 
-    if (releaseDay !== seoulNow().date) { await refresh(); return; }
+    if (releaseDay !== sessionKey()) { await refresh(); return; }
     const mine = myBooking();
     /* 변경이면 다음 자리에 그대로 쓸 수 있도록 적은 내용을 들고 있는다 */
     moving = moveTo ? { fromSeat: n, name: name, dept: dept, sid: sid, tel: (mine && mine.tel) || '' } : null;
@@ -568,9 +592,9 @@
         el('div', null, [el('dt', { text: '학과' }), el('dd', { text: b.dept })]),
         el('div', null, [el('dt', { text: '학번' }), el('dd', { text: b.sid })]),
         b.tel ? el('div', null, [el('dt', { text: '전화번호' }), el('dd', { text: formatTel(b.tel) })]) : null,
-        el('div', null, [el('dt', { text: '이용 날짜' }), el('dd', { text: b.date })]),
+        el('div', null, [el('dt', { text: '이용 날짜' }), el('dd', { text: b.date.replace('-evening', ' (18시 이후)') })]),
         el('div', null, [el('dt', { text: '이용 시간' }),
-                         el('dd', { text: two(OPEN) + ':00 – ' + two(CLOSE) + ':00' })]),
+                         el('dd', { text: b.date.endsWith('-evening') ? '18:00 – 24:00 (관리자 허용)' : two(OPEN) + ':00 – ' + two(CLOSE) + ':00' })]),
         el('div', null, [el('dt', { text: '예약한 시각' }),
                          el('dd', { text: seoulClock(b.at) + ' (한국 시각)' })])
       ]),
@@ -603,9 +627,13 @@
      불러오기
      ========================================================== */
   async function refresh() {
+    try {
+      const control = await STORE.getSeatControl();
+      afterHoursUntil = control.afterHoursUntil || '';
+    } catch (e) { afterHoursUntil = ''; }
     const now = seoulNow();
-    if (now.date !== today) {
-      today = now.date;
+    if (sessionKey(now) !== today) {
+      today = sessionKey(now);
       picking = null;
       moving = null;
       seats = {};
@@ -624,7 +652,7 @@
     try {
       loaded = await STORE.getSeats(requestDay);
       if (version !== refreshVersion) return;
-      if (requestDay !== seoulNow().date) return refresh();
+      if (requestDay !== sessionKey()) return refresh();
     } catch (e) {
       console.error(e);
       if (version !== refreshVersion) return;
@@ -650,14 +678,15 @@
     renderMap();
   }
 
-  // Korea has a fixed UTC+9 offset. One timeout, no per-second clock/polling.
-  function scheduleMidnight() {
+  // 한국 시각 00·08·18시에 상태를 갱신한다.
+  function scheduleBoundary() {
     clearTimeout(midnightTimer);
     const day = 86400000;
-    const delay = day - ((Date.now() + 9 * 3600000) % day);
+    const elapsed = (Date.now() + 9 * 3600000) % day;
+    const delay = [8, 18, 24].map((h) => h * 3600000).find((time) => time > elapsed) - elapsed;
     midnightTimer = setTimeout(() => {
       refresh();
-      scheduleMidnight();
+      scheduleBoundary();
     }, delay + 20);
   }
 
@@ -667,15 +696,15 @@
     clearInterval(timer);
     timer = setInterval(() => {
       if (document.hidden) return;
-      if (seoulNow().date !== today || picking === null) refresh();
+      if (sessionKey() !== today || picking === null) refresh();
     }, 30000);
-    scheduleMidnight();
+    scheduleBoundary();
   }
 
   /* ---------- 시작 ---------- */
   document.addEventListener('DOMContentLoaded', async () => {
     window.CORE.boot();
-    today = seoulNow().date;
+    today = sessionKey();
     renderNotes();
     renderHead();
 

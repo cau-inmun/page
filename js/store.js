@@ -20,6 +20,8 @@
     submissions: 'cau-inmun:submissions',
     notices: 'cau-inmun:notices',
     seats: 'cau-inmun:seats',
+    seatPhotos: 'cau-inmun:seat-photos',
+    seatControl: 'cau-inmun:seat-control',
     siteCache: 'cau-inmun:site-cache'
   };
 
@@ -272,6 +274,28 @@
 
   function getSite() { return window.SITE; }
 
+  async function getSeatControl() {
+    if (mode === 'firebase') {
+      const snap = await db.collection('config').doc('seatControl').get();
+      return { afterHoursUntil: snap.exists ? tsToIso(snap.data().afterHoursUntil) : '' };
+    }
+    return lsGet(KEY.seatControl, { afterHoursUntil: '' });
+  }
+
+  async function setAfterHoursOpen(open) {
+    const day = window.CORE.seoulNow().date;
+    const until = open ? new Date(day + 'T15:00:00Z').toISOString() : '';
+    if (mode === 'firebase') {
+      await db.collection('config').doc('seatControl').set({
+        afterHoursUntil: until ? firebase.firestore.Timestamp.fromDate(new Date(until)) : null,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      lsSet(KEY.seatControl, { afterHoursUntil: until });
+    }
+    return { afterHoursUntil: until };
+  }
+
   async function saveSite(patch) {
     const body = {};
     SITE_KEYS.forEach((k) => { if (patch[k] !== undefined) body[k] = patch[k]; });
@@ -330,6 +354,17 @@
     if (mode === 'firebase') {
       const snap = await db.collection('forms').get();
       const list = snap.docs.map((d) => Object.assign({ id: d.id }, decodeDoc(d.data())));
+      const builtin = defaultForms().find((f) => f.id === 'lost-found');
+      if (!list.length) {
+        const defaults = defaultForms();
+        const lostFound = defaults.find((f) => f.id === 'lost-found');
+        if (lostFound) delete lostFound._seed;
+        return defaults;
+      }
+      if (builtin && !list.some((f) => f.id === builtin.id)) {
+        delete builtin._seed; // 이 기본 신고 폼은 보안 규칙에서 직접 접수를 허용한다.
+        list.push(builtin);
+      }
       if (list.length) return list.sort((a, b) => (a.order || 0) - (b.order || 0));
     } else {
       const list = lsGet(KEY.forms, null);
@@ -439,23 +474,35 @@
     });
   }
 
-  async function submit(formId, data, formTitle, labels) {
+  async function submit(formId, data, formTitle, labels, images) {
+    const files = Object.keys(images || {});
+    if (!files.includes('verification')) throw new Error('소속 확인 사진을 선택해 주세요.');
+    if (files.length > 2) throw new Error('사진은 소속 인증 사진을 포함해 최대 2장까지 올릴 수 있습니다.');
     const record = {
       formId: String(formId),
       data: data,
+      files: files,
       createdAt: new Date().toISOString()
     };
     if (mode === 'firebase') {
-      const ref = await db.collection('submissions').add({
+      const ref = db.collection('submissions').doc();
+      const batch = db.batch();
+      batch.set(ref, {
         formId: record.formId,
         data: record.data,
+        files: files,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      files.forEach((key) => batch.set(ref.collection('files').doc(key), {
+        imageData: images[key], createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }));
+      await batch.commit();
       mirrorToSheet(formId, data, formTitle, labels);
       return ref.id;
     }
     const list = lsGet(KEY.submissions, []);
     record.id = uid();
+    record.images = images;
     list.unshift(record);
     lsSet(KEY.submissions, list);
     return record.id;
@@ -473,7 +520,7 @@
       const snap = await q.limit(1000).get();
       list = snap.docs.map((d) => {
         const v = d.data();
-        return { id: d.id, formId: v.formId, data: v.data || {},
+        return { id: d.id, formId: v.formId, data: v.data || {}, files: v.files || [],
                  createdAt: tsToIso(v.createdAt) };
       });
     } else {
@@ -484,8 +531,25 @@
   }
 
   async function deleteSubmission(id) {
-    if (mode === 'firebase') { await db.collection('submissions').doc(id).delete(); return true; }
+    if (mode === 'firebase') {
+      const ref = db.collection('submissions').doc(id);
+      const batch = db.batch();
+      const snap = await ref.get();
+      ((snap.data() || {}).files || []).forEach((key) => batch.delete(ref.collection('files').doc(key)));
+      batch.delete(ref);
+      await batch.commit();
+      return true;
+    }
     return lsSet(KEY.submissions, lsGet(KEY.submissions, []).filter((s) => s.id !== id));
+  }
+
+  async function getSubmissionImage(id, key) {
+    if (mode === 'firebase') {
+      const snap = await db.collection('submissions').doc(id).collection('files').doc(key).get();
+      return snap.exists ? snap.data().imageData || '' : '';
+    }
+    const item = lsGet(KEY.submissions, []).find((s) => s.id === id);
+    return item && item.images ? item.images[key] || '' : '';
   }
 
   /* ---------- 열람실 좌석 ----------
@@ -539,6 +603,7 @@
       sid: String(person.sid || '').replace(/\D/g, ''),
       tel: String(person.tel || '').replace(/\D/g, '')
     };
+    if (person.photoId) full.photoId = person.photoId;
 
     if (mode === 'firebase') {
       try {
@@ -683,10 +748,12 @@
   /* Append-only private events. Batch with the seat change once archive rules are live.
      Until rules are published, keep the old booking flow available; admin shows a warning. */
   function seatEvent(kind, seat, person, fromSeat = 0) {
-    return { kind, seat: Number(seat), fromSeat: Number(fromSeat) || 0,
+    const event = { kind, seat: Number(seat), fromSeat: Number(fromSeat) || 0,
       name: String(person.name || '').trim(), dept: String(person.dept || '').trim(),
       sid: String(person.sid || '').replace(/\D/g, ''),
       tel: String(person.tel || '').replace(/\D/g, '') };
+    if (person.photoId) event.photoId = person.photoId;
+    return event;
   }
   function appendLocalEvent(day, event) {
     const all = lsGet(KEY.seats, {}) || {};
@@ -701,9 +768,15 @@
       { createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
   }
   async function reserveSeat(day, seat, person) {
-    const event = seatEvent(person.fromSeat ? 'move-in' : 'reserve', seat, person, person.fromSeat);
+    if (!person.verificationImage) throw new Error('소속 확인 사진이 필요합니다.');
+    const photoId = uid();
+    const info = Object.assign({}, person, { photoId });
+    const event = seatEvent(person.fromSeat ? 'move-in' : 'reserve', seat, info, person.fromSeat);
     if (mode !== 'firebase') {
-      const result = await reserveSeatLegacy(day, seat, person);
+      const result = await reserveSeatLegacy(day, seat, info);
+      const saved = lsGet(KEY.seatPhotos, {});
+      saved[day + '/' + photoId] = person.verificationImage;
+      lsSet(KEY.seatPhotos, saved);
       event.createdAt = (lsGet(KEY.seats, {}) || {})[day][String(seat)].createdAt;
       appendLocalEvent(day, event);
       return result;
@@ -712,14 +785,37 @@
     const createdAt = firebase.firestore.FieldValue.serverTimestamp();
     batch.set(seatPath(day).collection('seats').doc(key), { seat: Number(seat), nameMasked: '', sidHead: '', createdAt });
     batch.set(seatPath(day).collection('logs').doc(key), {
-      seat: event.seat, name: event.name, dept: event.dept, sid: event.sid, tel: event.tel, createdAt
+      seat: event.seat, name: event.name, dept: event.dept, sid: event.sid, tel: event.tel, photoId, createdAt
+    });
+    batch.set(seatPath(day).collection('photos').doc(photoId), {
+      seat: event.seat, imageData: person.verificationImage, createdAt
     });
     addEvent(batch, day, event);
-    try { await batch.commit(); return true; }
-    catch (e) {
-      if (e.code !== 'permission-denied') throw e;
-      return reserveSeatLegacy(day, seat, person);
+    await batch.commit();
+    return true;
+  }
+
+  async function getSeatImage(day, photoId) {
+    if (mode === 'firebase') {
+      const snap = await seatPath(day).collection('photos').doc(photoId).get();
+      return snap.exists ? snap.data().imageData || '' : '';
     }
+    return (lsGet(KEY.seatPhotos, {}) || {})[day + '/' + photoId] || '';
+  }
+  async function deleteSeatPhotos(day, photoIds) {
+    const ids = [...new Set(photoIds || [])].filter(Boolean);
+    if (mode === 'firebase') {
+      for (let start = 0; start < ids.length; start += 400) {
+        const batch = db.batch();
+        ids.slice(start, start + 400).forEach((id) => batch.delete(seatPath(day).collection('photos').doc(id)));
+        await batch.commit();
+      }
+      return ids.length;
+    }
+    const saved = lsGet(KEY.seatPhotos, {});
+    ids.forEach((id) => delete saved[day + '/' + id]);
+    lsSet(KEY.seatPhotos, saved);
+    return ids.length;
   }
   async function releaseSeat(day, seat, person, kind) {
     const proofKind = kind === 'move' || kind === 'cancel' ? 'cancel' : 'return';
@@ -809,17 +905,26 @@
     const who = { name: '규칙점검', dept: '규칙점검', sid: '0' };
     const ref = (c) => seatPath(day).collection(c).doc(key);
     const stamp = () => firebase.firestore.FieldValue.serverTimestamp();
+    const photoRef = seatPath(day).collection('photos').doc('rules-check-photo');
 
     const done = [];
-    let stage = 'seat';
+    let stage = 'reserve';
     try {
-      await ref('seats').set({ seat: 1, nameMasked: '', sidHead: '', createdAt: stamp() });
-      done.push('seat');
-      stage = 'log';
-      await ref('logs').set(Object.assign({ seat: 1, tel: '0' }, who, { createdAt: stamp() }));
-      done.push('log');
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      const imageData = canvas.toDataURL('image/jpeg');
+      const reserve = db.batch();
+      reserve.set(ref('seats'), { seat: 1, nameMasked: '', sidHead: '', createdAt: stamp() });
+      reserve.set(ref('logs'), Object.assign({ seat: 1, tel: '0', photoId: photoRef.id }, who, { createdAt: stamp() }));
+      reserve.set(photoRef, { seat: 1, imageData, createdAt: stamp() });
+      await reserve.commit();
+      done.push('reserve');
       stage = 'release';
-      await ref('releases').set(Object.assign({ seat: 1, kind: 'return' }, who, { createdAt: stamp() }));
+      const release = db.batch();
+      release.set(ref('releases'), Object.assign({ seat: 1, kind: 'return' }, who, { createdAt: stamp() }));
+      release.delete(ref('seats'));
+      release.delete(ref('logs'));
+      await release.commit();
       done.push('release');
       return { ok: true, done: done };
     } catch (err) {
@@ -831,6 +936,7 @@
       for (const c of ['releases', 'logs', 'seats']) {
         try { await ref(c).delete(); } catch (e) { /* 없으면 넘어간다 */ }
       }
+      try { await photoRef.delete(); } catch (e) { /* 없으면 넘어간다 */ }
     }
   }
 
@@ -913,12 +1019,12 @@
     get isFirebase() { return mode === 'firebase'; },
     configured,
     auth: auth$,
-    getSite, saveSite, loadSite, applyCachedSite,
+    getSite, saveSite, loadSite, applyCachedSite, getSeatControl, setAfterHoursOpen,
     getLinks, saveLinks,
     getForms, getForm, saveForm, deleteForm,
-    submit, listSubmissions, deleteSubmission, testSheet,
+    submit, listSubmissions, deleteSubmission, getSubmissionImage, testSheet,
     getNotices, saveNotice, deleteNotice, replaceNotices,
-    getSeats, reserveSeat, releaseSeat, listSeatLogs, listSeatReleases,
+    getSeats, reserveSeat, releaseSeat, getSeatImage, deleteSeatPhotos, listSeatLogs, listSeatReleases,
     listOrphanSeats, cancelSeat, listSeatEvents, probeSeatRules
   };
 })();
